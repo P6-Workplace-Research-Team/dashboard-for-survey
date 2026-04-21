@@ -1588,7 +1588,7 @@
           <div class="drop-area" id="drop-criterion" data-zone="criterion" data-limit="1">
             <div class="empty-hint">좌측 문항을 여기로 드래그해 주세요.</div>
           </div>
-          <div class="criterion-help">객관식 단일 문항만 분석 기준으로 사용할 수 있습니다.</div>
+          <div class="criterion-help">객관식 단일 문항 또는 조사 연도를 분석 기준으로 사용할 수 있습니다.</div>
         </div>
       </div>
 
@@ -1933,6 +1933,22 @@ function cleanCell(v) {
   return String(v == null ? '' : v).replace(/^\uFEFF/, '').trim();
 }
 
+function getSurveyYearOptions(rows, headerMap) {
+  const map = headerMap instanceof Map ? headerMap : new Map();
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  if (!map.has('survey_year')) return [];
+  const yearIdx = map.get('survey_year');
+  const yearOptions = [];
+  const yearSeen = new Set();
+  for (let i = 1; i < sourceRows.length; i++) {
+    const value = cleanCell((sourceRows[i] || [])[yearIdx]);
+    if (!value || yearSeen.has(value)) continue;
+    yearSeen.add(value);
+    yearOptions.push(value);
+  }
+  return yearOptions;
+}
+
 // 코드북을 category_1 > category_2 > question 구조로 변환하고 화면에 렌더링합니다.
 function buildQuestionTree(rows) {
   if (!rows || rows.length < 2) return [];
@@ -1968,6 +1984,26 @@ function buildQuestionTree(rows) {
     const c1m = map.get(c1);
     if (!c1m.has(c2)) c1m.set(c2, []);
     c1m.get(c2).push({ qno, label, full, role, rtype });
+  }
+
+  const surveyYearOptions = getSurveyYearOptions(filterState.rows, filterState.headerMap);
+  if (surveyYearOptions.length > 1) {
+    const c1 = '응답자 정보';
+    const c2 = '기본 분류';
+    if (!map.has(c1)) { map.set(c1, new Map()); cat1Order.unshift(c1); }
+    const c1m = map.get(c1);
+    if (!c1m.has(c2)) c1m.set(c2, []);
+    const items = c1m.get(c2);
+    if (!items.some(item => item.label === 'survey_year')) {
+      items.unshift({
+        qno: 'SYS_YEAR',
+        label: 'survey_year',
+        displayLabel: '조사 연도',
+        full: '',
+        role: 'raw',
+        rtype: '객관식 단일'
+      });
+    }
   }
 
   return cat1Order.map(c1 => ({
@@ -2024,15 +2060,17 @@ function renderTree(tree) {
       cat2.items.forEach(item => {
         const card = document.createElement('div');
         const hasFull = item.full && item.full.trim() !== '';
+        const displayLabel = item.displayLabel || item.label;
         card.className = 'question-item' + (hasFull ? ' has-full' : '');
         card.draggable = true;
         card.dataset.label = item.label;
+        card.dataset.displayLabel = displayLabel;
         card.dataset.qno = item.qno;
         card.dataset.cat1 = cat1.name;
         card.dataset.cat2 = cat2.name;
         card.dataset.full = item.full;
         card.innerHTML = `
-          <span class="question-item-label">${escapeHtml(item.label)}</span>
+          <span class="question-item-label">${escapeHtml(displayLabel)}</span>
           ${hasFull ? `<span class="question-item-full">Q. ${escapeHtml(item.full)}</span>` : ''}
         `;
         subList.appendChild(card);
@@ -2097,6 +2135,7 @@ function setupSearch() {
         sub.querySelectorAll('.question-item').forEach(item => {
           const hay = [
             item.dataset.label || '',
+            item.dataset.displayLabel || '',
             item.dataset.full || '',
             item.dataset.qno || '',
             cat1Name,
@@ -2190,13 +2229,18 @@ function setupSelectionAndDragDrop() {
 
     let payload;
     if (item.classList.contains('selected')) {
-      payload = selectedItems().map(el => ({
-        label: el.dataset.label,
-        qno: el.dataset.qno || ''
-      }));
-    } else {
-      payload = [{ label: item.dataset.label, qno: item.dataset.qno || '' }];
-    }
+        payload = selectedItems().map(el => ({
+          label: el.dataset.label,
+          displayLabel: el.dataset.displayLabel || el.dataset.label,
+          qno: el.dataset.qno || ''
+        }));
+      } else {
+      payload = [{
+        label: item.dataset.label,
+        displayLabel: item.dataset.displayLabel || item.dataset.label,
+        qno: item.dataset.qno || ''
+      }];
+      }
 
     e.dataTransfer.setData('text/plain', JSON.stringify({ items: payload }));
     e.dataTransfer.effectAllowed = 'copy';
@@ -2252,9 +2296,10 @@ function setupSelectionAndDragDrop() {
     const chip = document.createElement('span');
     chip.className = 'chip';
     chip.dataset.label = data.label;
+    chip.dataset.displayLabel = data.displayLabel || data.label;
     chip.dataset.qno = data.qno || '';
     chip.innerHTML = `
-      <span>${escapeHtml(data.label)}</span>
+      <span>${escapeHtml(data.displayLabel || data.label)}</span>
       <button type="button" class="remove-btn" aria-label="제거">×</button>
     `;
     chip.querySelector('.remove-btn').addEventListener('click', () => {
@@ -2293,14 +2338,7 @@ function buildFilterCandidates(codebookRows, labelRows) {
   const candidates = [];
   if (headerMap.has('survey_year')) {
     const yearIdx = headerMap.get('survey_year');
-    const yearOptions = [];
-    const yearSeen = new Set();
-    for (let i = 1; i < (labelRows || []).length; i++) {
-      const value = cleanCell((labelRows[i] || [])[yearIdx]);
-      if (!value || yearSeen.has(value)) continue;
-      yearSeen.add(value);
-      yearOptions.push(value);
-    }
+    const yearOptions = getSurveyYearOptions(labelRows, headerMap);
     if (yearOptions.length > 1) {
       candidates.push({
         key: 'survey_year',
@@ -3126,6 +3164,18 @@ function buildCodebookIndex(codebookRows) {
       otherInput: cleanCell(row[iOther]).toUpperCase() === 'Y'
     });
   }
+  const surveyYearOptions = getSurveyYearOptions(filterState.rows, filterState.headerMap);
+  if (surveyYearOptions.length > 1 && !map.has('survey_year')) {
+    map.set('survey_year', {
+      label: 'survey_year',
+      displayLabel: '조사 연도',
+      full: '',
+      type: '객관식 단일',
+      role: 'raw',
+      options: surveyYearOptions,
+      otherInput: false
+    });
+  }
   return map;
 }
 
@@ -3204,6 +3254,7 @@ function aggregateSingle(targetLabel, criterionLabel, rows) {
     const critEntry = resultState.codebookByLabel.get(criterionLabel);
     const cIdx = filterState.headerMap.get(criterionLabel);
     if (critEntry && cIdx !== undefined) {
+      const criterionDisplayLabel = critEntry.displayLabel || critEntry.label || criterionLabel;
       const groupOrder = [...critEntry.options];
       const groupSet = new Set(groupOrder);
       const byGroup = new Map();
@@ -3235,7 +3286,7 @@ function aggregateSingle(targetLabel, criterionLabel, rows) {
         const g = byGroup.get(gv);
         return {
           value: gv,
-          label: `${criterionLabel}: ${gv}`,
+          label: `${criterionDisplayLabel}: ${gv}`,
           n: g.n,
           results: visibleOptionOrder.map(o => ({
             option: o,
