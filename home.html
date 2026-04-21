@@ -1,0 +1,1472 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>설문조사 분석 대시보드 만들기 | purple6studio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --black: #0a0a0a;
+    --text: #1a1a1a;
+    --text-2: #4a4a4a;
+    --text-3: #8a8a8a;
+    --text-4: #b8b8b8;
+    --bg: #ffffff;
+    --bg-soft: #f6f6f6;
+    --bg-soft-2: #f0f0f0;
+    --border: #e5e5e5;
+    --border-dashed: #d4d4d4;
+    --red: #e14b4b;
+    --red-bg: #fff3f3;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-pill: 999px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input { font-family: inherit; }
+  a { color: inherit; }
+
+  .page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .top-bar {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 15px 32px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .top-brand {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    line-height: 0;
+  }
+  .list-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+    background: #fff;
+    transition: all .15s;
+  }
+  .list-btn:hover { border-color: var(--text-2); color: var(--text); }
+    .list-btn .icon { width: 13px; height: 13px; display: block; object-fit: contain; }
+  .list-btn .count {
+    background: var(--black);
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .header {
+    padding: 8px 24px 0;
+    text-align: center;
+    position: relative;
+  }
+  .header::before {
+    content: "";
+    display: block;
+    width: min(100%, 836px);
+    margin: 0 auto 38px;
+    border-top: 1px solid var(--border);
+  }
+  .logo-link { display: inline-block; text-decoration: none; }
+  .logo-img {
+    height: 16px;
+    display: block;
+  }
+  .page-title {
+    font-size: 27px;
+    font-weight: 800;
+    color: var(--black);
+    margin: 16px 0 0;
+    letter-spacing: -0.02em;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 38px 32px 40px;
+    flex: 1;
+  }
+
+  .section { margin-bottom: 42px; }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--black);
+    margin: 0 0 18px;
+    letter-spacing: -0.01em;
+  }
+
+  .text-input {
+    width: 100%;
+    padding: 15px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    background: #fff;
+    color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .text-input::placeholder { color: var(--text-4); }
+  .text-input:focus {
+    outline: none;
+    border-color: var(--black);
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+  }
+  .text-input.error { border-color: var(--red); }
+  .field-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .error-text {
+    color: var(--red);
+    font-size: 13px;
+    margin-top: 8px;
+    display: none;
+  }
+  .error-text.show { display: block; }
+
+  .upload-wrapper { margin-top: 10px; }
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+  .upload-col {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .upload-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+  }
+
+  .drop-zone {
+    position: relative;
+    border: 1.5px dashed var(--border-dashed);
+    border-radius: var(--radius-md);
+    padding: 24px 14px;
+    text-align: center;
+    background: #fff;
+    min-height: 192px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .15s, background .15s;
+  }
+  .drop-zone:hover { border-color: var(--text-2); }
+  .drop-zone.drag-over {
+    border-color: var(--black);
+    background: var(--bg-soft);
+  }
+  .drop-zone input[type=file] { display: none; }
+
+  .dz-default {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+  }
+  .dz-hint {
+    font-size: 12.5px;
+    color: var(--text-3);
+    line-height: 1.6;
+  }
+  .dz-hint .formats {
+    display: block;
+    margin-top: 8px;
+    color: var(--text-4);
+    font-size: 12px;
+  }
+  .pick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: var(--black);
+    color: #fff;
+    border-radius: var(--radius-pill);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .pick-btn:hover { background: #222; }
+  .pick-btn svg { width: 14px; height: 14px; }
+
+  .drop-zone.done {
+    border: 1px solid var(--border);
+    background: #fff;
+    padding: 18px 14px 16px;
+  }
+  .dz-done-content {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .drop-zone.done .dz-default { display: none; }
+  .drop-zone.done .dz-done-content { display: flex; }
+
+  .done-title { font-size: 15px; font-weight: 700; color: var(--black); }
+  .check-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--black);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .check-icon svg { width: 14px; height: 14px; color: #fff; }
+  .done-filename {
+    font-size: 13px;
+    color: var(--text-3);
+    word-break: break-all;
+    max-width: 100%;
+    padding: 0 4px;
+  }
+  .reselect-btn {
+    margin-top: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color .15s, color .15s;
+  }
+  .reselect-btn:hover { border-color: var(--black); color: var(--black); }
+  .reselect-btn svg { width: 11px; height: 11px; }
+
+  .drop-zone.has-error {
+    border-color: var(--red);
+    background: var(--red-bg);
+  }
+  .dz-error-msg {
+    display: none;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--red);
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 6px;
+  }
+  .drop-zone.has-error .dz-error-msg { display: block; }
+
+  .upload-error {
+    color: var(--red);
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+    text-align: center;
+  }
+  .upload-error.show { display: block; }
+
+  .primary-btn {
+    display: block;
+    width: 100%;
+    padding: 18px 22px;
+    background: var(--black);
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    border-radius: var(--radius-md);
+    margin-top: 28px;
+    transition: background .15s, transform .05s, opacity .15s;
+    letter-spacing: -0.01em;
+  }
+  .primary-btn:hover:not(:disabled) { background: #222; }
+  .primary-btn:active:not(:disabled) { transform: translateY(1px); }
+  .primary-btn:disabled { background: #d4d4d4; color: #fff; cursor: not-allowed; }
+
+  .guide-banner {
+    margin-top: 14px;
+    padding: 19px 20px;
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--text-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: background .15s;
+    text-align: center;
+  }
+  .guide-banner:hover { background: var(--bg-soft-2); }
+  .guide-banner .guide-desc { font-size: 13px; color: var(--text-3); }
+  .guide-banner .guide-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 14px 24px 20px;
+    color: var(--text-4);
+    font-size: 12px;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: #fff;
+    width: 100%;
+    max-width: 560px;
+    max-height: 80vh;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-header {
+    padding: 22px 24px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; color: var(--black); }
+  .modal-close {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--text-2);
+  }
+  .modal-close:hover { background: var(--bg-soft); color: var(--black); }
+  .modal-body {
+    overflow-y: auto;
+    padding: 8px 16px 16px;
+  }
+  .saved-empty {
+    text-align: center;
+    color: var(--text-3);
+    padding: 48px 16px;
+    font-size: 13px;
+  }
+  .saved-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+    border-radius: var(--radius-sm);
+    transition: background .15s;
+  }
+  .saved-item:hover { background: var(--bg-soft); }
+  .saved-item + .saved-item { border-top: 1px solid var(--border); }
+  .saved-main {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+  }
+  .saved-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .saved-meta {
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
+  .saved-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .saved-rename,
+  .saved-delete {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+  }
+  .saved-rename:hover {
+    color: var(--black);
+    border-color: var(--black);
+  }
+  .saved-delete:hover {
+    color: var(--red);
+    border-color: var(--red);
+  }
+  .saved-title-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 4px 8px;
+    border: 1px solid var(--black);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    outline: none;
+    margin-bottom: 2px;
+  }
+
+  @media (max-width: 760px) {
+    .top-bar { padding: 13px 20px 10px; }
+    .header { padding-top: 10px; }
+    .header::before { margin-bottom: 26px; }
+    .page-title { font-size: 23px; margin-top: 13px; }
+    .container { padding: 30px 20px 24px; }
+    .upload-grid { grid-template-columns: 1fr; }
+    .drop-zone { min-height: 168px; }
+    .primary-btn { margin-top: 24px; padding: 16px; font-size: 15px; }
+    .section { margin-bottom: 35px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="top-bar">
+    <a href="home.html" class="top-brand" aria-label="purple6studio 홈">
+      <img class="logo-img" src="purple6studio_한줄_black.png" alt="purple6studio">
+    </a>
+    <button id="open-list-btn" class="list-btn" type="button">
+      <img class="icon" src="list_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png" alt="">
+      저장된 대시보드 리스트
+      <span class="count" id="saved-count">0</span>
+    </button>
+  </div>
+
+  <header class="header">
+    <h1 class="page-title">설문조사 분석 대시보드 만들기</h1>
+  </header>
+
+  <main class="container">
+    <section class="section" aria-labelledby="sec-1-title">
+      <h2 id="sec-1-title" class="section-title">1. 설문조사 제목을 입력해주세요.</h2>
+      <input id="survey-title" type="text" class="text-input" placeholder="예: 2025 직장인 사무환경 조사" autocomplete="off" maxlength="50">
+      <div class="field-hint">최대 50자까지 입력할 수 있습니다.</div>
+      <div id="title-error" class="error-text" role="alert">설문조사 제목을 입력해 주세요.</div>
+    </section>
+
+    <section class="section" aria-labelledby="sec-2-title">
+      <h2 id="sec-2-title" class="section-title">2. 문항 코드북과 응답 데이터셋을 업로드해주세요.</h2>
+
+      <div class="upload-wrapper">
+        <div class="upload-grid">
+          <div class="upload-col">
+            <div class="upload-label">문항 코드북</div>
+            <div class="drop-zone" data-key="codebook">
+              <input type="file" accept=".csv,.xlsx" id="file-codebook">
+              <div class="dz-default">
+                <div class="dz-hint">
+                  여기에 파일을 드래그하거나,<br>
+                  버튼을 눌러 파일을 선택하세요.
+                  <span class="formats">[.csv, .xlsx]</span>
+                </div>
+                <button type="button" class="pick-btn" data-pick="codebook">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                  파일 선택
+                </button>
+              </div>
+              <div class="dz-done-content">
+                <div class="done-title">업로드 완료!</div>
+                <div class="check-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="done-filename"></div>
+                <button type="button" class="reselect-btn" data-reselect="codebook">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  다시 선택하기
+                </button>
+              </div>
+              <div class="dz-error-msg"></div>
+            </div>
+          </div>
+
+          <div class="upload-col">
+            <div class="upload-label">응답 데이터셋_숫자형</div>
+            <div class="drop-zone" data-key="value">
+              <input type="file" accept=".csv,.xlsx" id="file-value">
+              <div class="dz-default">
+                <div class="dz-hint">
+                  여기에 파일을 드래그하거나,<br>
+                  버튼을 눌러 파일을 선택하세요.
+                  <span class="formats">[.csv, .xlsx]</span>
+                </div>
+                <button type="button" class="pick-btn" data-pick="value">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                  파일 선택
+                </button>
+              </div>
+              <div class="dz-done-content">
+                <div class="done-title">업로드 완료!</div>
+                <div class="check-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="done-filename"></div>
+                <button type="button" class="reselect-btn" data-reselect="value">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  다시 선택하기
+                </button>
+              </div>
+              <div class="dz-error-msg"></div>
+            </div>
+          </div>
+
+          <div class="upload-col">
+            <div class="upload-label">응답 데이터셋_라벨형</div>
+            <div class="drop-zone" data-key="label">
+              <input type="file" accept=".csv,.xlsx" id="file-label">
+              <div class="dz-default">
+                <div class="dz-hint">
+                  여기에 파일을 드래그하거나,<br>
+                  버튼을 눌러 파일을 선택하세요.
+                  <span class="formats">[.csv, .xlsx]</span>
+                </div>
+                <button type="button" class="pick-btn" data-pick="label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                  파일 선택
+                </button>
+              </div>
+              <div class="dz-done-content">
+                <div class="done-title">업로드 완료!</div>
+                <div class="check-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div class="done-filename"></div>
+                <button type="button" class="reselect-btn" data-reselect="label">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  다시 선택하기
+                </button>
+              </div>
+              <div class="dz-error-msg"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="upload-error" class="upload-error" role="alert">
+          지원하지 않는 파일 형식입니다. .csv 또는 .xlsx 파일만 업로드할 수 있습니다.
+        </div>
+      </div>
+    </section>
+
+    <button id="start-btn" class="primary-btn" type="button" disabled>분석 시작</button>
+
+    <a class="guide-banner" href="#" id="guide-link">
+      <span class="guide-desc">문항 코드북과 응답 데이터셋이 무엇인지 모르겠거나, 아직 만들지 않았다면 아래 가이드를 참고해 주세요.</span>
+      <span class="guide-link">가이드 보러 가기 →</span>
+    </a>
+  </main>
+
+  <footer class="footer">(주)퍼시스 Copyright 2026 fursys Inc.</footer>
+</div>
+
+<div class="modal-backdrop" id="list-modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="list-modal-title">저장된 대시보드 리스트</div>
+      <button class="modal-close" id="close-list-btn" aria-label="닫기">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="saved-list"></div>
+  </div>
+</div>
+
+<script>
+// 저장된 설문 대시보드 목록을 브라우저 저장소에서 읽고 쓰는 유틸리티입니다.
+const STORAGE_KEY = 'p6s.surveys';
+const FILE_DB_NAME = 'p6s.surveyFiles';
+const FILE_DB_VERSION = 1;
+const FILE_STORE_NAME = 'files';
+
+function loadSurveys() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveSurveys(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    return true;
+  } catch (_) {
+    alert('저장 공간이 부족해 설문조사를 브라우저에 저장할 수 없습니다. 이번 세션만 대시보드가 유지됩니다.');
+    return false;
+  }
+}
+
+function openFileDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
+        db.createObjectStore(FILE_STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbGet(id) {
+  return openFileDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_STORE_NAME, 'readonly');
+    const req = tx.objectStore(FILE_STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function idbPut(record) {
+  return openFileDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
+    tx.objectStore(FILE_STORE_NAME).put(record);
+    tx.oncomplete = () => {
+      db.close();
+      resolve(record);
+    };
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function idbDelete(id) {
+  return openFileDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
+    tx.objectStore(FILE_STORE_NAME).delete(id);
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function toHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return toHex(digest);
+}
+
+async function makeFileStorageKey(fileRec) {
+  const signature = [
+    fileRec.name || '',
+    fileRec.size || 0,
+    fileRec.contentType || '',
+    fileRec.content || ''
+  ].join('::');
+  return `file:${await sha256(signature)}`;
+}
+
+function isFileReferencedElsewhere(fileId, surveys, excludeSurveyId) {
+  return surveys.some(survey => {
+    if (!survey || survey.id === excludeSurveyId || !survey.files) return false;
+    return ['codebook', 'value', 'label'].some(key => {
+      const fileRec = survey.files[key];
+      return fileRec && fileRec.idbKey === fileId;
+    });
+  });
+}
+
+async function deleteSurveyFiles(surveyId, files, surveys) {
+  const tasks = [];
+  ['codebook', 'value', 'label'].forEach(key => {
+    const fileRec = files && files[key];
+    const id = fileRec && fileRec.idbKey ? fileRec.idbKey : `${surveyId}:${key}`;
+    if (id && !isFileReferencedElsewhere(id, surveys || [], surveyId)) {
+      tasks.push(idbDelete(id).catch(() => {}));
+    }
+  });
+  await Promise.all(tasks);
+}
+
+async function persistSurveyFiles(surveyId, files) {
+  const stored = {};
+  for (const key of ['codebook', 'value', 'label']) {
+    const fileRec = files && files[key];
+    if (!fileRec) continue;
+    const idbKey = await makeFileStorageKey(fileRec);
+    await idbPut({
+      id: idbKey,
+      surveyId,
+      key,
+      name: fileRec.name,
+      size: fileRec.size || 0,
+      contentType: fileRec.contentType,
+      content: fileRec.content
+    });
+    stored[key] = {
+      name: fileRec.name,
+      size: fileRec.size || 0,
+      contentType: fileRec.contentType,
+      idbKey
+    };
+  }
+  return stored;
+}
+
+async function migrateLegacySurveyStorage() {
+  const surveys = loadSurveys();
+  let changed = false;
+  for (const survey of surveys) {
+    if (!survey || !survey.files) continue;
+    for (const key of ['codebook', 'value', 'label']) {
+      const fileRec = survey.files[key];
+      if (!fileRec || !fileRec.content || fileRec.idbKey) continue;
+      const idbKey = await makeFileStorageKey(fileRec);
+      const existing = await idbGet(idbKey).catch(() => null);
+      if (!existing) {
+        await idbPut({
+          id: idbKey,
+          surveyId: survey.id,
+          key,
+          name: fileRec.name,
+          size: fileRec.size || 0,
+          contentType: fileRec.contentType,
+          content: fileRec.content
+        });
+      }
+      delete fileRec.content;
+      fileRec.idbKey = idbKey;
+      changed = true;
+    }
+  }
+  if (changed) saveSurveys(surveys);
+}
+
+function formatDate(iso) {
+  try {
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (_) {
+    return iso;
+  }
+}
+
+// 업로드한 CSV/XLSX 파일을 읽기 위한 파일 처리 유틸리티입니다.
+function readAsText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsText(file, 'UTF-8');
+  });
+}
+
+function readAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function arrayBufferToBase64(buf) {
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+// 업로드 파일의 형식과 필수 컬럼을 점검하는 검증 로직입니다.
+function parseCSV(text, maxRows) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += c;
+      }
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') {
+        row.push(field);
+        field = '';
+      } else if (c === '\n') {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = '';
+        if (maxRows && rows.length >= maxRows) break;
+      } else if (c !== '\r') {
+        field += c;
+      }
+    }
+  }
+
+  if (field !== '' || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+async function readTabularFile(file, maxRows = 50) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (ext === 'csv') {
+    const text = await readAsText(file);
+    return { rows: parseCSV(text, maxRows), raw: text, type: 'csv' };
+  }
+  if (ext === 'xlsx') {
+    const buf = await readAsArrayBuffer(file);
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, raw: true });
+    const limitedRows = maxRows ? rows.slice(0, maxRows) : rows;
+    return {
+      rows: limitedRows.map(r => (r || []).map(v => v == null ? '' : String(v))),
+      raw: buf,
+      type: 'xlsx'
+    };
+  }
+  throw new Error('unsupported');
+}
+
+const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role'];
+const REQUIRED_RESPONSE = ['survey_year', 'respondent_no'];
+
+function normalizeHeader(s) {
+  return String(s || '').replace(/^\uFEFF/, '').trim().toLowerCase();
+}
+
+function checkColumns(headerRow, required) {
+  const headerSet = new Set(headerRow.map(normalizeHeader));
+  const missing = required.filter(c => !headerSet.has(c.toLowerCase()));
+  return { ok: missing.length === 0, missing };
+}
+
+function detectResponseType(rows) {
+  if (rows.length < 2) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
+  const header = rows[0] || [];
+  const skipCols = Math.min(4, header.length);
+  let numeric = 0;
+  let textLike = 0;
+  let samples = 0;
+
+  const dataRows = rows.slice(1, 31);
+  for (const r of dataRows) {
+    for (let c = skipCols; c < (r || []).length; c++) {
+      const v = String(r[c] == null ? '' : r[c]).trim();
+      if (v === '') continue;
+      samples++;
+      if (/^-?\d+(\.\d+)?$/.test(v)) numeric++;
+      else if (/^-?\d+(\.\d+)?(\s*\|\s*-?\d+(\.\d+)?)+$/.test(v)) numeric++;
+      else textLike++;
+    }
+  }
+
+  if (samples === 0) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
+  const textRatio = textLike / samples;
+  let type = 'ambiguous';
+  if (textRatio < 0.02) type = 'numeric';
+  else if (textRatio >= 0.05) type = 'label';
+  return { type, numericRatio: numeric / samples, textRatio, sampleSize: samples };
+}
+
+function validateFileForKey(key, rows) {
+  if (!rows || rows.length === 0) {
+    return { ok: false, error: '파일이 비어 있습니다.' };
+  }
+
+  const header = rows[0] || [];
+
+  if (key === 'codebook') {
+    const chk = checkColumns(header, REQUIRED_CODEBOOK);
+    if (!chk.ok) {
+      return { ok: false, error: `문항 코드북 형식이 올바르지 않습니다. 누락된 컬럼: ${chk.missing.join(', ')}` };
+    }
+    return { ok: true };
+  }
+
+  if (key === 'value' || key === 'label') {
+    const chk = checkColumns(header, REQUIRED_RESPONSE);
+    if (!chk.ok) {
+      return { ok: false, error: `응답 데이터셋 형식이 올바르지 않습니다. 누락된 컬럼: ${chk.missing.join(', ')}` };
+    }
+
+    const det = detectResponseType(rows);
+    if (det.type === 'unknown') {
+      return { ok: false, error: '데이터 열을 찾을 수 없어 형식을 판별할 수 없습니다.' };
+    }
+    if (key === 'value' && det.type === 'label') {
+      return { ok: false, error: '라벨형 데이터로 보입니다. 숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
+    }
+    if (key === 'label' && det.type === 'numeric') {
+      return { ok: false, error: '숫자형 데이터로 보입니다. 라벨이 담긴 라벨형 파일을 업로드해 주세요.' };
+    }
+    return { ok: true };
+  }
+
+  return { ok: true };
+}
+
+function cleanCell(v) {
+  return String(v == null ? '' : v).replace(/^\uFEFF/, '').trim();
+}
+
+function getCodebookQuestionLabels(rows) {
+  if (!rows || rows.length < 2) return [];
+  const header = (rows[0] || []).map(normalizeHeader);
+  const iLabel = header.indexOf('question_label');
+  if (iLabel < 0) return [];
+  const labels = [];
+  for (let r = 1; r < rows.length; r++) {
+    const label = cleanCell((rows[r] || [])[iLabel]);
+    if (label) labels.push(label);
+  }
+  return labels;
+}
+
+function getResponseQuestionHeaders(rows) {
+  if (!rows || rows.length === 0) return [];
+  return (rows[0] || []).slice(2).map(cleanCell);
+}
+
+function arraysEqualNormalized(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (cleanCell(a[i]) !== cleanCell(b[i])) return false;
+  }
+  return true;
+}
+
+function findFirstHeaderMismatch(a, b) {
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    if (cleanCell(a[i]) !== cleanCell(b[i])) {
+      return { index: i, left: cleanCell(a[i]), right: cleanCell(b[i]) };
+    }
+  }
+  return null;
+}
+
+function validateCodebookAgainstResponse(codebookRows, responseRows, responseLabel) {
+  const codebookLabels = getCodebookQuestionLabels(codebookRows);
+  const responseHeaders = getResponseQuestionHeaders(responseRows);
+  if (codebookLabels.length === 0 || responseHeaders.length === 0) return { ok: true };
+  if (arraysEqualNormalized(codebookLabels, responseHeaders)) return { ok: true };
+
+  if (codebookLabels.length !== responseHeaders.length) {
+    return {
+      ok: false,
+      error: `문항 코드북과 ${responseLabel}의 문항 수가 다릅니다. 코드북 ${codebookLabels.length}개, 데이터셋 ${responseHeaders.length}개입니다.`
+    };
+  }
+
+  const mismatch = findFirstHeaderMismatch(codebookLabels, responseHeaders);
+  if (mismatch) {
+    return {
+      ok: false,
+      error: `문항 코드북과 ${responseLabel}의 문항 순서 또는 이름이 다릅니다. ${mismatch.index + 3}번째 응답 데이터 컬럼을 확인해 주세요.`
+    };
+  }
+
+  return { ok: true };
+}
+
+function validateResponsePair(valueRows, labelRows) {
+  if (!valueRows || !labelRows) return { ok: true };
+  const valueHeader = (valueRows[0] || []).map(cleanCell);
+  const labelHeader = (labelRows[0] || []).map(cleanCell);
+
+  if (!arraysEqualNormalized(valueHeader, labelHeader)) {
+    return { ok: false, error: '응답 데이터셋 숫자형과 라벨형의 가로 첫행 구조가 서로 다릅니다.' };
+  }
+
+  if (valueRows.length !== labelRows.length) {
+    return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 행 수가 다릅니다. 숫자형 ${valueRows.length - 1}행, 라벨형 ${labelRows.length - 1}행입니다.` };
+  }
+
+  for (let r = 1; r < valueRows.length; r++) {
+    const vRow = valueRows[r] || [];
+    const lRow = labelRows[r] || [];
+    if (cleanCell(vRow[0]) !== cleanCell(lRow[0]) || cleanCell(vRow[1]) !== cleanCell(lRow[1])) {
+      return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 세로 첫행 기준값이 ${r + 1}번째 행에서 다릅니다.` };
+    }
+    const maxCols = Math.max(vRow.length, lRow.length);
+    for (let c = 2; c < maxCols; c++) {
+      const vFilled = cleanCell(vRow[c]) !== '';
+      const lFilled = cleanCell(lRow[c]) !== '';
+      if (vFilled !== lFilled) {
+        const headerName = valueHeader[c] || `${c + 1}번째 컬럼`;
+        return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 값 위치 구조가 다릅니다. ${r + 1}번째 행 / ${headerName} 컬럼을 확인해 주세요.` };
+      }
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateBundleConsistency(rowsByKey) {
+  const { codebook, value, label } = rowsByKey;
+  if (codebook && value) {
+    const result = validateCodebookAgainstResponse(codebook, value, '응답 데이터셋_숫자형');
+    if (!result.ok) return result;
+  }
+  if (codebook && label) {
+    const result = validateCodebookAgainstResponse(codebook, label, '응답 데이터셋_라벨형');
+    if (!result.ok) return result;
+  }
+  if (value && label) {
+    const result = validateResponsePair(value, label);
+    if (!result.ok) return result;
+  }
+  return { ok: true };
+}
+
+// 홈 화면의 제목 입력, 파일 업로드, 저장 목록 모달, 시작 버튼 상태를 관리합니다.
+(function () {
+  const ALLOWED_EXT = ['csv', 'xlsx'];
+
+  const titleInput = document.getElementById('survey-title');
+  const titleError = document.getElementById('title-error');
+  const startBtn = document.getElementById('start-btn');
+  const uploadErr = document.getElementById('upload-error');
+
+  const fileInputs = {
+    codebook: document.getElementById('file-codebook'),
+    value: document.getElementById('file-value'),
+    label: document.getElementById('file-label')
+  };
+
+  const state = {
+    codebook: null,
+    value: null,
+    label: null
+  };
+
+  const parsedState = {
+    codebook: null,
+    value: null,
+    label: null
+  };
+
+  titleInput.addEventListener('input', () => {
+    if (titleInput.value.trim()) {
+      titleInput.classList.remove('error');
+      titleError.classList.remove('show');
+    }
+    updateStart();
+  });
+
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    const key = zone.dataset.key;
+    const input = fileInputs[key];
+
+    input.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleFile(zone, key, file);
+    });
+
+    ['dragenter', 'dragover'].forEach(ev => {
+      zone.addEventListener(ev, e => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(ev => {
+      zone.addEventListener(ev, e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+      });
+    });
+
+    zone.addEventListener('drop', e => {
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(zone, key, file);
+    });
+  });
+
+  document.querySelectorAll('[data-pick]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      fileInputs[btn.dataset.pick].click();
+    });
+  });
+
+  document.querySelectorAll('[data-reselect]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const key = btn.dataset.reselect;
+      fileInputs[key].value = '';
+      fileInputs[key].click();
+    });
+  });
+
+  function resetZone(zone) {
+    zone.classList.remove('done', 'has-error');
+    zone.querySelector('.dz-error-msg').textContent = '';
+    zone.querySelector('.done-filename').textContent = '';
+  }
+
+  function setZoneError(zone, msg) {
+    zone.classList.remove('done');
+    zone.classList.add('has-error');
+    zone.querySelector('.dz-error-msg').textContent = msg;
+  }
+
+  function setZoneDone(zone, filename) {
+    zone.classList.remove('has-error');
+    zone.classList.add('done');
+    zone.querySelector('.dz-error-msg').textContent = '';
+    zone.querySelector('.done-filename').textContent = filename;
+  }
+
+  async function handleFile(zone, key, file) {
+    uploadErr.classList.remove('show');
+    resetZone(zone);
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_EXT.includes(ext)) {
+      uploadErr.classList.add('show');
+      state[key] = null;
+      updateStart();
+      return;
+    }
+
+    let parsed;
+    try {
+      const maxRows = key === 'codebook' ? null : 50;
+      parsed = await readTabularFile(file, maxRows);
+    } catch (_) {
+      setZoneError(zone, '파일을 읽는 중 오류가 발생했습니다.');
+      state[key] = null;
+      updateStart();
+      return;
+    }
+
+    const result = validateFileForKey(key, parsed.rows);
+    if (!result.ok) {
+      setZoneError(zone, result.error);
+      state[key] = null;
+      parsedState[key] = null;
+      updateStart();
+      return;
+    }
+
+    const bundleResult = validateBundleConsistency({
+      codebook: key === 'codebook' ? parsed.rows : parsedState.codebook,
+      value: key === 'value' ? parsed.rows : parsedState.value,
+      label: key === 'label' ? parsed.rows : parsedState.label
+    });
+    if (!bundleResult.ok) {
+      setZoneError(zone, bundleResult.error);
+      state[key] = null;
+      parsedState[key] = null;
+      updateStart();
+      return;
+    }
+
+    let content;
+    let contentType;
+    if (parsed.type === 'csv') {
+      content = parsed.raw;
+      contentType = 'csv-text';
+    } else {
+      content = arrayBufferToBase64(parsed.raw);
+      contentType = 'xlsx-base64';
+    }
+
+    state[key] = { name: file.name, content, contentType };
+    parsedState[key] = parsed.rows;
+    setZoneDone(zone, file.name);
+    updateStart();
+  }
+
+  function updateStart() {
+    const ready = titleInput.value.trim() && state.codebook && state.value && state.label;
+    startBtn.disabled = !ready;
+  }
+
+  startBtn.addEventListener('click', async () => {
+    const title = titleInput.value.trim();
+    if (!title) {
+      titleInput.classList.add('error');
+      titleError.classList.add('show');
+      titleInput.focus();
+      return;
+    }
+
+    const surveys = loadSurveys();
+    const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    let files;
+    try {
+      files = await persistSurveyFiles(id, {
+        codebook: state.codebook,
+        value: state.value,
+        label: state.label
+      });
+    } catch (_) {
+      alert('업로드 파일을 브라우저 저장소에 저장하지 못했습니다. 브라우저 저장공간을 확인해 주세요.');
+      return;
+    }
+    const entry = {
+      id,
+      title,
+      createdAt: new Date().toISOString(),
+      files
+    };
+
+    surveys.unshift(entry);
+    const saved = saveSurveys(surveys);
+
+    try {
+      sessionStorage.setItem('survey.currentId', saved ? id : '');
+      sessionStorage.setItem('survey.title', title);
+    } catch (_) {}
+
+    window.location.href = 'dashboard.html';
+  });
+
+  document.getElementById('guide-link').addEventListener('click', e => {
+    e.preventDefault();
+    alert('가이드 문서로 이동 (링크 연결 예정)');
+  });
+
+  const listModal = document.getElementById('list-modal');
+  const openListBtn = document.getElementById('open-list-btn');
+  const closeListBtn = document.getElementById('close-list-btn');
+  const savedList = document.getElementById('saved-list');
+  const savedCountBadge = document.getElementById('saved-count');
+
+  function refreshCount() {
+    savedCountBadge.textContent = loadSurveys().length;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+  }
+
+  function openSurvey(id) {
+    const found = loadSurveys().find(s => s.id === id);
+    if (!found) return;
+    try {
+      sessionStorage.setItem('survey.currentId', id);
+      sessionStorage.setItem('survey.title', found.title);
+    } catch (_) {}
+    window.location.href = 'dashboard.html';
+  }
+
+  function renderList() {
+    const items = loadSurveys();
+    savedList.innerHTML = '';
+
+    if (items.length === 0) {
+      savedList.innerHTML = '<div class="saved-empty">아직 저장된 대시보드가 없습니다.<br>설문조사를 업로드하고 분석을 시작하면 여기에 쌓입니다.</div>';
+      return;
+    }
+
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'saved-item';
+      row.dataset.id = item.id;
+      row.innerHTML = `
+        <div class="saved-main" data-id="${item.id}">
+          <div class="saved-title" data-id="${item.id}">${escapeHtml(item.title)}</div>
+          <input type="text" class="saved-title-input" maxlength="50" hidden>
+          <div class="saved-meta">저장일 ${formatDate(item.createdAt)}</div>
+        </div>
+        <div class="saved-actions">
+          <button type="button" class="saved-rename" data-rename="${item.id}">이름 바꾸기</button>
+          <button type="button" class="saved-delete" data-del="${item.id}">삭제</button>
+        </div>
+      `;
+      savedList.appendChild(row);
+    });
+
+    savedList.querySelectorAll('.saved-main').forEach(main => {
+      main.addEventListener('click', e => {
+        const input = main.querySelector('.saved-title-input');
+        if (input && !input.hidden) return;
+        openSurvey(main.dataset.id);
+      });
+    });
+
+    savedList.querySelectorAll('.saved-rename').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const row = btn.closest('.saved-item');
+        const id = btn.dataset.rename;
+        const titleEl = row.querySelector('.saved-title');
+        const inputEl = row.querySelector('.saved-title-input');
+
+        inputEl.value = titleEl.textContent;
+        titleEl.hidden = true;
+        inputEl.hidden = false;
+        inputEl.focus();
+        inputEl.select();
+
+        function commit() {
+          inputEl.removeEventListener('blur', commit);
+          inputEl.removeEventListener('keydown', onKey);
+          const next = inputEl.value.trim().slice(0, 50);
+          if (next && next !== titleEl.textContent) {
+            const list = loadSurveys();
+            const idx = list.findIndex(s => s.id === id);
+            if (idx >= 0) {
+              list[idx].title = next;
+              list[idx].updatedAt = new Date().toISOString();
+              saveSurveys(list);
+            }
+          }
+          renderList();
+          refreshCount();
+        }
+        function cancel() {
+          inputEl.removeEventListener('blur', commit);
+          inputEl.removeEventListener('keydown', onKey);
+          titleEl.hidden = false;
+          inputEl.hidden = true;
+        }
+        function onKey(ev) {
+          if (ev.key === 'Enter') { ev.preventDefault(); inputEl.blur(); }
+          else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+        }
+        inputEl.addEventListener('blur', commit);
+        inputEl.addEventListener('keydown', onKey);
+      });
+    });
+
+    savedList.querySelectorAll('[data-del]').forEach(el => {
+      el.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('이 대시보드를 삭제하시겠습니까?')) return;
+        const id = el.dataset.del;
+        const list = loadSurveys();
+        const target = list.find(s => s.id === id);
+        const next = list.filter(s => s.id !== id);
+        saveSurveys(next);
+        await deleteSurveyFiles(id, target && target.files, next);
+        renderList();
+        refreshCount();
+      });
+    });
+  }
+
+  migrateLegacySurveyStorage()
+    .catch(() => {})
+    .finally(() => {
+      refreshCount();
+    });
+
+  openListBtn.addEventListener('click', () => {
+    renderList();
+    listModal.classList.add('show');
+  });
+
+  try {
+    if (sessionStorage.getItem('openListOnLoad') === '1') {
+      sessionStorage.removeItem('openListOnLoad');
+      renderList();
+      listModal.classList.add('show');
+    }
+  } catch (_) {}
+
+  closeListBtn.addEventListener('click', () => listModal.classList.remove('show'));
+  listModal.addEventListener('click', e => {
+    if (e.target === listModal) listModal.classList.remove('show');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') listModal.classList.remove('show');
+  });
+})();
+</script>
+
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
