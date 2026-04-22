@@ -862,6 +862,11 @@
     transition: all .12s;
     background: var(--bg-soft);
   }
+  .drop-area:not(.has-chip) {
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+  }
   #drop-target {
     min-height: 76px;
   }
@@ -875,7 +880,6 @@
   .drop-area .empty-hint {
     color: var(--text-4);
     font-size: 12px;
-    margin: auto;
     text-align: center;
   }
   .drop-area.has-chip .empty-hint { display: none; }
@@ -1167,8 +1171,144 @@
   .legend-item.disabled { color: var(--text-4); }
   .legend-item.disabled .legend-swatch { opacity: 0.28; }
   .legend-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     padding-left: 12px;
     min-width: 0;
+  }
+
+  .scale-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .scale-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scale-mean-row {
+    position: relative;
+    width: 100%;
+    height: 24px;
+  }
+  .scale-bar {
+    width: 100%;
+  }
+  .scale-track {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 42px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f3f3f3;
+  }
+  .scale-segment {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+  }
+  .scale-segment-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .scale-segment-label.is-dark {
+    color: rgba(20,20,20,0.78);
+  }
+  .scale-mean {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .scale-mean-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    background: #fff;
+    padding: 2px 7px;
+    border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    white-space: nowrap;
+  }
+  .scale-mean-mark {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid var(--text);
+  }
+  .scale-axis {
+    height: 8px;
+    position: relative;
+    width: 100%;
+  }
+  .scale-axis-point {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 8px;
+    display: block;
+  }
+  .scale-axis-tick {
+    display: block;
+    width: 1px;
+    height: 8px;
+    background: #bdbdbd;
+  }
+  .scale-group-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .scale-group-row {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+  }
+  .scale-group-label {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .scale-group-label strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+  .scale-score-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .scale-score-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .scale-score-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex: 0 0 auto;
   }
 
   .result-table-wrap { overflow-x: auto; }
@@ -3148,7 +3288,10 @@ function buildCodebookIndex(codebookRows) {
   const iType = col('response_type');
   const iRole = col('data_column_role');
   const iOptions = col('response_options');
+  const iValueCount = col('value_count');
+  const iValueCodeMap = col('value_code_map');
   const iOther = col('other_input_expected');
+  const iDashboardValueType = col('dashboard_value_type');
 
   for (let r = 1; r < codebookRows.length; r++) {
     const row = codebookRows[r] || [];
@@ -3162,9 +3305,28 @@ function buildCodebookIndex(codebookRows) {
       type: cleanCell(row[iType]),
       role: cleanCell(row[iRole]),
       options: opts,
-      otherInput: cleanCell(row[iOther]).toUpperCase() === 'Y'
+      valueCount: Number.parseInt(cleanCell(row[iValueCount]), 10) || 0,
+      valueCodeMap: parseValueCodeMap(cleanCell(row[iValueCodeMap])),
+      otherInput: cleanCell(row[iOther]).toUpperCase() === 'Y',
+      dashboardValueType: cleanCell(row[iDashboardValueType])
     });
   }
+  return map;
+}
+
+function parseValueCodeMap(raw) {
+  const map = new Map();
+  cleanCell(raw).split('|').forEach(part => {
+    const item = cleanCell(part);
+    if (!item) return;
+    const eqIndex = item.indexOf('=');
+    if (eqIndex < 0) return;
+    const key = cleanCell(item.slice(0, eqIndex));
+    const value = cleanCell(item.slice(eqIndex + 1));
+    const score = Number.parseInt(key, 10);
+    if (!Number.isFinite(score)) return;
+    map.set(score, value);
+  });
   return map;
 }
 
@@ -3301,6 +3463,276 @@ function aggregateSingle(targetLabel, criterionLabel, rows) {
     totalN,
     optionOrder: visibleOptionOrder,
     totalResults: visibleTotalResults,
+    visualType: 'choice',
+    criterionLabel: groupResults ? criterionLabel : null,
+    groupResults
+  };
+}
+
+function isSelectedBinaryValue(value) {
+  const normalized = cleanCell(value).toLowerCase();
+  return normalized === '1'
+    || normalized === 'y'
+    || normalized === 'yes'
+    || normalized === 'true'
+    || normalized === '선택';
+}
+
+function getExpandedBinaryOptionEntries(targetLabel, entry) {
+  const codebookMap = resultState.codebookByLabel || new Map();
+  return (entry.options || []).map(option => {
+    const expandedLabel = `${targetLabel}__${option}`;
+    const expandedEntry = codebookMap.get(expandedLabel);
+    if (!expandedEntry || expandedEntry.role !== 'expanded') return null;
+    return { option, expandedLabel, expandedEntry };
+  }).filter(Boolean);
+}
+
+function aggregateMultiple(targetLabel, criterionLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry) return null;
+
+  const optionEntries = getExpandedBinaryOptionEntries(targetLabel, entry);
+  if (optionEntries.length === 0) return null;
+
+  const totalN = rows.length;
+  const totalResults = optionEntries.map(({ option, expandedLabel }) => {
+    const idx = filterState.headerMap ? filterState.headerMap.get(expandedLabel) : undefined;
+    const count = idx === undefined
+      ? 0
+      : rows.reduce((sum, row) => sum + (isSelectedBinaryValue((row || [])[idx]) ? 1 : 0), 0);
+    return {
+      option,
+      count,
+      pct: totalN > 0 ? (count / totalN) * 100 : 0
+    };
+  });
+
+  const visibleTotalResults = totalResults.filter(result => result.count > 0);
+
+  let groupResults = null;
+  if (criterionLabel) {
+    const critEntry = resultState.codebookByLabel.get(criterionLabel) || (() => {
+      const candidate = getCandidateByKey(criterionLabel);
+      if (!candidate) return null;
+      return {
+        label: candidate.label,
+        type: '객관식 단일',
+        role: 'raw',
+        options: candidate.options || []
+      };
+    })();
+    const cIdx = filterState.headerMap.get(criterionLabel);
+    if (critEntry && cIdx !== undefined) {
+      const groupOrder = [...critEntry.options];
+      const groupSet = new Set(groupOrder);
+      const byGroup = new Map();
+
+      groupOrder.forEach(groupValue => {
+        byGroup.set(groupValue, {
+          n: 0,
+          count: Object.fromEntries(optionEntries.map(({ option }) => [option, 0]))
+        });
+      });
+
+      rows.forEach(row => {
+        const groupValue = cleanCell((row || [])[cIdx]);
+        if (groupValue === '') return;
+        if (!groupSet.has(groupValue)) {
+          groupSet.add(groupValue);
+          groupOrder.push(groupValue);
+          byGroup.set(groupValue, {
+            n: 0,
+            count: Object.fromEntries(optionEntries.map(({ option }) => [option, 0]))
+          });
+        }
+
+        const group = byGroup.get(groupValue);
+        group.n += 1;
+        optionEntries.forEach(({ option, expandedLabel }) => {
+          const idx = filterState.headerMap ? filterState.headerMap.get(expandedLabel) : undefined;
+          if (idx === undefined) return;
+          if (isSelectedBinaryValue((row || [])[idx])) {
+            group.count[option] = (group.count[option] || 0) + 1;
+          }
+        });
+      });
+
+      groupResults = groupOrder.map(groupValue => {
+        const group = byGroup.get(groupValue);
+        return {
+          value: groupValue,
+          label: `${critEntry.label}: ${groupValue}`,
+          n: group.n,
+          results: visibleTotalResults.map(result => ({
+            option: result.option,
+            count: group.count[result.option] || 0,
+            pct: group.n > 0 ? ((group.count[result.option] || 0) / group.n) * 100 : 0
+          }))
+        };
+      });
+    }
+  }
+
+  return {
+    targetLabel,
+    codebookEntry: entry,
+    totalN,
+    optionOrder: visibleTotalResults.map(result => result.option),
+    totalResults: visibleTotalResults,
+    visualType: 'choice',
+    criterionLabel: groupResults ? criterionLabel : null,
+    groupResults
+  };
+}
+
+function parseScaleScore(value) {
+  const text = cleanCell(value);
+  if (!text) return null;
+  const num = Number(text);
+  if (!Number.isFinite(num)) return null;
+  const score = Math.round(num);
+  return Math.abs(num - score) < 1e-8 ? score : null;
+}
+
+function getScaleScoreColors(scoreCount) {
+  const fixedPalettes = {
+    5: ['#c96d6d', '#e6aaaa', '#d9d9d9', '#a9c1de', '#5f86b2'],
+    7: ['#b85f5f', '#d98989', '#edbcbc', '#d9d9d9', '#bdd0e4', '#8fb0d1', '#5f86b2']
+  };
+  if (fixedPalettes[scoreCount]) return [...fixedPalettes[scoreCount]];
+
+  const midpoint = (scoreCount + 1) / 2;
+  return Array.from({ length: scoreCount }, (_, index) => {
+    const score = index + 1;
+    if (score === Math.round(midpoint) && Math.abs(score - midpoint) < 0.001) return '#d9d9d9';
+    if (score < midpoint) {
+      const distance = midpoint - score;
+      return distance > 1.5 ? '#c96d6d' : '#e6aaaa';
+    }
+    const distance = score - midpoint;
+    return distance > 1.5 ? '#5f86b2' : '#a9c1de';
+  });
+}
+
+function resolveScaleMeta(entry, rows, valueIndex) {
+  let maxScore = entry && entry.valueCount > 0 ? entry.valueCount : 0;
+  rows.forEach(row => {
+    const score = parseScaleScore((row || [])[valueIndex]);
+    if (score && score > maxScore) maxScore = score;
+  });
+  if (maxScore <= 0) return null;
+
+  const scoreOrder = Array.from({ length: maxScore }, (_, index) => index + 1);
+  const scoreLabels = new Map();
+  scoreOrder.forEach(score => {
+    const mapped = entry && entry.valueCodeMap instanceof Map ? cleanCell(entry.valueCodeMap.get(score)) : '';
+    scoreLabels.set(score, mapped || `${score}점`);
+  });
+
+  return {
+    maxScore,
+    scoreOrder,
+    scoreLabels,
+    scoreColors: getScaleScoreColors(maxScore)
+  };
+}
+
+function buildScaleResultsForRows(sourceRows, valueIndex, meta) {
+  const counts = Object.fromEntries(meta.scoreOrder.map(score => [score, 0]));
+  let totalN = 0;
+  let sum = 0;
+
+  sourceRows.forEach(row => {
+    const score = parseScaleScore((row || [])[valueIndex]);
+    if (!score || !counts.hasOwnProperty(score)) return;
+    counts[score] += 1;
+    totalN += 1;
+    sum += score;
+  });
+
+  const results = meta.scoreOrder.map(score => ({
+    option: `${score}점`,
+    score,
+    label: meta.scoreLabels.get(score) || `${score}점`,
+    count: counts[score] || 0,
+    pct: totalN > 0 ? ((counts[score] || 0) / totalN) * 100 : 0,
+    color: meta.scoreColors[score - 1] || meta.scoreColors[meta.scoreColors.length - 1]
+  }));
+
+  return {
+    n: totalN,
+    mean: totalN > 0 ? (sum / totalN) : 0,
+    results
+  };
+}
+
+function aggregateScale(targetLabel, criterionLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry) return null;
+  const valueIndex = filterState.headerMap ? filterState.headerMap.get(targetLabel) : undefined;
+  if (valueIndex === undefined) return null;
+
+  const meta = resolveScaleMeta(entry, rows, valueIndex);
+  if (!meta) return null;
+
+  const total = buildScaleResultsForRows(rows, valueIndex, meta);
+
+  let groupResults = null;
+  if (criterionLabel) {
+    const critEntry = resultState.codebookByLabel.get(criterionLabel) || (() => {
+      const candidate = getCandidateByKey(criterionLabel);
+      if (!candidate) return null;
+      return {
+        label: candidate.label,
+        type: '객관식 단일',
+        role: 'raw',
+        options: candidate.options || []
+      };
+    })();
+    const cIdx = filterState.headerMap.get(criterionLabel);
+    if (critEntry && cIdx !== undefined) {
+      const groupOrder = [...critEntry.options];
+      const groupSet = new Set(groupOrder);
+      const byGroup = new Map();
+      groupOrder.forEach(groupValue => byGroup.set(groupValue, []));
+
+      rows.forEach(row => {
+        const groupValue = cleanCell((row || [])[cIdx]);
+        const score = parseScaleScore((row || [])[valueIndex]);
+        if (groupValue === '' || !score) return;
+        if (!groupSet.has(groupValue)) {
+          groupSet.add(groupValue);
+          groupOrder.push(groupValue);
+          byGroup.set(groupValue, []);
+        }
+        byGroup.get(groupValue).push(row);
+      });
+
+      groupResults = groupOrder.map(groupValue => {
+        const grouped = buildScaleResultsForRows(byGroup.get(groupValue) || [], valueIndex, meta);
+        return {
+          value: groupValue,
+          label: `${critEntry.label}: ${groupValue}`,
+          n: grouped.n,
+          mean: grouped.mean,
+          results: grouped.results
+        };
+      });
+    }
+  }
+
+  return {
+    targetLabel,
+    codebookEntry: entry,
+    totalN: total.n,
+    mean: total.mean,
+    scoreOrder: meta.scoreOrder,
+    scoreLabels: meta.scoreLabels,
+    scoreColors: meta.scoreColors,
+    scaleMax: meta.maxScore,
+    totalResults: total.results,
+    visualType: 'scale',
     criterionLabel: groupResults ? criterionLabel : null,
     groupResults
   };
@@ -3428,7 +3860,119 @@ function buildGroupCompareChartHtml(data, hidden) {
   `;
 }
 
+function formatScaleMean(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return '0.0';
+  return (Math.round((num + 1e-10) * 10) / 10).toFixed(1);
+}
+
+function getScaleMeanLeft(mean, maxScore) {
+  if (!Number.isFinite(mean) || mean <= 0) return 0;
+  if (maxScore <= 1) return 0;
+  return Math.max(0, Math.min(100, ((mean - 1) / (maxScore - 1)) * 100));
+}
+
+function getScalePointLeft(score, maxScore) {
+  if (!Number.isFinite(score) || maxScore <= 1) return 0;
+  return Math.max(0, Math.min(100, ((score - 1) / (maxScore - 1)) * 100));
+}
+
+function buildScaleBarHtml(data, result, groupLabel) {
+  const meanLeft = getScaleMeanLeft(result.mean, data.scaleMax);
+  const segmentsHtml = data.totalResults.map(scoreResult => {
+    const current = (result.results || []).find(item => item.score === scoreResult.score) || scoreResult;
+    const width = Math.max(0, Math.min(100, current.pct));
+    const label = width >= 8 ? formatPercent(current.pct) : '';
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'scale-segment',
+      groupLabel: groupLabel || '응답자 전체',
+      score: current.score,
+      scoreLabel: current.label,
+      pct: current.pct,
+      count: current.count
+    }));
+    return `
+      <div class="scale-segment"
+           style="width:${width}%; background:${current.color};"
+           data-tip="${tip}">
+        ${label ? `<span class="scale-segment-label ${current.score <= Math.ceil(data.scaleMax / 2) ? 'is-dark' : ''}">${label}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+  const axisHtml = data.scoreOrder.map(score => `
+    <span class="scale-axis-point" style="left:${getScalePointLeft(score, data.scaleMax)}%;">
+      <span class="scale-axis-tick"></span>
+    </span>
+  `).join('');
+
+  const meanTip = encodeURIComponent(JSON.stringify({
+    kind: 'scale-mean',
+    groupLabel: groupLabel || '응답자 전체',
+    mean: result.mean,
+    scaleMax: data.scaleMax,
+    count: result.n
+  }));
+
+  return `
+    <div class="scale-bar-wrap">
+      <div class="scale-mean-row">
+        <div class="scale-mean" style="left:${meanLeft}%;" data-tip="${meanTip}">
+          <span class="scale-mean-value">평균 : ${formatScaleMean(result.mean)}</span>
+          <span class="scale-mean-mark"></span>
+        </div>
+      </div>
+      <div class="scale-axis">${axisHtml}</div>
+      <div class="scale-bar">
+        <div class="scale-track">
+          ${segmentsHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildScaleChartHtml(data, hidden) {
+  if (!data.groupResults) {
+    return `
+      <div class="scale-chart">
+        ${buildScaleBarHtml(data, { n: data.totalN, mean: data.mean, results: data.totalResults }, '응답자 전체')}
+      </div>
+    `;
+  }
+
+  const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
+  const rowsHtml = displayGroups.map(group => `
+    <div class="scale-group-row">
+      <div class="scale-group-label">
+        <strong>${escapeHtml(group.label)}</strong>
+        <span>N=${group.n.toLocaleString()}</span>
+      </div>
+      ${buildScaleBarHtml(data, group, group.label)}
+    </div>
+  `).join('');
+
+  return `<div class="scale-group-chart">${rowsHtml}</div>`;
+}
+
 function buildLegendHtml(data, hidden) {
+  if (data.visualType === 'scale') {
+    const items = data.totalResults.map(result => {
+      const suffix = cleanCell(result.label) && result.label !== `${result.score}점`
+        ? ` · ${escapeHtml(result.label)}`
+        : '';
+      return `
+        <div class="scale-score-item">
+          <span class="scale-score-swatch" style="background:${result.color};"></span>
+          <span>${result.score}점${suffix}</span>
+        </div>
+      `;
+    }).join('');
+    return `
+      <aside class="legend-panel">
+        <div class="scale-score-legend">${items}</div>
+      </aside>
+    `;
+  }
   if (!data.groupResults) return '';
   const displayGroups = getDisplayGroupResults(data.groupResults);
   if (displayGroups.length === 0) return '';
@@ -3454,7 +3998,7 @@ function buildLegendHtml(data, hidden) {
   `;
 }
 
-function buildDataTableHtml(data) {
+function buildChoiceDataTableHtml(data) {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
     const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
@@ -3528,6 +4072,86 @@ function buildDataTableHtml(data) {
   `;
 }
 
+function buildScaleDataTableHtml(data) {
+  const { totalResults, groupResults, totalN } = data;
+  if (!groupResults) {
+    const sumPct = totalResults.reduce((sum, result) => sum + result.pct, 0);
+    return `
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>점수</th>
+              <th class="num">비율(%)</th>
+              <th class="num">빈도수 (명)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${totalResults.map(result => `
+              <tr>
+                <td>${result.score}점</td>
+                <td class="num">${formatPercent(result.pct)}</td>
+                <td class="num">${result.count.toLocaleString()}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td>합계</td>
+              <td class="num">${formatPercent(sumPct)}</td>
+              <td class="num">${totalN.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
+  const displayGroups = getDisplayGroupResults(groupResults, hidden);
+
+  const topRow1 = [
+    `<th rowspan="2">점수</th>`,
+    `<th colspan="2" class="group-head">응답자 전체<br><span style="font-weight:500;color:var(--text-3);">N=${totalN.toLocaleString()}</span></th>`,
+    ...displayGroups.map(group => `<th colspan="2" class="group-head">${escapeHtml(group.label)}<br><span style="font-weight:500;color:var(--text-3);">N=${group.n.toLocaleString()}</span></th>`)
+  ].join('');
+  const topRow2 = [
+    `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`,
+    ...displayGroups.map(() => `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`)
+  ].join('');
+
+  const bodyRows = totalResults.map(result => {
+    const groupCells = displayGroups.map(group => {
+      const groupResult = (group.results || []).find(item => item.score === result.score) || { pct: 0, count: 0 };
+      return `<td class="num group-col">${formatPercent(groupResult.pct)}</td><td class="num">${groupResult.count.toLocaleString()}</td>`;
+    }).join('');
+    return `
+      <tr>
+        <td>${result.score}점</td>
+        <td class="num group-col">${formatPercent(result.pct)}</td>
+        <td class="num">${result.count.toLocaleString()}</td>
+        ${groupCells}
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead>
+          <tr>${topRow1}</tr>
+          <tr>${topRow2}</tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildDataTableHtml(data) {
+  return data.visualType === 'scale'
+    ? buildScaleDataTableHtml(data)
+    : buildChoiceDataTableHtml(data);
+}
+
 function findOtherTextColumnIndex(targetLabel) {
   const header = filterState.rows && filterState.rows[0] ? filterState.rows[0] : [];
   if (!Array.isArray(header) || header.length === 0) return undefined;
@@ -3570,14 +4194,14 @@ function getOtherResponseTexts(targetLabel, rows) {
 
 function buildSectionHtml(data, rows) {
   if (!data) return '';
-  const { codebookEntry, targetLabel, totalN, groupResults } = data;
+  const { codebookEntry, targetLabel, totalN, groupResults, visualType } = data;
   const hidden = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
 
-  const chartHtml = groupResults
-    ? buildGroupCompareChartHtml(data, hidden)
-    : buildBasicChartHtml(data);
+  const chartHtml = visualType === 'scale'
+    ? buildScaleChartHtml(data, hidden)
+    : (groupResults ? buildGroupCompareChartHtml(data, hidden) : buildBasicChartHtml(data));
 
-  const legendHtml = groupResults ? buildLegendHtml(data, hidden) : '';
+  const legendHtml = buildLegendHtml(data, hidden);
   const tableHtml = buildDataTableHtml(data);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
@@ -3614,7 +4238,7 @@ function buildUnsupportedSection(label, entry) {
         ${fullText}
       </div>
       <div class="result-unsupported">
-        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong> 문항만 지원합니다.
+        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong>, <strong>객관식 중복</strong>, <strong>객관식 척도</strong> 문항을 지원합니다.
       </div>
     </section>
   `;
@@ -3657,8 +4281,16 @@ async function renderResults() {
   const sections = targetLabels.map(label => {
     const entry = resultState.codebookByLabel.get(label);
     if (!entry) return buildUnsupportedSection(label, null);
-    if (entry.type !== '객관식 단일') return buildUnsupportedSection(label, entry);
-    const data = aggregateSingle(label, criterionLabel, filteredRows);
+    let data = null;
+    if (entry.type === '객관식 단일') {
+      data = aggregateSingle(label, criterionLabel, filteredRows);
+    } else if (entry.type === '객관식 중복') {
+      data = aggregateMultiple(label, criterionLabel, filteredRows);
+    } else if (entry.type === '객관식 척도') {
+      data = aggregateScale(label, criterionLabel, filteredRows);
+    } else {
+      return buildUnsupportedSection(label, entry);
+    }
     if (!data) return buildUnsupportedSection(label, entry);
     return buildSectionHtml(data, filteredRows);
   }).join('');
@@ -3885,6 +4517,20 @@ function formatTooltipHtml(d) {
         line(escapeHtml(d.groupLabel)),
         line(escapeHtml(d.option)),
         line(pct(d.pct)),
+        line(n(d.count))
+      ].join('');
+    case 'scale-segment':
+      return [
+        line(escapeHtml(d.groupLabel)),
+        line(`${escapeHtml(d.score)}점${d.scoreLabel ? ` · ${escapeHtml(d.scoreLabel)}` : ''}`),
+        line(pct(d.pct)),
+        line(n(d.count))
+      ].join('');
+    case 'scale-mean':
+      return [
+        line(escapeHtml(d.groupLabel)),
+        line(`평균 ${formatScaleMean(d.mean)}점`),
+        line(`${d.scaleMax}점 척도`),
         line(n(d.count))
       ].join('');
     default:
