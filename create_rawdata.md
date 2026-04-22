@@ -204,3 +204,13 @@
 - 코드북에 기타 텍스트용 `expanded` 행이 있으면, wide_value/wide_label에도 동일한 이름의 컬럼이 생성되어야 합니다.
 - `other_input_expected = Y`인데 기타 텍스트용 컬럼이 생성되지 않았다면 생성 실패로 간주합니다.
 - 기타 텍스트용 컬럼은 코드 변환 없이 원문 텍스트가 그대로 들어가야 합니다.
+## 0-1. Rank Response Rules
+
+Apply the following rules to every `객관식 순위` question when generating `responsedata_value.csv` and `responsedata_label.csv`.
+
+- Keep the raw rank answer column and the rank expanded columns together. Do not assume every raw response will also appear in `__1순위`, `__2순위`, `__3순위` style expanded fields.
+- If a response exists in the raw rank answer but does not map to any rank expanded column, keep that raw response in the generated data rather than dropping it.
+- Such raw-only non-ranked responses must still remain available for downstream chart and table display.
+- However, raw-only non-ranked responses are not treated as ranked selections for weighted ranking logic.
+- `기타` direct-input text columns for rank questions must still be generated according to the existing `other_input_expected = Y` rule.
+- Rank direct-input text should remain available to the dashboard so it can be opened from the shared `응답 보기` modal.

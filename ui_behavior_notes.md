@@ -1,4 +1,18 @@
 # UI Behavior Notes
+## Rank Question Rules
+
+The following rules apply to every `객관식 순위` question in the current dashboard behavior.
+
+- Each rank percentage uses the full respondent base for that question as the denominator.
+- In group comparison, each group's rank percentages use that group's full respondent count `n` as the denominator.
+- Responses that exist only in the raw rank column and do not appear in any `__1순위`, `__2순위` style expanded column are still shown in the chart and data table.
+- Raw-only non-ranked responses are excluded from `가중 점수` and `종합 순위`.
+- `기타` remains visible in the rank chart and rank data table, but is excluded from overall ranking.
+- `기타` free-text responses are opened from the data table via the same modal-style `응답 보기` button used for single and multiple choice questions.
+- When a group is unchecked in the legend, that group disappears from both the rank chart area and the rank data table.
+- Rank group comparison shows per-group ranking results in a table layout rather than inline sentence text.
+- Rank data tables include a total row. The total row keeps per-rank percentage and count totals, while `가중 점수` and `종합 순위` remain `-`.
+
 
 ## 조사 연도 조건
 
