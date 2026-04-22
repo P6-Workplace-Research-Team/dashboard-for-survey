@@ -356,6 +356,9 @@
   }
   .accordion-list { display: none; padding: 2px 0 12px; }
   .accordion-category.open .accordion-list { display: block; }
+  .accordion-direct-list {
+    padding: 4px 0 10px;
+  }
   .accordion-subcategory {
     padding-left: 12px;
   }
@@ -567,12 +570,12 @@
     overflow: visible;
   }
   .filter-label {
-    font-size: 11px;
+    font-size: 15px;
     font-weight: 700;
-    color: var(--text-3);
+    color: var(--black);
     margin-right: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    text-transform: none;
+    letter-spacing: -0.01em;
   }
   .filter-control {
     position: relative;
@@ -914,7 +917,7 @@
     background: #fff;
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 20px;
+    padding: 24px 24px 32px;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -1001,9 +1004,14 @@
     border-bottom: none;
     padding-bottom: 0;
   }
-  .result-header { display: flex; flex-direction: column; gap: 4px; }
+  .result-header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
   .result-title {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--text);
     display: flex;
@@ -1015,7 +1023,12 @@
     font-weight: 500;
     font-size: 12px;
   }
-  .result-sub { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+  .result-sub {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
   .result-unsupported {
     font-size: 12px;
     color: var(--text-3);
@@ -1027,7 +1040,7 @@
 
   .hbar-chart {
     position: relative;
-    padding: 8px 0;
+    padding: 8px 0 8px 10px;
   }
   .hbar-row {
     display: grid;
@@ -1077,9 +1090,17 @@
     align-items: start;
     margin-bottom: 24px;
   }
+  .result-visual.rank-summary-row {
+    margin-bottom: 12px;
+  }
+  .result-visual.rank-summary-row .legend-panel {
+    visibility: hidden;
+    pointer-events: none;
+  }
   .result-chart-col {
     min-width: 0;
     width: 100%;
+    padding-left: 14px;
     padding-right: 12px;
   }
 
@@ -1130,7 +1151,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 16px;
+    margin-top: 8px;
   }
   .legend-action-btn {
     font-size: 11px;
@@ -1311,7 +1332,36 @@
     flex: 0 0 auto;
   }
 
-  .result-table-wrap { overflow-x: auto; }
+  .result-table-wrap {
+    overflow-x: auto;
+    margin: 10px 12px 0;
+    padding: 0;
+  }
+  .result-table-wrap,
+  .rank-group-table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: #d7d7d7 transparent;
+  }
+  .result-table-wrap::-webkit-scrollbar,
+  .rank-group-table-wrap::-webkit-scrollbar {
+    height: 10px;
+  }
+  .result-table-wrap::-webkit-scrollbar-track,
+  .rank-group-table-wrap::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .result-table-wrap::-webkit-scrollbar-thumb,
+  .rank-group-table-wrap::-webkit-scrollbar-thumb {
+    background: #d7d7d7;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .result-table-wrap::-webkit-scrollbar-thumb:hover,
+  .rank-group-table-wrap::-webkit-scrollbar-thumb:hover {
+    background: #c9c9c9;
+    background-clip: padding-box;
+  }
   .result-table {
     width: 100%;
     border-collapse: collapse;
@@ -1319,7 +1369,7 @@
   }
   .result-table th,
   .result-table td {
-    padding: 8px 10px;
+    padding: 10px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border-2);
     white-space: nowrap;
@@ -1342,11 +1392,34 @@
     color: var(--text-2);
     border-left: 1px solid var(--border-2);
   }
+  .result-table thead tr:first-child > th:first-child,
+  .result-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    box-shadow: 1px 0 0 var(--border-2);
+  }
+  .result-table thead tr:first-child > th:first-child {
+    z-index: 4;
+    background: var(--bg-soft);
+  }
+  .result-table tbody td:first-child {
+    background: #fff;
+  }
   .result-table .group-col { border-left: 1px solid var(--border-2); }
   .result-table tr.total-row td {
     background: #fafafa;
     color: var(--text);
-    font-weight: 600;
+    font-weight: 400;
+  }
+  .result-table tr.total-row td:first-child {
+    background: #fafafa;
+  }
+  .result-table-note {
+    margin: 8px 12px 0;
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.45;
   }
   .other-response-open-btn {
     display: inline-flex;
@@ -1393,6 +1466,160 @@
     white-space: nowrap;
     box-shadow: 0 4px 12px rgba(0,0,0,0.22);
     display: none;
+  }
+
+  /* ===== 객관식 순위 ===== */
+  .rank-summary {
+    font-size: 13px;
+    color: var(--text);
+    padding: 14px 20px;
+    margin: 0 0 12px;
+    width: 100%;
+    box-sizing: border-box;
+    background: #f3f3f3;
+    border: 1px solid #d8d8d8;
+    border-radius: var(--radius-sm);
+    line-height: 1.7;
+  }
+  .rank-summary-title {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--text-2);
+    font-weight: 700;
+    margin-right: 12px;
+    margin-bottom: 0;
+    flex: 0 0 auto;
+  }
+  .rank-summary .rank-summary-line {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .rank-summary .rank-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 4px;
+  }
+  .rank-summary .rank-pos {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .rank-summary .rank-opt {
+    color: var(--text-2);
+    font-size: 12.5px;
+  }
+  .rank-summary .rank-sep {
+    color: var(--text-4);
+    margin: 0 6px;
+    font-size: 12px;
+  }
+
+  .rank-stack-chart {
+    padding: 8px 0 8px 10px;
+  }
+  .rank-stack-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 54px;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 8px;
+    height: 20px;
+  }
+  .rank-stack-row:last-child { margin-bottom: 0; }
+  .rank-stack-label {
+    font-size: 12px;
+    color: var(--text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .rank-stack-track {
+    position: relative;
+    background: #f5f5f5;
+    border-radius: 3px;
+    height: 20px;
+    overflow: hidden;
+    display: flex;
+  }
+  .rank-stack-seg {
+    height: 100%;
+    cursor: pointer;
+    transition: opacity .15s ease;
+    min-width: 0;
+  }
+  .rank-stack-seg:hover { opacity: 0.85; }
+  .rank-stack-track .rank-stack-seg:first-child {
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+  }
+  .rank-stack-track .rank-stack-seg:last-child {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+  }
+  .rank-stack-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rank-group-panel {
+    padding: 14px 20px;
+    background: var(--bg-soft);
+    border-radius: var(--radius-sm);
+  }
+  .rank-group-heading {
+    display: flex;
+    align-items: center;
+    margin: 2px 0 12px;
+  }
+  .rank-group-table-wrap {
+    overflow-x: auto;
+  }
+  .rank-group-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .rank-group-table th,
+  .rank-group-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-2);
+    white-space: nowrap;
+  }
+  .rank-group-table th {
+    color: var(--text-2);
+    font-weight: 600;
+    text-align: center;
+    font-size: 12px;
+  }
+  .rank-group-table th:first-child,
+  .rank-group-table td:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    box-shadow: 1px 0 0 var(--border-2);
+  }
+  .rank-group-table th:first-child {
+    z-index: 3;
+    background: var(--bg-soft);
+  }
+  .rank-group-table td:first-child {
+    z-index: 2;
+    background: var(--bg-soft);
+  }
+  .rank-group-table td {
+    color: var(--text-2);
+    text-align: center;
+  }
+  .rank-group-table .group-name {
+    font-weight: 700;
+    color: var(--text);
   }
 
   .dash-footer {
@@ -1748,7 +1975,7 @@
             <div class="empty-hint">좌측 문항을 여기로 드래그해 주세요.</div>
           </div>
           <div class="criterion-actions">
-            <button type="button" id="criterion-year-btn" class="criterion-action-btn">연도별 비교하기</button>
+          <button type="button" id="criterion-year-btn" class="criterion-action-btn" hidden>연도별 비교하기</button>
           </div>
         </div>
       </div>
@@ -2094,7 +2321,7 @@ function cleanCell(v) {
   return String(v == null ? '' : v).replace(/^\uFEFF/, '').trim();
 }
 
-// 코드북을 category_1 > category_2 > question 구조로 변환하고 화면에 렌더링합니다.
+// 코드북을 category_1 > question 또는 category_1 > category_2 > question 구조로 변환합니다.
 function buildQuestionTree(rows) {
   if (!rows || rows.length < 2) return [];
   const header = (rows[0] || []).map(normalizeHeader);
@@ -2116,24 +2343,33 @@ function buildQuestionTree(rows) {
     if (!label) continue;
 
     const c1 = (iCat1 >= 0 ? String(row[iCat1] || '').trim() : '') || '기타';
-    const c2 = (iCat2 >= 0 ? String(row[iCat2] || '').trim() : '') || '기타';
+    const c2 = iCat2 >= 0 ? String(row[iCat2] || '').trim() : '';
     const full = iFull >= 0 ? String(row[iFull] || '').trim() : '';
     const qno = iNo >= 0 ? String(row[iNo] || '').trim() : '';
     const role = iRole >= 0 ? String(row[iRole] || '').trim() : '';
     const rtype = iType >= 0 ? String(row[iType] || '').trim() : '';
+    const item = { qno, label, full, role, rtype };
 
     // expanded 행은 계산 편의를 위한 내부 컬럼이므로 사용자용 문항 리스트에서 제외합니다.
     if (role.toLowerCase() === 'expanded') continue;
 
-    if (!map.has(c1)) { map.set(c1, new Map()); cat1Order.push(c1); }
+    if (!map.has(c1)) {
+      map.set(c1, { items: [], children: new Map() });
+      cat1Order.push(c1);
+    }
     const c1m = map.get(c1);
-    if (!c1m.has(c2)) c1m.set(c2, []);
-    c1m.get(c2).push({ qno, label, full, role, rtype });
+    if (!c2) {
+      c1m.items.push(item);
+      continue;
+    }
+    if (!c1m.children.has(c2)) c1m.children.set(c2, []);
+    c1m.children.get(c2).push(item);
   }
 
   return cat1Order.map(c1 => ({
     name: c1,
-    children: Array.from(map.get(c1).entries()).map(([c2, items]) => ({ name: c2, items }))
+    items: map.get(c1).items,
+    children: Array.from(map.get(c1).children.entries()).map(([c2, items]) => ({ name: c2, items }))
   }));
 }
 
@@ -2147,6 +2383,22 @@ function renderTree(tree) {
   }
 
   const chevron = 'arrow_forward_ios_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png';
+  function appendQuestionCard(parent, item, cat1Name, cat2Name) {
+    const card = document.createElement('div');
+    const hasFull = item.full && item.full.trim() !== '';
+    card.className = 'question-item' + (hasFull ? ' has-full' : '');
+    card.draggable = true;
+    card.dataset.label = item.label;
+    card.dataset.qno = item.qno;
+    card.dataset.cat1 = cat1Name;
+    card.dataset.cat2 = cat2Name || '';
+    card.dataset.full = item.full;
+    card.innerHTML = `
+      <span class="question-item-label">${escapeHtml(item.label)}</span>
+      ${hasFull ? `<span class="question-item-full">Q. ${escapeHtml(item.full)}</span>` : ''}
+    `;
+    parent.appendChild(card);
+  }
 
   tree.forEach((cat1, i1) => {
     const cat = document.createElement('div');
@@ -2164,6 +2416,13 @@ function renderTree(tree) {
 
     const list = document.createElement('div');
     list.className = 'accordion-list';
+
+    if (Array.isArray(cat1.items) && cat1.items.length > 0) {
+      const directList = document.createElement('div');
+      directList.className = 'accordion-direct-list';
+      cat1.items.forEach(item => appendQuestionCard(directList, item, cat1.name, ''));
+      list.appendChild(directList);
+    }
 
     cat1.children.forEach((cat2, i2) => {
       const sub = document.createElement('div');
@@ -2183,20 +2442,7 @@ function renderTree(tree) {
       subList.className = 'sub-accordion-list';
 
       cat2.items.forEach(item => {
-        const card = document.createElement('div');
-        const hasFull = item.full && item.full.trim() !== '';
-        card.className = 'question-item' + (hasFull ? ' has-full' : '');
-        card.draggable = true;
-        card.dataset.label = item.label;
-        card.dataset.qno = item.qno;
-        card.dataset.cat1 = cat1.name;
-        card.dataset.cat2 = cat2.name;
-        card.dataset.full = item.full;
-        card.innerHTML = `
-          <span class="question-item-label">${escapeHtml(item.label)}</span>
-          ${hasFull ? `<span class="question-item-full">Q. ${escapeHtml(item.full)}</span>` : ''}
-        `;
-        subList.appendChild(card);
+        appendQuestionCard(subList, item, cat1.name, cat2.name);
       });
 
       sub.appendChild(subList);
@@ -2236,6 +2482,8 @@ function setupSearch() {
       cats.forEach(cat => {
         cat.style.display = '';
         cat.classList.remove('open');
+        cat.querySelectorAll('.accordion-direct-list').forEach(list => list.style.display = '');
+        cat.querySelectorAll('.accordion-direct-list .question-item').forEach(item => item.style.display = '');
         cat.querySelectorAll('.accordion-subcategory').forEach(sub => {
           sub.style.display = '';
           sub.classList.remove('open');
@@ -2251,6 +2499,22 @@ function setupSearch() {
       let catMatch = false;
       const cat1Name = cat.dataset.cat1 || '';
       const cat1Hit = cat1Name.toLowerCase().includes(q);
+      cat.querySelectorAll('.accordion-direct-list').forEach(list => {
+        let directMatch = false;
+        list.querySelectorAll('.question-item').forEach(item => {
+          const hay = [
+            item.dataset.label || '',
+            item.dataset.full || '',
+            item.dataset.qno || '',
+            cat1Name
+          ].join(' ').toLowerCase();
+          const hit = cat1Hit || hay.includes(q);
+          item.style.display = hit ? '' : 'none';
+          if (hit) directMatch = true;
+        });
+        list.style.display = directMatch ? '' : 'none';
+        if (directMatch) catMatch = true;
+      });
       cat.querySelectorAll('.accordion-subcategory').forEach(sub => {
         let subMatch = false;
         const cat2Name = sub.dataset.cat2 || '';
@@ -2828,6 +3092,14 @@ function positionPopupWithinMainArea(anchorEl, menuEl) {
   menuEl.style.left = `${desiredLeft - anchorRect.left}px`;
 }
 
+function updateCriterionYearButtonVisibility() {
+  const criterionYearBtn = document.getElementById('criterion-year-btn');
+  if (!criterionYearBtn) return;
+  const yearCandidate = getCandidateByKey('survey_year');
+  const isVisible = !!(yearCandidate && Array.isArray(yearCandidate.options) && yearCandidate.options.length > 1);
+  criterionYearBtn.hidden = !isVisible;
+}
+
 async function setupFilters() {
   const currentId = sessionStorage.getItem('survey.currentId');
   const nEl = document.getElementById('n-count');
@@ -2870,6 +3142,7 @@ async function setupFilters() {
   filterState.selectedMap = nextSelectedMap;
 
   renderFilters();
+  updateCriterionYearButtonVisibility();
   updateFilterCount();
 }
 
@@ -3053,12 +3326,15 @@ function setupSavedModal() {
       el.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm('이 대시보드를 삭제하시겠습니까?')) return;
+
         const id = el.dataset.del;
-        const list = loadSurveys();
-        const target = list.find(s => s.id === id);
-        const next = list.filter(s => s.id !== id);
+        const currentSurveys = loadSurveys();
+        const target = currentSurveys.find(s => s.id === id);
+        const next = currentSurveys.filter(s => s.id !== id);
         saveSurveys(next);
-        await deleteSurveyFiles(id, target && target.files, next);
+        if (target) {
+          try { await deleteSurveyFiles(id, target.files || {}, next); } catch (_) {}
+        }
         if (sessionStorage.getItem('survey.currentId') === id) {
           try {
             sessionStorage.removeItem('survey.currentId');
@@ -3071,7 +3347,7 @@ function setupSavedModal() {
     });
   }
 
-  function saveCurrentSurvey() {
+  async function saveCurrentSurvey() {
     const currentId = sessionStorage.getItem('survey.currentId');
     const title = (document.getElementById('project-title')?.textContent || '새 대시보드').trim();
     const surveys = loadSurveys();
@@ -3089,7 +3365,7 @@ function setupSavedModal() {
     }
 
     const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const current = getCurrentSurvey().current;
+    const { current } = getCurrentSurvey();
     if (!current || !current.files) {
       alert('저장할 데이터가 아직 준비되지 않았습니다.');
       return;
@@ -3127,7 +3403,7 @@ function setupSavedModal() {
       <div class="saved-item">
         <div class="saved-main">
           <div class="saved-title">${escapeHtml(item.label)}</div>
-          <div class="saved-meta">${escapeHtml(item.file?.name || '파일 없음')}</div>
+          <div class="saved-meta">${escapeHtml((item.file && item.file.name) || '파일 없음')}</div>
         </div>
         <div class="saved-actions">
           <button type="button" class="saved-rename" data-file-update="${item.key}">교체하기</button>
@@ -3175,18 +3451,18 @@ function setupSavedModal() {
     const idx = surveys.findIndex(s => s.id === currentId);
     if (idx < 0) return;
 
-    const nextFile = await convertFileToStoredRec(file);
-    const prevFile = surveys[idx].files ? surveys[idx].files[key] : null;
-    const persisted = await persistStoredFile(currentId, key, nextFile);
-    surveys[idx].files = { ...(surveys[idx].files || {}), [key]: persisted };
+    const rawFile = await convertFileToStoredRec(file);
+    let storedRef = rawFile;
+    try {
+      const persisted = await persistStoredFile(currentId, key, rawFile);
+      if (persisted) storedRef = persisted;
+    } catch (_) {}
+    surveys[idx].files = { ...(surveys[idx].files || {}), [key]: storedRef };
     surveys[idx].updatedAt = new Date().toISOString();
     if (!saveSurveys(surveys)) return;
-    if (prevFile && prevFile.idbKey && prevFile.idbKey !== persisted.idbKey) {
-      await deleteSurveyFiles(currentId, { [key]: prevFile }, surveys);
-    }
 
     if (key === 'codebook') resultState.codebookByLabel = new Map();
-    await setupFilters();
+    try { await setupFilters(); } catch (_) {}
     try {
       const rows = await loadCodebookRows(surveys[idx].files.codebook);
       if (rows) {
@@ -3199,11 +3475,7 @@ function setupSavedModal() {
     alert('데이터 파일을 교체했습니다.');
   }
 
-  migrateLegacySurveyStorage()
-    .catch(() => {})
-    .finally(() => {
-      refreshCount();
-    });
+  refreshCount();
 
   if (saveBtn) saveBtn.addEventListener('click', saveCurrentSurvey);
   if (newBtn) newBtn.addEventListener('click', () => { window.location.href = 'home.html'; });
@@ -3255,12 +3527,8 @@ function setupSavedModal() {
 }
 
 /* =====================================================================
-   [객관식 단일] 분석 결과 렌더링
-   - data_visualization.md 의 2-1 규칙을 따릅니다.
-   - 기본 차트: 가로 막대 그래프, 데이터 레이블 = 비율(%)
-   - 그룹별 비교 차트: 전체 결과는 연한 회색 막대, 그룹 결과는 꺾은선
-   - 데이터 테이블: 보기별 비율(%) 과 응답자 수(N)
-   - 툴팁/범례는 스펙에 맞춰 구성
+   [분석 결과 렌더링]
+   - data_visualization.md 의 2-1(객관식 단일), 2-3(객관식 순위) 규칙을 따릅니다.
    ===================================================================== */
 
 const GROUP_PALETTE = [
@@ -3268,11 +3536,22 @@ const GROUP_PALETTE = [
   '#a77bc6', '#7bbfb8', '#c67bad', '#9ba07b'
 ];
 const SINGLE_BAR_COLOR = '#4a4a4a';
-const COMPARE_BAR_COLOR = '#e4e4e4';
+const COMPARE_BAR_COLOR = '#d9d9d9';
+
+// 객관식 순위: 무채색 계열 안에서 순위별 차이를 조금 더 크게 둡니다.
+const RANK_PALETTE = [
+  '#1f1f1f', '#555555', '#8b8b8b', '#b1b1b1', '#c7c7c7', '#d9d9d9', '#e6e6e6', '#f0f0f0'
+];
+function rankColor(idx) {
+  if (idx < RANK_PALETTE.length) return RANK_PALETTE[idx];
+  return RANK_PALETTE[RANK_PALETTE.length - 1];
+}
 
 const resultState = {
   codebookByLabel: new Map(),
-  hiddenGroupKeys: new Map(), // targetLabel -> Set of hidden group values
+  codebookRowsByLabel: new Map(),
+  hiddenGroupKeys: new Map(),
+  hiddenRankKeys: new Map(),
   otherResponseTexts: new Map(),
   tooltipEl: null,
   initialized: false
@@ -3280,7 +3559,11 @@ const resultState = {
 
 function buildCodebookIndex(codebookRows) {
   const map = new Map();
-  if (!codebookRows || codebookRows.length < 2) return map;
+  const rowsByLabel = new Map();
+  if (!codebookRows || codebookRows.length < 2) {
+    resultState.codebookRowsByLabel = rowsByLabel;
+    return map;
+  }
   const header = (codebookRows[0] || []).map(normalizeHeader);
   const col = name => header.indexOf(name);
   const iLabel = col('question_label');
@@ -3288,45 +3571,31 @@ function buildCodebookIndex(codebookRows) {
   const iType = col('response_type');
   const iRole = col('data_column_role');
   const iOptions = col('response_options');
-  const iValueCount = col('value_count');
-  const iValueCodeMap = col('value_code_map');
   const iOther = col('other_input_expected');
-  const iDashboardValueType = col('dashboard_value_type');
+  const iValueCount = col('value_count');
 
   for (let r = 1; r < codebookRows.length; r++) {
     const row = codebookRows[r] || [];
     const label = cleanCell(row[iLabel]);
-    if (!label || map.has(label)) continue;
+    if (!label) continue;
+    if (!rowsByLabel.has(label)) rowsByLabel.set(label, []);
+    rowsByLabel.get(label).push(row);
+    if (map.has(label)) continue;
     const opts = cleanCell(row[iOptions])
       .split('|').map(cleanCell).filter(Boolean);
+    const vcRaw = iValueCount >= 0 ? cleanCell(row[iValueCount]) : '';
+    const valueCount = vcRaw ? Number(vcRaw) : null;
     map.set(label, {
       label,
       full: cleanCell(row[iFull]),
       type: cleanCell(row[iType]),
       role: cleanCell(row[iRole]),
       options: opts,
-      valueCount: Number.parseInt(cleanCell(row[iValueCount]), 10) || 0,
-      valueCodeMap: parseValueCodeMap(cleanCell(row[iValueCodeMap])),
       otherInput: cleanCell(row[iOther]).toUpperCase() === 'Y',
-      dashboardValueType: cleanCell(row[iDashboardValueType])
+      valueCount: Number.isFinite(valueCount) ? valueCount : null
     });
   }
-  return map;
-}
-
-function parseValueCodeMap(raw) {
-  const map = new Map();
-  cleanCell(raw).split('|').forEach(part => {
-    const item = cleanCell(part);
-    if (!item) return;
-    const eqIndex = item.indexOf('=');
-    if (eqIndex < 0) return;
-    const key = cleanCell(item.slice(0, eqIndex));
-    const value = cleanCell(item.slice(eqIndex + 1));
-    const score = Number.parseInt(key, 10);
-    if (!Number.isFinite(score)) return;
-    map.set(score, value);
-  });
+  resultState.codebookRowsByLabel = rowsByLabel;
   return map;
 }
 
@@ -3337,7 +3606,7 @@ function getTargetChipLabels() {
 }
 function getCriterionChipLabel() {
   const chip = document.querySelector('#drop-criterion .chip');
-  return chip ? (chip.dataset.key || chip.dataset.label || null) : null;
+  return chip ? chip.dataset.label : null;
 }
 
 function clearDropZone(zoneId) {
@@ -3364,13 +3633,26 @@ function getFilteredLabelDataRows() {
   });
 }
 
+/* ---------- 공통 포맷 ---------- */
+function formatPercent(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '0.0%';
+  return `${(Math.round((num + 1e-10) * 10) / 10).toFixed(1)}%`;
+}
+
+function isOtherOption(option) {
+  return cleanCell(option).includes('기타');
+}
+
+/* =========================================================
+   [객관식 단일] 집계 / 렌더
+   ========================================================= */
 function aggregateSingle(targetLabel, criterionLabel, rows) {
   const entry = resultState.codebookByLabel.get(targetLabel);
   if (!entry) return null;
   const tIdx = filterState.headerMap ? filterState.headerMap.get(targetLabel) : undefined;
   if (tIdx === undefined) return null;
 
-  // 보기 목록: 코드북 기준 우선, 데이터에만 존재하는 값은 뒤에 보충
   const optionOrder = [...entry.options];
   const optionSet = new Set(optionOrder);
   const totalCount = {};
@@ -3507,7 +3789,6 @@ function aggregateMultiple(targetLabel, criterionLabel, rows) {
       pct: totalN > 0 ? (count / totalN) * 100 : 0
     };
   });
-
   const visibleTotalResults = totalResults.filter(result => result.count > 0);
 
   let groupResults = null;
@@ -3527,7 +3808,6 @@ function aggregateMultiple(targetLabel, criterionLabel, rows) {
       const groupOrder = [...critEntry.options];
       const groupSet = new Set(groupOrder);
       const byGroup = new Map();
-
       groupOrder.forEach(groupValue => {
         byGroup.set(groupValue, {
           n: 0,
@@ -3546,7 +3826,6 @@ function aggregateMultiple(targetLabel, criterionLabel, rows) {
             count: Object.fromEntries(optionEntries.map(({ option }) => [option, 0]))
           });
         }
-
         const group = byGroup.get(groupValue);
         group.n += 1;
         optionEntries.forEach(({ option, expandedLabel }) => {
@@ -3586,194 +3865,14 @@ function aggregateMultiple(targetLabel, criterionLabel, rows) {
   };
 }
 
-function parseScaleScore(value) {
-  const text = cleanCell(value);
-  if (!text) return null;
-  const num = Number(text);
-  if (!Number.isFinite(num)) return null;
-  const score = Math.round(num);
-  return Math.abs(num - score) < 1e-8 ? score : null;
-}
-
-function getScaleScoreColors(scoreCount) {
-  const fixedPalettes = {
-    5: ['#c96d6d', '#e6aaaa', '#d9d9d9', '#a9c1de', '#5f86b2'],
-    7: ['#b85f5f', '#d98989', '#edbcbc', '#d9d9d9', '#bdd0e4', '#8fb0d1', '#5f86b2']
-  };
-  if (fixedPalettes[scoreCount]) return [...fixedPalettes[scoreCount]];
-
-  const midpoint = (scoreCount + 1) / 2;
-  return Array.from({ length: scoreCount }, (_, index) => {
-    const score = index + 1;
-    if (score === Math.round(midpoint) && Math.abs(score - midpoint) < 0.001) return '#d9d9d9';
-    if (score < midpoint) {
-      const distance = midpoint - score;
-      return distance > 1.5 ? '#c96d6d' : '#e6aaaa';
-    }
-    const distance = score - midpoint;
-    return distance > 1.5 ? '#5f86b2' : '#a9c1de';
-  });
-}
-
-function resolveScaleMeta(entry, rows, valueIndex) {
-  let maxScore = entry && entry.valueCount > 0 ? entry.valueCount : 0;
-  rows.forEach(row => {
-    const score = parseScaleScore((row || [])[valueIndex]);
-    if (score && score > maxScore) maxScore = score;
-  });
-  if (maxScore <= 0) return null;
-
-  const scoreOrder = Array.from({ length: maxScore }, (_, index) => index + 1);
-  const scoreLabels = new Map();
-  scoreOrder.forEach(score => {
-    const mapped = entry && entry.valueCodeMap instanceof Map ? cleanCell(entry.valueCodeMap.get(score)) : '';
-    scoreLabels.set(score, mapped || `${score}점`);
-  });
-
-  return {
-    maxScore,
-    scoreOrder,
-    scoreLabels,
-    scoreColors: getScaleScoreColors(maxScore)
-  };
-}
-
-function buildScaleResultsForRows(sourceRows, valueIndex, meta) {
-  const counts = Object.fromEntries(meta.scoreOrder.map(score => [score, 0]));
-  let totalN = 0;
-  let sum = 0;
-
-  sourceRows.forEach(row => {
-    const score = parseScaleScore((row || [])[valueIndex]);
-    if (!score || !counts.hasOwnProperty(score)) return;
-    counts[score] += 1;
-    totalN += 1;
-    sum += score;
-  });
-
-  const results = meta.scoreOrder.map(score => ({
-    option: `${score}점`,
-    score,
-    label: meta.scoreLabels.get(score) || `${score}점`,
-    count: counts[score] || 0,
-    pct: totalN > 0 ? ((counts[score] || 0) / totalN) * 100 : 0,
-    color: meta.scoreColors[score - 1] || meta.scoreColors[meta.scoreColors.length - 1]
-  }));
-
-  return {
-    n: totalN,
-    mean: totalN > 0 ? (sum / totalN) : 0,
-    results
-  };
-}
-
-function aggregateScale(targetLabel, criterionLabel, rows) {
-  const entry = resultState.codebookByLabel.get(targetLabel);
-  if (!entry) return null;
-  const valueIndex = filterState.headerMap ? filterState.headerMap.get(targetLabel) : undefined;
-  if (valueIndex === undefined) return null;
-
-  const meta = resolveScaleMeta(entry, rows, valueIndex);
-  if (!meta) return null;
-
-  const total = buildScaleResultsForRows(rows, valueIndex, meta);
-
-  let groupResults = null;
-  if (criterionLabel) {
-    const critEntry = resultState.codebookByLabel.get(criterionLabel) || (() => {
-      const candidate = getCandidateByKey(criterionLabel);
-      if (!candidate) return null;
-      return {
-        label: candidate.label,
-        type: '객관식 단일',
-        role: 'raw',
-        options: candidate.options || []
-      };
-    })();
-    const cIdx = filterState.headerMap.get(criterionLabel);
-    if (critEntry && cIdx !== undefined) {
-      const groupOrder = [...critEntry.options];
-      const groupSet = new Set(groupOrder);
-      const byGroup = new Map();
-      groupOrder.forEach(groupValue => byGroup.set(groupValue, []));
-
-      rows.forEach(row => {
-        const groupValue = cleanCell((row || [])[cIdx]);
-        const score = parseScaleScore((row || [])[valueIndex]);
-        if (groupValue === '' || !score) return;
-        if (!groupSet.has(groupValue)) {
-          groupSet.add(groupValue);
-          groupOrder.push(groupValue);
-          byGroup.set(groupValue, []);
-        }
-        byGroup.get(groupValue).push(row);
-      });
-
-      groupResults = groupOrder.map(groupValue => {
-        const grouped = buildScaleResultsForRows(byGroup.get(groupValue) || [], valueIndex, meta);
-        return {
-          value: groupValue,
-          label: `${critEntry.label}: ${groupValue}`,
-          n: grouped.n,
-          mean: grouped.mean,
-          results: grouped.results
-        };
-      });
-    }
-  }
-
-  return {
-    targetLabel,
-    codebookEntry: entry,
-    totalN: total.n,
-    mean: total.mean,
-    scoreOrder: meta.scoreOrder,
-    scoreLabels: meta.scoreLabels,
-    scoreColors: meta.scoreColors,
-    scaleMax: meta.maxScore,
-    totalResults: total.results,
-    visualType: 'scale',
-    criterionLabel: groupResults ? criterionLabel : null,
-    groupResults
-  };
-}
-
-function formatPercent(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return '0.0%';
-  return `${(Math.round((num + 1e-10) * 10) / 10).toFixed(1)}%`;
-}
-
-function isOtherOption(option) {
-  return cleanCell(option).includes('기타');
-}
-
-function renderTableOptionLabel(option, targetLabel) {
-  const safeOption = escapeHtml(option);
-  if (!isOtherOption(option)) return safeOption;
-  return `${safeOption}<button type="button" class="other-response-open-btn" data-open-other="${escapeHtml(targetLabel)}">응답 보기</button>`;
-}
-
-function getDisplayGroupResults(groupResults, hidden) {
-  if (!Array.isArray(groupResults)) return [];
-  return groupResults.filter(group => {
-    const hasResponse = (group.results || []).some(r => (r.count || 0) > 0);
-    if (!hasResponse) return false;
-    if (hidden && hidden.has(group.value)) return false;
-    return true;
-  });
-}
-
-function getGroupColor(groupResults, groupValue) {
-  const baseGroups = getDisplayGroupResults(groupResults);
-  const idx = baseGroups.findIndex(group => group.value === groupValue);
-  return GROUP_PALETTE[(idx < 0 ? 0 : idx) % GROUP_PALETTE.length];
-}
-
 function buildBasicChartHtml(data) {
   const rows = data.totalResults;
   const rowHtml = rows.map(r => {
     const widthStr = `${Math.max(0, Math.min(100, r.pct))}%`;
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
     const tip = encodeURIComponent(JSON.stringify({
       kind: 'basic-bar',
       option: r.option,
@@ -3782,7 +3881,7 @@ function buildBasicChartHtml(data) {
     }));
     return `
       <div class="hbar-row">
-        <div class="hbar-label" title="${escapeHtml(r.option)}">${escapeHtml(r.option)}</div>
+        <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${SINGLE_BAR_COLOR};"
@@ -3800,6 +3899,10 @@ function buildGroupCompareChartHtml(data, hidden) {
   const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
   const rowHtml = rows.map(r => {
     const widthStr = `${Math.max(0, Math.min(100, r.pct))}%`;
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
     const tip = encodeURIComponent(JSON.stringify({
       kind: 'compare-bar',
       option: r.option,
@@ -3808,7 +3911,7 @@ function buildGroupCompareChartHtml(data, hidden) {
     }));
     return `
       <div class="hbar-row">
-        <div class="hbar-label" title="${escapeHtml(r.option)}">${escapeHtml(r.option)}</div>
+        <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${COMPARE_BAR_COLOR};"
@@ -3851,7 +3954,7 @@ function buildGroupCompareChartHtml(data, hidden) {
     <div class="hbar-chart group-compare">
       ${rowHtml}
       <div class="hbar-group-overlay">
-        <svg class="group-line-svg" preserveAspectRatio="none">
+        <svg class="group-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
           ${pathsHtml}
         </svg>
         ${dotsHtml}
@@ -3860,119 +3963,33 @@ function buildGroupCompareChartHtml(data, hidden) {
   `;
 }
 
-function formatScaleMean(value) {
-  const num = Number(value);
-  if (!Number.isFinite(num) || num <= 0) return '0.0';
-  return (Math.round((num + 1e-10) * 10) / 10).toFixed(1);
+function getDisplayGroupResults(groupResults, hidden) {
+  if (!Array.isArray(groupResults)) return [];
+  return groupResults.filter(group => {
+    const hasResponse = Array.isArray(group.results)
+      ? group.results.some(r => (r.count || 0) > 0)
+      : Array.isArray(group.perOption)
+        ? group.perOption.some(r => {
+            const totalCount = r.totalCount || 0;
+            const perRankCount = Array.isArray(r.perRank)
+              ? r.perRank.reduce((sum, pr) => sum + (pr.count || 0), 0)
+              : 0;
+            return totalCount > 0 || perRankCount > 0;
+          })
+        : ((group.n || 0) > 0);
+    if (!hasResponse) return false;
+    if (hidden && hidden.has(group.value)) return false;
+    return true;
+  });
 }
 
-function getScaleMeanLeft(mean, maxScore) {
-  if (!Number.isFinite(mean) || mean <= 0) return 0;
-  if (maxScore <= 1) return 0;
-  return Math.max(0, Math.min(100, ((mean - 1) / (maxScore - 1)) * 100));
-}
-
-function getScalePointLeft(score, maxScore) {
-  if (!Number.isFinite(score) || maxScore <= 1) return 0;
-  return Math.max(0, Math.min(100, ((score - 1) / (maxScore - 1)) * 100));
-}
-
-function buildScaleBarHtml(data, result, groupLabel) {
-  const meanLeft = getScaleMeanLeft(result.mean, data.scaleMax);
-  const segmentsHtml = data.totalResults.map(scoreResult => {
-    const current = (result.results || []).find(item => item.score === scoreResult.score) || scoreResult;
-    const width = Math.max(0, Math.min(100, current.pct));
-    const label = width >= 8 ? formatPercent(current.pct) : '';
-    const tip = encodeURIComponent(JSON.stringify({
-      kind: 'scale-segment',
-      groupLabel: groupLabel || '응답자 전체',
-      score: current.score,
-      scoreLabel: current.label,
-      pct: current.pct,
-      count: current.count
-    }));
-    return `
-      <div class="scale-segment"
-           style="width:${width}%; background:${current.color};"
-           data-tip="${tip}">
-        ${label ? `<span class="scale-segment-label ${current.score <= Math.ceil(data.scaleMax / 2) ? 'is-dark' : ''}">${label}</span>` : ''}
-      </div>
-    `;
-  }).join('');
-  const axisHtml = data.scoreOrder.map(score => `
-    <span class="scale-axis-point" style="left:${getScalePointLeft(score, data.scaleMax)}%;">
-      <span class="scale-axis-tick"></span>
-    </span>
-  `).join('');
-
-  const meanTip = encodeURIComponent(JSON.stringify({
-    kind: 'scale-mean',
-    groupLabel: groupLabel || '응답자 전체',
-    mean: result.mean,
-    scaleMax: data.scaleMax,
-    count: result.n
-  }));
-
-  return `
-    <div class="scale-bar-wrap">
-      <div class="scale-mean-row">
-        <div class="scale-mean" style="left:${meanLeft}%;" data-tip="${meanTip}">
-          <span class="scale-mean-value">평균 : ${formatScaleMean(result.mean)}</span>
-          <span class="scale-mean-mark"></span>
-        </div>
-      </div>
-      <div class="scale-axis">${axisHtml}</div>
-      <div class="scale-bar">
-        <div class="scale-track">
-          ${segmentsHtml}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function buildScaleChartHtml(data, hidden) {
-  if (!data.groupResults) {
-    return `
-      <div class="scale-chart">
-        ${buildScaleBarHtml(data, { n: data.totalN, mean: data.mean, results: data.totalResults }, '응답자 전체')}
-      </div>
-    `;
-  }
-
-  const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
-  const rowsHtml = displayGroups.map(group => `
-    <div class="scale-group-row">
-      <div class="scale-group-label">
-        <strong>${escapeHtml(group.label)}</strong>
-        <span>N=${group.n.toLocaleString()}</span>
-      </div>
-      ${buildScaleBarHtml(data, group, group.label)}
-    </div>
-  `).join('');
-
-  return `<div class="scale-group-chart">${rowsHtml}</div>`;
+function getGroupColor(groupResults, groupValue) {
+  const baseGroups = getDisplayGroupResults(groupResults);
+  const idx = baseGroups.findIndex(group => group.value === groupValue);
+  return GROUP_PALETTE[(idx < 0 ? 0 : idx) % GROUP_PALETTE.length];
 }
 
 function buildLegendHtml(data, hidden) {
-  if (data.visualType === 'scale') {
-    const items = data.totalResults.map(result => {
-      const suffix = cleanCell(result.label) && result.label !== `${result.score}점`
-        ? ` · ${escapeHtml(result.label)}`
-        : '';
-      return `
-        <div class="scale-score-item">
-          <span class="scale-score-swatch" style="background:${result.color};"></span>
-          <span>${result.score}점${suffix}</span>
-        </div>
-      `;
-    }).join('');
-    return `
-      <aside class="legend-panel">
-        <div class="scale-score-legend">${items}</div>
-      </aside>
-    `;
-  }
   if (!data.groupResults) return '';
   const displayGroups = getDisplayGroupResults(data.groupResults);
   if (displayGroups.length === 0) return '';
@@ -3989,8 +4006,8 @@ function buildLegendHtml(data, hidden) {
   }).join('');
   return `
     <aside class="legend-panel">
-      <div class="legend" data-target="${escapeHtml(data.targetLabel)}">${items}</div>
-      <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}">
+      <div class="legend" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">${items}</div>
+      <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
         <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
         <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
       </div>
@@ -3998,46 +4015,77 @@ function buildLegendHtml(data, hidden) {
   `;
 }
 
+function renderTableOptionLabel(option, targetLabel) {
+  const safeOption = escapeHtml(option);
+  if (!isOtherOption(option)) return safeOption;
+  return `${safeOption}<button type="button" class="other-response-open-btn" data-open-other="${escapeHtml(targetLabel)}">응답 보기</button>`;
+}
+
+function buildQuestionFullHtml(entry) {
+  return entry && entry.full
+    ? `<div class="result-sub">Q. ${escapeHtml(entry.full)}</div>`
+    : '';
+}
+
+function getResultVisualClass(hasLegend) {
+  return hasLegend ? 'result-visual has-legend' : 'result-visual';
+}
+
+function buildGroupedCountHeader(label, count, colspan) {
+  return `<th colspan="${colspan}" class="group-head">${escapeHtml(label)}<br><span style="font-weight:500;color:var(--text-3);">N=${Number(count || 0).toLocaleString()}</span></th>`;
+}
+
+function wrapResultTable(tableHtml, noteHtml = '') {
+  return `
+    <div class="result-table-wrap">
+      ${tableHtml}
+    </div>
+    ${noteHtml}
+  `;
+}
+
 function buildChoiceDataTableHtml(data) {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
     const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
-    return `
-      <div class="result-table-wrap">
-        <table class="result-table">
-          <thead>
+    const isMultiple = data.codebookEntry && data.codebookEntry.type === '객관식 중복';
+    const helperText = isMultiple
+      ? '<div class="result-table-note">복수 응답은 비율 합계가 100%를 넘을 수 있습니다.</div>'
+      : '';
+    const tableHtml = `
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>응답 보기</th>
+            <th class="num">비율(%)</th>
+            <th class="num">빈도수 (명)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${totalResults.map(r => `
             <tr>
-              <th>응답 보기</th>
-              <th class="num">비율(%)</th>
-              <th class="num">빈도수 (명)</th>
+              <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+              <td class="num">${formatPercent(r.pct)}</td>
+              <td class="num">${r.count.toLocaleString()}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${totalResults.map(r => `
-              <tr>
-                <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
-                <td class="num">${formatPercent(r.pct)}</td>
-                <td class="num">${r.count.toLocaleString()}</td>
-              </tr>
-            `).join('')}
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="num">${formatPercent(sumPct)}</td>
-              <td class="num">${totalN.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          `).join('')}
+          <tr class="total-row">
+            <td>합계</td>
+            <td class="num">${formatPercent(sumPct)}</td>
+            <td class="num">${totalN.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
     `;
+    return wrapResultTable(tableHtml, helperText);
   }
 
   const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
   const displayGroups = getDisplayGroupResults(groupResults, hidden);
-
   const topRow1 = [
     `<th rowspan="2">응답 보기</th>`,
-    `<th colspan="2" class="group-head">응답자 전체<br><span style="font-weight:500;color:var(--text-3);">N=${totalN.toLocaleString()}</span></th>`,
-    ...displayGroups.map(g => `<th colspan="2" class="group-head">${escapeHtml(g.label)}<br><span style="font-weight:500;color:var(--text-3);">N=${g.n.toLocaleString()}</span></th>`)
+    buildGroupedCountHeader('응답자 전체', totalN, 2),
+    ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, 2))
   ].join('');
   const topRow2 = [
     `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`,
@@ -4058,104 +4106,623 @@ function buildChoiceDataTableHtml(data) {
       </tr>
     `;
   }).join('');
+  const totalGroupCells = displayGroups.map(g => {
+    const totalCount = totalResults.reduce((sum, result) => {
+      const gr = g.results.find(x => x.option === result.option);
+      return sum + ((gr && gr.count) || 0);
+    }, 0);
+    const totalPct = g.n > 0 ? (totalCount / g.n) * 100 : 0;
+    return `<td class="num group-col">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
+  }).join('');
 
+  const tableHtml = `
+    <table class="result-table">
+      <thead>
+        <tr>${topRow1}</tr>
+        <tr>${topRow2}</tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        <tr class="total-row">
+          <td>합계</td>
+          <td class="num group-col">${formatPercent(totalResults.reduce((sum, result) => sum + (result.pct || 0), 0))}</td>
+          <td class="num">${totalN.toLocaleString()}</td>
+          ${totalGroupCells}
+        </tr>
+      </tbody>
+    </table>
+  `;
+  return wrapResultTable(tableHtml);
+}
+
+function buildDataTableHtml(data) {
+  return buildChoiceDataTableHtml(data);
+}
+
+/* =========================================================
+   [객관식 순위] 집계 / 렌더
+   ========================================================= */
+
+// 원 문항 라벨에서 순위별 expanded 컬럼 목록을 찾는다
+// pattern: `${targetLabel}__N순위`
+function findRankExpandedColumns(targetLabel) {
+  const headerMap = filterState.headerMap;
+  if (!headerMap) return [];
+  const cols = [];
+  for (let n = 1; n <= 30; n++) {
+    const name = `${targetLabel}__${n}순위`;
+    const idx = headerMap.get(name);
+    if (idx === undefined) break;
+    cols.push({ rank: n, label: name, colIdx: idx });
+  }
+  return cols;
+}
+
+function aggregateRank(targetLabel, criterionLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry) return null;
+  const rawIdx = filterState.headerMap ? filterState.headerMap.get(targetLabel) : undefined;
+
+  const rankCols = findRankExpandedColumns(targetLabel);
+  if (rankCols.length === 0) return null;
+  const rankCount = rankCols.length;
+
+  const optionOrder = [...entry.options];
+  const optionSet = new Set(optionOrder);
+  // perRankCount[rankIdx][option] = count
+  const perRankCount = rankCols.map(() => {
+    const m = {};
+    optionOrder.forEach(o => { m[o] = 0; });
+    return m;
+  });
+  // respondent coverage (raw 또는 any rank filled)
+  let respondentN = 0;
+
+  rows.forEach(row => {
+    const raw = rawIdx !== undefined ? cleanCell((row || [])[rawIdx]) : '';
+    let touched = false;
+    rankCols.forEach((rc, ri) => {
+      const v = cleanCell(row[rc.colIdx]);
+      if (v === '') return;
+      if (!optionSet.has(v)) {
+        optionSet.add(v);
+        optionOrder.push(v);
+        perRankCount.forEach(m => { if (m[v] === undefined) m[v] = 0; });
+      }
+      perRankCount[ri][v] = (perRankCount[ri][v] || 0) + 1;
+      touched = true;
+    });
+    if (touched || raw !== '') respondentN += 1;
+  });
+
+  // weighted score: rank i (1-indexed) 는 (rankCount - i + 1)점
+  // 종합 순위 판정에 사용
+  const weightedScore = {};
+  optionOrder.forEach(o => {
+    weightedScore[o] = 0;
+    rankCols.forEach((rc, ri) => {
+      const w = rankCount - ri;
+      weightedScore[o] += (perRankCount[ri][o] || 0) * w;
+    });
+  });
+
+  const rawOnlyCount = {};
+  optionOrder.forEach(o => { rawOnlyCount[o] = 0; });
+  if (rawIdx !== undefined) {
+    rows.forEach(row => {
+      const raw = cleanCell((row || [])[rawIdx]);
+      if (!raw || raw.includes('|')) return;
+      if (!Object.prototype.hasOwnProperty.call(rawOnlyCount, raw)) return;
+      const hasRank = rankCols.some((rc) => cleanCell((row || [])[rc.colIdx]) !== '');
+      if (!hasRank) rawOnlyCount[raw] += 1;
+    });
+  }
+
+  // 0건인 보기는 숨김하되, raw 단독 응답은 순위가 없어도 유지합니다.
+  const nonzeroOptionOrder = optionOrder.filter(o => {
+    const hasRankCount = rankCols.some((_, ri) => (perRankCount[ri][o] || 0) > 0);
+    return hasRankCount || (rawOnlyCount[o] || 0) > 0;
+  });
+  const visibleOptionOrder = optionOrder.filter(o => {
+    if (isOtherOption(o)) return false;
+    return rankCols.some((_, ri) => (perRankCount[ri][o] || 0) > 0);
+  });
+
+  // 종합 순위 계산 (내림차순, 동률이면 공동 순위)
+  const sortedVisible = [...visibleOptionOrder].sort((a, b) => weightedScore[b] - weightedScore[a]);
+  const ranking = [];
+  let currentPos = 0;
+  let lastScore = null;
+  let seen = 0;
+  sortedVisible.forEach(opt => {
+    seen += 1;
+    const sc = weightedScore[opt];
+    if (lastScore === null || sc !== lastScore) {
+      currentPos = seen;
+      lastScore = sc;
+    }
+    ranking.push({ option: opt, position: currentPos, score: sc });
+  });
+
+  // per-option, per-rank 비율 표 데이터
+  // basis: 순위별 응답자 수가 아니라 전체 응답자 수(respondentN)
+  const totalResults = nonzeroOptionOrder.map(opt => {
+    const perRank = rankCols.map((rc, ri) => {
+      const c = perRankCount[ri][opt] || 0;
+      const pct = respondentN > 0 ? (c / respondentN) * 100 : 0;
+      return { rank: rc.rank, count: c, pct };
+    });
+    return {
+      option: opt,
+      score: weightedScore[opt],
+      perRank,
+      totalPct: perRank.reduce((s, r) => s + r.pct, 0) + (respondentN > 0 ? ((rawOnlyCount[opt] || 0) / respondentN) * 100 : 0),
+      totalCount: perRank.reduce((s, r) => s + r.count, 0) + (rawOnlyCount[opt] || 0)
+    };
+  });
+
+  // 그룹별 비교
+  let groupResults = null;
+  if (criterionLabel) {
+    const critEntry = resultState.codebookByLabel.get(criterionLabel);
+    const cIdx = filterState.headerMap.get(criterionLabel);
+    if (critEntry && cIdx !== undefined) {
+      const groupOrder = [...critEntry.options];
+      const groupSet = new Set(groupOrder);
+      // per-group per-rank count
+      const byGroup = new Map();
+      const makeBucket = () => ({
+        n: 0,
+        perRankCount: rankCols.map(() => Object.fromEntries(optionOrder.map(o => [o, 0])))
+      });
+      groupOrder.forEach(gv => byGroup.set(gv, makeBucket()));
+
+      rows.forEach(row => {
+        const gv = cleanCell(row[cIdx]);
+        if (gv === '') return;
+        if (!groupSet.has(gv)) {
+          groupSet.add(gv);
+          groupOrder.push(gv);
+          byGroup.set(gv, makeBucket());
+        }
+        const bucket = byGroup.get(gv);
+        const raw = rawIdx !== undefined ? cleanCell((row || [])[rawIdx]) : '';
+        let touched = false;
+        rankCols.forEach((rc, ri) => {
+          const v = cleanCell(row[rc.colIdx]);
+          if (v === '') return;
+          if (!optionSet.has(v)) {
+            optionSet.add(v);
+            optionOrder.push(v);
+            byGroup.forEach(b => {
+              b.perRankCount.forEach(m => { if (m[v] === undefined) m[v] = 0; });
+            });
+          }
+          bucket.perRankCount[ri][v] = (bucket.perRankCount[ri][v] || 0) + 1;
+          touched = true;
+        });
+        if (touched || raw !== '') bucket.n += 1;
+      });
+
+      groupResults = groupOrder.map(gv => {
+        const bucket = byGroup.get(gv);
+        const gRawOnlyCount = {};
+        nonzeroOptionOrder.forEach(opt => { gRawOnlyCount[opt] = 0; });
+        if (rawIdx !== undefined) {
+          rows.forEach(row => {
+            const rowGroup = cleanCell((row || [])[cIdx]);
+            if (rowGroup !== gv) return;
+            const raw = cleanCell((row || [])[rawIdx]);
+            if (!raw || raw.includes('|')) return;
+            if (!Object.prototype.hasOwnProperty.call(gRawOnlyCount, raw)) return;
+            const hasRank = rankCols.some((rc) => cleanCell((row || [])[rc.colIdx]) !== '');
+            if (!hasRank) gRawOnlyCount[raw] += 1;
+          });
+        }
+        // group 내부 가중 점수
+        const gScore = {};
+        visibleOptionOrder.forEach(opt => {
+          gScore[opt] = 0;
+          rankCols.forEach((rc, ri) => {
+            const w = rankCount - ri;
+            gScore[opt] += (bucket.perRankCount[ri][opt] || 0) * w;
+          });
+        });
+        const gSorted = [...visibleOptionOrder].sort((a, b) => gScore[b] - gScore[a]);
+        const gRanking = [];
+        let pos = 0; let last = null; let n = 0;
+        gSorted.forEach(opt => {
+          n += 1;
+          const sc = gScore[opt];
+          if (last === null || sc !== last) { pos = n; last = sc; }
+          gRanking.push({ option: opt, position: pos, score: sc });
+        });
+        const gPerOption = nonzeroOptionOrder.map(opt => ({
+          option: opt,
+          score: gScore[opt],
+          totalCount: rankCols.reduce((sum, _rc, ri) => sum + (bucket.perRankCount[ri][opt] || 0), 0) + (gRawOnlyCount[opt] || 0),
+          perRank: rankCols.map((rc, ri) => {
+            const c = bucket.perRankCount[ri][opt] || 0;
+            const pct = bucket.n > 0 ? (c / bucket.n) * 100 : 0;
+            return { rank: rc.rank, count: c, pct };
+          })
+        }));
+        return {
+          value: gv,
+          label: `${criterionLabel}: ${gv}`,
+          n: bucket.n,
+          ranking: gRanking,
+          perOption: gPerOption
+        };
+      });
+    }
+  }
+
+  return {
+    targetLabel,
+    codebookEntry: entry,
+    rankCount,
+    rankLabels: rankCols.map(rc => `${rc.rank}순위`),
+    respondentN,
+    optionOrder: visibleOptionOrder,
+    totalResults,
+    ranking,
+    criterionLabel: groupResults ? criterionLabel : null,
+    groupResults
+  };
+}
+
+function buildRankSummaryHtml(data) {
+  if (!data.ranking || data.ranking.length === 0) return '';
+  const tokens = data.ranking.map((r, i) => {
+    const prev = i > 0 ? data.ranking[i - 1] : null;
+    const sepHtml = prev
+      ? `<span class="rank-sep">${prev.position === r.position ? '=' : '&gt;'}</span>`
+      : '';
+    return `${sepHtml}<span class="rank-token"><span class="rank-pos">${r.position}위</span><span class="rank-opt">${escapeHtml(r.option)}</span></span>`;
+  }).join('');
   return `
-    <div class="result-table-wrap">
-      <table class="result-table">
-        <thead>
-          <tr>${topRow1}</tr>
-          <tr>${topRow2}</tr>
-        </thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
+    <div class="rank-summary">
+      <div class="rank-summary-line">
+        <div class="rank-summary-title">종합 순위</div>
+        <div>${tokens}</div>
+      </div>
     </div>
   `;
 }
 
-function buildScaleDataTableHtml(data) {
-  const { totalResults, groupResults, totalN } = data;
-  if (!groupResults) {
-    const sumPct = totalResults.reduce((sum, result) => sum + result.pct, 0);
+function buildRankStackChartHtml(data, hiddenRanks) {
+  const rows = data.totalResults;
+  const rankLabels = data.rankLabels;
+  const rowHtml = rows.map(r => {
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    const rankedCount = r.perRank.reduce((s, pr) => s + (pr.count || 0), 0);
+    const nonRankedCount = Math.max(0, (r.totalCount || 0) - rankedCount);
+    const nonRankedPct = Math.max(0, (r.totalPct || 0) - r.perRank.reduce((s, pr) => s + (pr.pct || 0), 0));
+    const segments = r.perRank.map((pr, ri) => {
+      if (hiddenRanks.has(ri)) return '';
+      const w = Math.max(0, pr.pct);
+      if (w <= 0) return '';
+      const color = rankColor(ri);
+      const tip = encodeURIComponent(JSON.stringify({
+        kind: 'rank-seg',
+        option: r.option,
+        rankLabel: rankLabels[ri],
+        pct: pr.pct,
+        count: pr.count
+      }));
+      return `<div class="rank-stack-seg"
+                   style="width:${w}%; background:${color};"
+                   data-tip="${tip}"></div>`;
+    }).join('');
+    const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
+    const fallbackWidth = Math.max(0, Math.min(100, nonRankedPct));
+    const fallbackTip = encodeURIComponent(JSON.stringify({
+      kind: 'rank-nonranked',
+      option: r.option,
+      rankLabel: '비순위 응답',
+      pct: nonRankedPct,
+      count: nonRankedCount
+    }));
+    const trackHtml = segments || (fallbackWidth > 0
+      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}"></div>`
+      : '');
     return `
-      <div class="result-table-wrap">
-        <table class="result-table">
-          <thead>
-            <tr>
-              <th>점수</th>
-              <th class="num">비율(%)</th>
-              <th class="num">빈도수 (명)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${totalResults.map(result => `
-              <tr>
-                <td>${result.score}점</td>
-                <td class="num">${formatPercent(result.pct)}</td>
-                <td class="num">${result.count.toLocaleString()}</td>
-              </tr>
-            `).join('')}
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="num">${formatPercent(sumPct)}</td>
-              <td class="num">${totalN.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="rank-stack-row">
+        <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+        <div class="rank-stack-track">${trackHtml}</div>
+        <div class="hbar-value rank-stack-value">${formatPercent(segments ? visiblePct : nonRankedPct)}</div>
       </div>
     `;
-  }
+  }).join('');
+  return `<div class="rank-stack-chart">${rowHtml}</div>`;
+}
 
-  const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
-  const displayGroups = getDisplayGroupResults(groupResults, hidden);
+function buildRankLegendHtml(data, hiddenRanks) {
+  const items = data.rankLabels.map((lab, ri) => {
+    const isHidden = hiddenRanks.has(ri);
+    const color = rankColor(ri);
+    return `
+      <label class="legend-item ${isHidden ? 'disabled' : ''}" data-rank="${ri}">
+        <input type="checkbox" ${isHidden ? '' : 'checked'}>
+        <span class="legend-swatch" style="background:${color}"></span>
+        <span>${escapeHtml(lab)}</span>
+      </label>
+    `;
+  }).join('');
+  return `
+    <aside class="legend-panel">
+      <div class="legend" data-target="${escapeHtml(data.targetLabel)}" data-mode="rank">${items}</div>
+      <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="rank">
+        <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
+        <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+      </div>
+    </aside>
+  `;
+}
 
-  const topRow1 = [
-    `<th rowspan="2">점수</th>`,
-    `<th colspan="2" class="group-head">응답자 전체<br><span style="font-weight:500;color:var(--text-3);">N=${totalN.toLocaleString()}</span></th>`,
-    ...displayGroups.map(group => `<th colspan="2" class="group-head">${escapeHtml(group.label)}<br><span style="font-weight:500;color:var(--text-3);">N=${group.n.toLocaleString()}</span></th>`)
+function buildRankGroupLegendHtml(data, hiddenGroups) {
+  if (!data.groupResults) return '';
+  const items = data.groupResults.map((g, i) => {
+    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
+    const isHidden = hiddenGroups.has(g.value);
+    return `
+      <label class="legend-item ${isHidden ? 'disabled' : ''}" data-group="${escapeHtml(g.value)}">
+        <input type="checkbox" ${isHidden ? '' : 'checked'}>
+        <span class="legend-swatch" style="background:${color}"></span>
+        <span>${escapeHtml(g.label)}</span>
+      </label>
+    `;
+  }).join('');
+  return `
+    <aside class="legend-panel">
+      <div class="legend" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">${items}</div>
+      <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
+        <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
+        <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+      </div>
+    </aside>
+  `;
+}
+
+function buildRankGroupTextHtml(data, hiddenGroups) {
+  if (!data.groupResults) return '';
+  const displayGroups = data.groupResults.filter(g => !hiddenGroups.has(g.value));
+  if (displayGroups.length === 0) return '';
+  const groupedRankings = displayGroups.map(g => {
+    const groups = [];
+    (g.ranking || []).forEach(item => {
+      const last = groups[groups.length - 1];
+      if (last && last.position === item.position) {
+        last.items.push(item);
+      } else {
+        groups.push({ position: item.position, items: [item] });
+      }
+    });
+    return { group: g, rankGroups: groups };
+  });
+  const displayRankCount = groupedRankings.reduce((max, entry) => Math.max(max, entry.rankGroups.length), 0);
+  const headCells = [
+    `<th>그룹</th>`,
+    ...Array.from({ length: displayRankCount }, (_, i) => `<th>${i + 1}위</th>`)
   ].join('');
-  const topRow2 = [
-    `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`,
-    ...displayGroups.map(() => `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`)
-  ].join('');
-
-  const bodyRows = totalResults.map(result => {
-    const groupCells = displayGroups.map(group => {
-      const groupResult = (group.results || []).find(item => item.score === result.score) || { pct: 0, count: 0 };
-      return `<td class="num group-col">${formatPercent(groupResult.pct)}</td><td class="num">${groupResult.count.toLocaleString()}</td>`;
+  const bodyRows = groupedRankings.map(({ group, rankGroups }) => {
+    const rankCells = Array.from({ length: displayRankCount }, (_, i) => {
+      const rankGroup = rankGroups[i];
+      const label = rankGroup
+        ? rankGroup.items.map(item => escapeHtml(item.option)).join(' / ')
+        : '-';
+      return `<td>${label}</td>`;
     }).join('');
     return `
       <tr>
-        <td>${result.score}점</td>
-        <td class="num group-col">${formatPercent(result.pct)}</td>
-        <td class="num">${result.count.toLocaleString()}</td>
+        <td class="group-name">${escapeHtml(group.label)}</td>
+        ${rankCells}
+      </tr>
+    `;
+  }).join('');
+  return `
+    <div class="rank-group-panel">
+      <div class="rank-group-heading">
+        <div class="rank-summary-title">그룹별 순위</div>
+      </div>
+      <div class="rank-group-table-wrap">
+        <table class="rank-group-table">
+          <thead><tr>${headCells}</tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
+  const { totalResults, rankLabels, groupResults, respondentN } = data;
+  if (!groupResults) {
+    const topRow = [
+      `<th rowspan="2">응답 보기</th>`,
+      ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
+      `<th rowspan="2" class="num group-col">가중 점수</th>`,
+      `<th rowspan="2" class="num">종합 순위</th>`
+    ].join('');
+    const subRow = [
+      ...rankLabels.map(() => `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`)
+    ].join('');
+    const bodyRows = totalResults.map(r => {
+      const rankObj = data.ranking.find(rk => rk.option === r.option);
+      const pos = rankObj ? rankObj.position : '-';
+      const rankCells = r.perRank.map(pr => `<td class="num">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
+      return `
+        <tr>
+          <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+          ${rankCells}
+          <td class="num">${rankObj ? r.score.toLocaleString() : '-'}</td>
+          <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
+        </tr>
+      `;
+    }).join('');
+    const totalRankCells = rankLabels.map((_, ri) => {
+      const totalCount = totalResults.reduce((sum, result) => sum + ((result.perRank[ri] && result.perRank[ri].count) || 0), 0);
+      const totalPct = respondentN > 0 ? (totalCount / respondentN) * 100 : 0;
+      return `<td class="num">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
+    }).join('');
+    const tableHtml = `
+      <table class="result-table">
+        <thead>
+          <tr>${topRow}</tr>
+          <tr>${subRow}</tr>
+        </thead>
+        <tbody>
+          ${bodyRows}
+          <tr class="total-row">
+            <td>합계</td>
+            ${totalRankCells}
+            <td class="num">-</td>
+            <td class="num">-</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    return wrapResultTable(
+      tableHtml,
+      `<div class="result-table-note">가중 점수 = Σ(응답 건수 × (${data.rankCount}-i+1))</div>`
+    );
+  }
+
+  const displayGroups = getDisplayGroupResults(groupResults, hiddenGroups);
+  const blockColspan = (rankLabels.length * 2) + 2;
+  const topRow = [
+    `<th rowspan="3">응답 보기</th>`,
+    buildGroupedCountHeader('응답자 전체', respondentN, blockColspan),
+    ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, blockColspan))
+  ].join('');
+  const midRow = [
+    ...[null, ...displayGroups].map(() => [
+      ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
+      `<th rowspan="2" class="num group-col">가중점수</th>`,
+      `<th rowspan="2" class="num">종합순위</th>`
+    ].join(''))
+  ].join('');
+  const subRow = [
+    ...[null, ...displayGroups].map(() =>
+      rankLabels.map(() => `<th class="num group-col">비율(%)</th><th class="num">빈도수 (명)</th>`).join('')
+    )
+  ].join('');
+
+  const bodyRows = totalResults.map(r => {
+    const totalRank = data.ranking.find(rk => rk.option === r.option);
+    const totalPos = totalRank ? totalRank.position : '-';
+    const rankCells = r.perRank.map(pr => `<td class="num group-col">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
+    const groupCells = displayGroups.map(g => {
+      const perOpt = g.perOption.find(x => x.option === r.option);
+      const perRankCells = (perOpt ? perOpt.perRank : rankLabels.map(() => ({ pct: 0, count: 0 })))
+        .map(pr => `<td class="num group-col">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`)
+        .join('');
+      const rk = g.ranking.find(x => x.option === r.option);
+      const po = rk ? rk.position : '-';
+      const sc = rk ? rk.score : 0;
+      return `${perRankCells}<td class="num group-col">${rk ? sc.toLocaleString() : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
+    }).join('');
+    return `
+      <tr>
+        <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+        ${rankCells}
+        <td class="num group-col">${totalRank ? r.score.toLocaleString() : '-'}</td>
+        <td class="num">${totalPos === '-' ? '-' : `${totalPos}위`}</td>
         ${groupCells}
       </tr>
     `;
   }).join('');
+  const totalRankCells = rankLabels.map((_, ri) => {
+    const totalCount = totalResults.reduce((sum, result) => sum + ((result.perRank[ri] && result.perRank[ri].count) || 0), 0);
+    const totalPct = respondentN > 0 ? (totalCount / respondentN) * 100 : 0;
+    return `<td class="num group-col">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
+  }).join('');
+  const totalGroupCells = displayGroups.map(g => {
+    const totalPerRank = rankLabels.map((_, ri) => {
+      const totalCount = totalResults.reduce((sum, result) => {
+        const perOpt = g.perOption.find(x => x.option === result.option);
+        return sum + ((perOpt && perOpt.perRank[ri] && perOpt.perRank[ri].count) || 0);
+      }, 0);
+      const totalPct = g.n > 0 ? (totalCount / g.n) * 100 : 0;
+      return `<td class="num group-col">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
+    }).join('');
+    return `${totalPerRank}<td class="num group-col">-</td><td class="num">-</td>`;
+  }).join('');
+  const tableHtml = `
+    <table class="result-table">
+      <thead>
+        <tr>${topRow}</tr>
+        <tr>${midRow}</tr>
+        <tr>${subRow}</tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        <tr class="total-row">
+          <td>합계</td>
+          ${totalRankCells}
+          <td class="num group-col">-</td>
+          <td class="num">-</td>
+          ${totalGroupCells}
+        </tr>
+      </tbody>
+    </table>
+  `;
+  return wrapResultTable(
+    tableHtml,
+    `<div class="result-table-note">가중 점수 = Σ(응답 건수 × (${data.rankCount}-i+1))</div>`
+  );
+}
+
+function buildRankSection(data, rows) {
+  const { codebookEntry, targetLabel, groupResults } = data;
+  const hiddenRanks = resultState.hiddenRankKeys.get(targetLabel) || new Set();
+  const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+
+  const summaryHtml = buildRankSummaryHtml(data);
+  let chartHtml = '';
+  let legendHtml = '';
+  if (groupResults) {
+    chartHtml = buildRankGroupTextHtml(data, hiddenGroups);
+    legendHtml = buildRankGroupLegendHtml(data, hiddenGroups);
+  } else {
+    chartHtml = buildRankStackChartHtml(data, hiddenRanks);
+    legendHtml = buildRankLegendHtml(data, hiddenRanks);
+  }
+  const tableHtml = buildRankDataTableHtml(data, hiddenGroups);
+  const otherTexts = getOtherResponseTexts(targetLabel, rows);
+  resultState.otherResponseTexts.set(targetLabel, otherTexts);
+  const fullText = buildQuestionFullHtml(codebookEntry);
 
   return `
-    <div class="result-table-wrap">
-      <table class="result-table">
-        <thead>
-          <tr>${topRow1}</tr>
-          <tr>${topRow2}</tr>
-        </thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
+    <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="rank">
+      <div class="result-header">
+        <div class="result-title">
+          ${escapeHtml(targetLabel)}
+        </div>
+        ${fullText}
+      </div>
+      ${summaryHtml ? `
+      <div class="result-visual rank-summary-row has-legend">
+        <div class="result-chart-col">${summaryHtml}</div>
+        <aside class="legend-panel" aria-hidden="true"></aside>
+      </div>` : ''}
+      <div class="result-visual has-legend">
+        <div class="result-chart-col">${chartHtml}</div>
+        ${legendHtml}
+      </div>
+      ${tableHtml}
+    </section>
   `;
 }
 
-function buildDataTableHtml(data) {
-  return data.visualType === 'scale'
-    ? buildScaleDataTableHtml(data)
-    : buildChoiceDataTableHtml(data);
-}
-
+/* ---------- 기타 응답 모음 ---------- */
 function findOtherTextColumnIndex(targetLabel) {
   const header = filterState.rows && filterState.rows[0] ? filterState.rows[0] : [];
   if (!Array.isArray(header) || header.length === 0) return undefined;
-
   const exactCandidates = [
     `${targetLabel}__기타_텍스트`,
     `${targetLabel}__기타 텍스트`,
@@ -4166,7 +4733,6 @@ function findOtherTextColumnIndex(targetLabel) {
     const idx = filterState.headerMap.get(name);
     if (idx !== undefined) return idx;
   }
-
   for (let i = 0; i < header.length; i++) {
     const name = cleanCell(header[i]);
     if (!name.startsWith(`${targetLabel}__`) && !name.startsWith(`${targetLabel}_`)) continue;
@@ -4176,48 +4742,160 @@ function findOtherTextColumnIndex(targetLabel) {
   return undefined;
 }
 
-function getOtherResponseTexts(targetLabel, rows) {
+function buildOtherResponsesHtml(targetLabel, rows) {
   const entry = resultState.codebookByLabel.get(targetLabel);
-  if (!entry || !entry.otherInput) return [];
-
+  if (!entry || !entry.otherInput) return '';
   const textIdx = findOtherTextColumnIndex(targetLabel);
-  if (textIdx === undefined) return [];
-
+  if (textIdx === undefined) return '';
   const textSet = new Set();
   rows.forEach(row => {
     const text = cleanCell((row || [])[textIdx]);
     if (text) textSet.add(text);
   });
+  const texts = [...textSet];
+  if (texts.length === 0) return '';
+  const listHtml = texts.map(text => `<li>${escapeHtml(text)}</li>`).join('');
+  return `
+    <div class="other-response-box">
+      <div class="other-response-title">기타 응답<span class="other-response-count">${texts.length}건</span></div>
+      <ul class="other-response-list">${listHtml}</ul>
+    </div>
+  `;
+}
 
+function getOtherResponseTexts(targetLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry || !entry.otherInput) return [];
+  const textIdx = findOtherTextColumnIndex(targetLabel);
+  if (textIdx === undefined) return [];
+  const textSet = new Set();
+  (rows || []).forEach(row => {
+    const text = cleanCell((row || [])[textIdx]);
+    if (text) textSet.add(text);
+  });
   return [...textSet];
 }
 
-function buildSectionHtml(data, rows) {
+function openOtherResponsesModal(targetLabel, event) {
+  const modal = document.getElementById('other-response-modal');
+  const panel = modal ? modal.querySelector('.modal') : null;
+  const titleEl = document.getElementById('other-response-modal-title');
+  const subtitleEl = document.getElementById('other-response-modal-subtitle');
+  const listEl = document.getElementById('other-response-modal-list');
+  if (!modal || !panel || !titleEl || !subtitleEl || !listEl) return;
+
+  const texts = resultState.otherResponseTexts.get(targetLabel) || [];
+  titleEl.textContent = `${targetLabel} 기타 응답`;
+  subtitleEl.textContent = `${texts.length}건의 직접 입력 응답`;
+  listEl.innerHTML = texts.length
+    ? texts.map(text => `<li>${escapeHtml(text)}</li>`).join('')
+    : '<li>표시할 기타 응답이 없습니다.</li>';
+  modal.classList.add('show');
+
+  const pad = 12;
+  const clickX = event && Number.isFinite(event.clientX) ? event.clientX : Math.round(window.innerWidth / 2);
+  const clickY = event && Number.isFinite(event.clientY) ? event.clientY : Math.round(window.innerHeight / 2);
+  requestAnimationFrame(() => {
+    const rect = panel.getBoundingClientRect();
+    const maxLeft = Math.max(pad, window.innerWidth - rect.width - pad);
+    const maxTop = Math.max(pad, window.innerHeight - rect.height - pad);
+    let left = clickX + 10;
+    let top = clickY + 10;
+
+    if (left > maxLeft) left = Math.max(pad, clickX - rect.width - 10);
+    if (top > maxTop) top = Math.max(pad, clickY - rect.height - 10);
+
+    panel.style.left = `${Math.min(left, maxLeft)}px`;
+    panel.style.top = `${Math.min(top, maxTop)}px`;
+  });
+}
+
+function closeOtherResponsesModal() {
+  const modal = document.getElementById('other-response-modal');
+  const panel = modal ? modal.querySelector('.modal') : null;
+  if (panel) {
+    panel.style.left = '';
+    panel.style.top = '';
+  }
+  if (modal) modal.classList.remove('show');
+}
+
+function setupOtherResponseModal() {
+  const modal = document.getElementById('other-response-modal');
+  const closeBtn = document.getElementById('close-other-response-btn');
+  if (!modal || !closeBtn) return;
+  closeBtn.addEventListener('click', closeOtherResponsesModal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeOtherResponsesModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('show')) {
+      closeOtherResponsesModal();
+    }
+  });
+}
+
+/* ---------- 섹션 dispatch ---------- */
+function buildSingleSectionHtml(data, rows) {
   if (!data) return '';
-  const { codebookEntry, targetLabel, totalN, groupResults, visualType } = data;
+  const { codebookEntry, targetLabel, groupResults } = data;
   const hidden = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
 
-  const chartHtml = visualType === 'scale'
-    ? buildScaleChartHtml(data, hidden)
-    : (groupResults ? buildGroupCompareChartHtml(data, hidden) : buildBasicChartHtml(data));
+  const chartHtml = groupResults
+    ? buildGroupCompareChartHtml(data, hidden)
+    : buildBasicChartHtml(data);
 
-  const legendHtml = buildLegendHtml(data, hidden);
+  const legendHtml = groupResults ? buildLegendHtml(data, hidden) : '';
   const tableHtml = buildDataTableHtml(data);
+  const otherHtml = buildOtherResponsesHtml(targetLabel, rows);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
-  const fullText = codebookEntry.full
-    ? `<div class="result-sub">Q. ${escapeHtml(codebookEntry.full)}</div>`
-    : '';
+  const fullText = buildQuestionFullHtml(codebookEntry);
+  const visualClass = getResultVisualClass(!!groupResults);
+
   return `
-    <section class="result-section" data-target="${escapeHtml(targetLabel)}">
+    <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="single">
       <div class="result-header">
         <div class="result-title">
           ${escapeHtml(targetLabel)}
-          <span class="result-n">N=${totalN.toLocaleString()}</span>
         </div>
         ${fullText}
       </div>
-      <div class="result-visual">
+      <div class="${visualClass}">
+        <div class="result-chart-col">${chartHtml}</div>
+        ${legendHtml}
+      </div>
+      ${tableHtml}
+      ${otherHtml}
+    </section>
+  `;
+}
+
+function buildMultipleSectionHtml(data, rows) {
+  if (!data) return '';
+  const { codebookEntry, targetLabel, groupResults } = data;
+  const hidden = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+
+  const chartHtml = groupResults
+    ? buildGroupCompareChartHtml(data, hidden)
+    : buildBasicChartHtml(data);
+
+  const legendHtml = groupResults ? buildLegendHtml(data, hidden) : '';
+  const tableHtml = buildDataTableHtml(data);
+  const otherTexts = getOtherResponseTexts(targetLabel, rows);
+  resultState.otherResponseTexts.set(targetLabel, otherTexts);
+  const fullText = buildQuestionFullHtml(codebookEntry);
+  const visualClass = getResultVisualClass(!!groupResults);
+
+  return `
+    <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="multiple">
+      <div class="result-header">
+        <div class="result-title">
+          ${escapeHtml(targetLabel)}
+        </div>
+        ${fullText}
+      </div>
+      <div class="${visualClass}">
         <div class="result-chart-col">${chartHtml}</div>
         ${legendHtml}
       </div>
@@ -4227,9 +4905,7 @@ function buildSectionHtml(data, rows) {
 }
 
 function buildUnsupportedSection(label, entry) {
-  const fullText = entry && entry.full
-    ? `<div class="result-sub">Q. ${escapeHtml(entry.full)}</div>`
-    : '';
+  const fullText = buildQuestionFullHtml(entry);
   const typeText = entry ? entry.type : '알 수 없음';
   return `
     <section class="result-section" data-target="${escapeHtml(label)}">
@@ -4238,7 +4914,7 @@ function buildUnsupportedSection(label, entry) {
         ${fullText}
       </div>
       <div class="result-unsupported">
-        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong>, <strong>객관식 중복</strong>, <strong>객관식 척도</strong> 문항을 지원합니다.
+        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong>, <strong>객관식 중복</strong>, <strong>객관식 순위</strong> 문항을 지원합니다.
       </div>
     </section>
   `;
@@ -4281,18 +4957,25 @@ async function renderResults() {
   const sections = targetLabels.map(label => {
     const entry = resultState.codebookByLabel.get(label);
     if (!entry) return buildUnsupportedSection(label, null);
-    let data = null;
     if (entry.type === '객관식 단일') {
-      data = aggregateSingle(label, criterionLabel, filteredRows);
-    } else if (entry.type === '객관식 중복') {
-      data = aggregateMultiple(label, criterionLabel, filteredRows);
-    } else if (entry.type === '객관식 척도') {
-      data = aggregateScale(label, criterionLabel, filteredRows);
-    } else {
-      return buildUnsupportedSection(label, entry);
+      const data = aggregateSingle(label, criterionLabel, filteredRows);
+      if (!data) return buildUnsupportedSection(label, entry);
+      return buildSingleSectionHtml(data, filteredRows);
     }
-    if (!data) return buildUnsupportedSection(label, entry);
-    return buildSectionHtml(data, filteredRows);
+    if (entry.type === '객관식 중복') {
+      if (entry.role && entry.role !== 'raw') return buildUnsupportedSection(label, entry);
+      const data = aggregateMultiple(label, criterionLabel, filteredRows);
+      if (!data) return buildUnsupportedSection(label, entry);
+      return buildMultipleSectionHtml(data, filteredRows);
+    }
+    if (entry.type === '객관식 순위') {
+      // raw 문항만 분석 대상으로 사용 (expanded 는 자동 결합)
+      if (entry.role && entry.role !== 'raw') return buildUnsupportedSection(label, entry);
+      const data = aggregateRank(label, criterionLabel, filteredRows);
+      if (!data) return buildUnsupportedSection(label, entry);
+      return buildRankSection(data, filteredRows);
+    }
+    return buildUnsupportedSection(label, entry);
   }).join('');
 
   container.innerHTML = sections;
@@ -4313,10 +4996,14 @@ function alignGroupCompareCharts(container) {
     const height = overlay.clientHeight;
     if (!width || !height) return;
 
-    const centers = rows.map(row => {
+    const trackMetrics = rows.map(row => {
       const track = row.querySelector('.hbar-track');
       const rect = (track || row).getBoundingClientRect();
-      return (rect.top + (rect.height / 2)) - overlayRect.top;
+      return {
+        centerY: (rect.top + (rect.height / 2)) - overlayRect.top,
+        left: rect.left - overlayRect.left,
+        width: rect.width
+      };
     });
 
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -4327,8 +5014,9 @@ function alignGroupCompareCharts(container) {
         .map(v => Number(v))
         .filter(v => Number.isFinite(v));
       const d = pcts.map((pct, i) => {
-        const x = (pct / 100) * width;
-        const y = centers[i] ?? 0;
+        const metric = trackMetrics[i] || { centerY: 0, left: 0, width: 0 };
+        const x = metric.left + ((pct / 100) * metric.width);
+        const y = metric.centerY;
         return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
       }).join(' ');
       path.setAttribute('d', d);
@@ -4336,7 +5024,11 @@ function alignGroupCompareCharts(container) {
 
     chart.querySelectorAll('.group-dot').forEach(dot => {
       const rowIndex = Number(dot.dataset.rowIndex || 0);
-      const y = centers[rowIndex] ?? 0;
+      const metric = trackMetrics[rowIndex] || { centerY: 0, left: 0, width: 0 };
+      const pct = Math.max(0, Math.min(100, Number(dot.style.left.replace('%', '')) || 0));
+      const x = metric.left + ((pct / 100) * metric.width);
+      const y = metric.centerY;
+      dot.style.left = `${x}px`;
       dot.style.top = `${y}px`;
     });
   });
@@ -4349,107 +5041,61 @@ function attachResultEventListeners(container) {
     el.addEventListener('mousemove', onTipMove);
     el.addEventListener('mouseleave', onTipLeave);
   });
-  container.querySelectorAll('[data-open-other]').forEach(el => {
-    el.addEventListener('click', e => {
+  container.querySelectorAll('[data-open-other]').forEach(btn => {
+    btn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
-      openOtherResponsesModal(el.dataset.openOther || '', e);
+      openOtherResponsesModal(btn.dataset.openOther || '', e);
     });
   });
   container.querySelectorAll('.legend').forEach(legend => {
     const targetLabel = legend.dataset.target;
+    const mode = legend.dataset.mode; // 'group' or 'rank'
     legend.querySelectorAll('.legend-item').forEach(item => {
       const cb = item.querySelector('input[type="checkbox"]');
       if (!cb) return;
       cb.addEventListener('change', () => {
-        const hidden = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
-        if (cb.checked) hidden.delete(item.dataset.group);
-        else hidden.add(item.dataset.group);
-        resultState.hiddenGroupKeys.set(targetLabel, hidden);
+        if (mode === 'rank') {
+          const hidden = resultState.hiddenRankKeys.get(targetLabel) || new Set();
+          const ri = Number(item.dataset.rank);
+          if (cb.checked) hidden.delete(ri);
+          else hidden.add(ri);
+          resultState.hiddenRankKeys.set(targetLabel, hidden);
+        } else {
+          const hidden = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+          if (cb.checked) hidden.delete(item.dataset.group);
+          else hidden.add(item.dataset.group);
+          resultState.hiddenGroupKeys.set(targetLabel, hidden);
+        }
         renderResults();
       });
     });
   });
   container.querySelectorAll('.legend-actions').forEach(actions => {
     const targetLabel = actions.dataset.target;
-    actions.querySelectorAll('[data-legend-action]').forEach(btn => {
+    const mode = actions.dataset.mode;
+    actions.querySelectorAll('.legend-action-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const panel = btn.closest('.legend-panel');
-        const legend = panel ? panel.querySelector('.legend') : null;
-        const groupValues = legend
-          ? Array.from(legend.querySelectorAll('.legend-item')).map(item => item.dataset.group).filter(Boolean)
-          : [];
-        if (btn.dataset.legendAction === 'all-on') {
-          resultState.hiddenGroupKeys.set(targetLabel, new Set());
-        } else if (btn.dataset.legendAction === 'all-off') {
-          resultState.hiddenGroupKeys.set(targetLabel, new Set(groupValues));
+        const action = btn.dataset.legendAction;
+        if (mode === 'rank') {
+          const legend = actions.parentElement ? actions.parentElement.querySelector('.legend[data-mode="rank"]') : null;
+          const rankIndexes = legend
+            ? Array.from(legend.querySelectorAll('.legend-item')).map(item => Number(item.dataset.rank)).filter(Number.isFinite)
+            : [];
+          const nextHidden = action === 'all-off' ? new Set(rankIndexes) : new Set();
+          resultState.hiddenRankKeys.set(targetLabel, nextHidden);
+        } else {
+          const legend = actions.parentElement ? actions.parentElement.querySelector('.legend[data-mode="group"]') : null;
+          const groupValues = legend
+            ? Array.from(legend.querySelectorAll('.legend-item')).map(item => item.dataset.group).filter(Boolean)
+            : [];
+          resultState.hiddenGroupKeys.set(targetLabel, action === 'all-off' ? new Set(groupValues) : new Set());
         }
         renderResults();
       });
     });
-  });
-}
-
-function openOtherResponsesModal(targetLabel, event) {
-  const modal = document.getElementById('other-response-modal');
-  const panel = modal ? modal.querySelector('.modal') : null;
-  const titleEl = document.getElementById('other-response-modal-title');
-  const subtitleEl = document.getElementById('other-response-modal-subtitle');
-  const listEl = document.getElementById('other-response-modal-list');
-  if (!modal || !panel || !titleEl || !subtitleEl || !listEl) return;
-
-  const texts = resultState.otherResponseTexts.get(targetLabel) || [];
-  titleEl.textContent = `${targetLabel} 기타 응답`;
-  subtitleEl.textContent = `${texts.length}건의 직접 입력 응답`;
-  listEl.innerHTML = texts.length
-    ? texts.map(text => `<li>${escapeHtml(text)}</li>`).join('')
-    : '<li>표시할 기타 응답이 없습니다.</li>';
-  modal.classList.add('show');
-
-  const pad = 12;
-  const clickX = event && Number.isFinite(event.clientX) ? event.clientX : Math.round(window.innerWidth / 2);
-  const clickY = event && Number.isFinite(event.clientY) ? event.clientY : Math.round(window.innerHeight / 2);
-
-  requestAnimationFrame(() => {
-    const rect = panel.getBoundingClientRect();
-    const maxLeft = Math.max(pad, window.innerWidth - rect.width - pad);
-    const maxTop = Math.max(pad, window.innerHeight - rect.height - pad);
-    let left = clickX + 10;
-    let top = clickY + 10;
-
-    if (left > maxLeft) left = Math.max(pad, clickX - rect.width - 10);
-    if (top > maxTop) top = Math.max(pad, clickY - rect.height - 10);
-
-    panel.style.left = `${Math.min(left, maxLeft)}px`;
-    panel.style.top = `${Math.min(top, maxTop)}px`;
-  });
-}
-
-function closeOtherResponsesModal() {
-  const modal = document.getElementById('other-response-modal');
-  const panel = modal ? modal.querySelector('.modal') : null;
-  if (panel) {
-    panel.style.left = '';
-    panel.style.top = '';
-  }
-  if (modal) modal.classList.remove('show');
-}
-
-function setupOtherResponseModal() {
-  const modal = document.getElementById('other-response-modal');
-  const closeBtn = document.getElementById('close-other-response-btn');
-  if (!modal || !closeBtn) return;
-
-  closeBtn.addEventListener('click', closeOtherResponsesModal);
-  modal.addEventListener('click', e => {
-    if (e.target === modal) closeOtherResponsesModal();
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modal.classList.contains('show')) {
-      closeOtherResponsesModal();
-    }
   });
 }
 
@@ -4472,6 +5118,8 @@ function onTipEnter(e) {
   try { data = JSON.parse(decodeURIComponent(raw)); } catch (_) { return; }
   tip.innerHTML = formatTooltipHtml(data);
   tip.style.display = 'block';
+  tip.style.whiteSpace = data.kind === 'rank-group-text' ? 'normal' : 'nowrap';
+  tip.style.maxWidth = data.kind === 'rank-group-text' ? '280px' : 'none';
   positionTooltip(tip, e);
 }
 function onTipMove(e) {
@@ -4499,6 +5147,10 @@ function formatTooltipHtml(d) {
   const n = (v) => 'N=' + Number(v || 0).toLocaleString();
   const line = (s) => `<div>${s}</div>`;
   switch (d.kind) {
+    case 'option-label':
+      return [
+        line(escapeHtml(d.option))
+      ].join('');
     case 'basic-bar':
       return [
         line(escapeHtml(d.option)),
@@ -4519,39 +5171,39 @@ function formatTooltipHtml(d) {
         line(pct(d.pct)),
         line(n(d.count))
       ].join('');
-    case 'scale-segment':
+    case 'rank-seg':
+    case 'rank-nonranked':
       return [
-        line(escapeHtml(d.groupLabel)),
-        line(`${escapeHtml(d.score)}점${d.scoreLabel ? ` · ${escapeHtml(d.scoreLabel)}` : ''}`),
+        line(escapeHtml(d.option)),
+        line(escapeHtml(d.rankLabel)),
         line(pct(d.pct)),
         line(n(d.count))
       ].join('');
-    case 'scale-mean':
-      return [
+    case 'rank-group-text': {
+      const head = [
         line(escapeHtml(d.groupLabel)),
-        line(`평균 ${formatScaleMean(d.mean)}점`),
-        line(`${d.scaleMax}점 척도`),
-        line(n(d.count))
-      ].join('');
+        line(escapeHtml(d.option))
+      ];
+      const perRank = (d.perRank || []).map(pr =>
+        line(`${escapeHtml(pr.rankLabel)}: ${pct(pr.pct)}`)
+      );
+      const tail = [line(n(d.count))];
+      return [...head, ...perRank, ...tail].join('');
+    }
     default:
       return '';
   }
 }
 
-// 드롭존 변경 감지 (chip 추가/제거)
 function observeDropZones() {
   ['drop-target', 'drop-criterion'].forEach(id => {
     const zone = document.getElementById(id);
     if (!zone) return;
-    const obs = new MutationObserver(() => {
-      // 드롭존의 자식이 바뀌면 결과 재렌더링
-      renderResults();
-    });
+    const obs = new MutationObserver(() => { renderResults(); });
     obs.observe(zone, { childList: true, subtree: false });
   });
 }
 
-// 필터 변경 감지: updateFilterCount 를 래핑해서 결과 재렌더링
 function hookFilterUpdates() {
   if (typeof updateFilterCount !== 'function') return;
   const original = updateFilterCount;
@@ -4563,13 +5215,12 @@ function hookFilterUpdates() {
   };
 }
 
-// 초기화
 async function initResultFeature() {
   if (resultState.initialized) return;
   resultState.initialized = true;
+
   try { await migrateLegacySurveyStorage(); } catch (_) {}
 
-  // 좌측 패널/드래그/필터 등 기존 셋업을 순차 실행 (일부 이미 호출되었어도 안전하게 try)
   const currentId = sessionStorage.getItem('survey.currentId');
   if (currentId) {
     const surveys = loadSurveys();
@@ -4583,7 +5234,6 @@ async function initResultFeature() {
         }
       } catch (_) {}
     }
-    // 설문 제목 초기 세팅
     const titleEl = document.getElementById('project-title');
     if (titleEl && cur && cur.title) {
       try { titleEl.textContent = cur.title; } catch (_) {}

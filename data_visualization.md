@@ -500,3 +500,19 @@
 
 - 결과 카드 상단의 질문 원문(`question_full`)은 보조 설명이지만, 기존보다 한 단계 크게 읽히도록 표시한다.
 - 현재 구현 기준으로 질문 원문은 본문보다 약간 작은 보조 텍스트가 아니라, 차트 문맥을 빠르게 이해할 수 있을 정도의 크기와 대비를 확보해야 한다.
+## Rank Question Rules
+
+The following visualization rules are fixed for every `객관식 순위` question.
+
+- Each rank segment percentage uses the full respondent count for the question as the denominator.
+- Group comparison uses each group's full respondent count `n` as the denominator for all rank percentages.
+- Responses that exist only in the raw rank answer and do not appear in rank expanded columns are still included in the chart and in the data table.
+- Raw-only non-ranked responses are not included in `가중 점수` or `종합 순위`.
+- `기타` remains in the rank chart and rank data table, but is always excluded from overall ranking.
+- `기타` direct-input text is opened from the table by the shared modal-style `응답 보기` button.
+- If a row has no ranked segment but does have raw-only responses, it may render as a single gray bar rather than a multi-segment rank stack.
+- When a group is hidden in the legend, that group is removed from both the chart output and the data table.
+- Rank group comparison uses a table structure for per-group rank outcomes instead of inline text.
+- Rank data tables include a total row; only per-rank percentage and count totals are aggregated, while `가중 점수` and `종합 순위` stay `-`.
+- Chart option labels should show the full response label on hover, even when the visible text is truncated.
+- Raw-only non-ranked responses in rank questions use a muted red fallback bar and the tooltip format matches other rank segments: option, rank label, percentage, and count.

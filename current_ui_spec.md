@@ -687,3 +687,16 @@
 
 - 결과 데이터 테이블의 count 열 제목은 `N` 대신 `빈도수 (명)`으로 표시한다.
 - 결과 카드 상단의 질문 원문(`question_full`)은 기존보다 조금 더 큰 크기와 높은 대비로 표시한다.
+## Rank Question Rules
+
+The current UI applies the following shared rules to every `객관식 순위` result card.
+
+- Rank percentages for `1순위`, `2순위`, `3순위` and beyond use the full respondent count for that question, not the count of people who filled that specific rank.
+- Group comparison uses the same rule with each displayed group's respondent count `n`.
+- Responses that are present only in the raw rank answer and absent from rank expanded columns are still rendered in the rank chart and rank data table.
+- Those raw-only non-ranked responses are excluded from weighted ranking logic, so `가중 점수` and `종합 순위` are shown as `-`.
+- `기타` is shown in the chart and data table but always excluded from `종합 순위`.
+- `기타` direct-input text is opened by the table's `응답 보기` button in the shared modal, matching single and multiple choice behavior.
+- In group comparison, hiding a group in the legend removes it from both visualization and table output.
+- Group-level rank summaries are displayed as a table with groups on rows and rank positions on columns.
+- Rank data tables keep a total row, and the total row leaves `가중 점수` and `종합 순위` as `-`.
