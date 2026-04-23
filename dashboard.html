@@ -854,6 +854,7 @@
     background: var(--bg-soft);
   }
   .drop-area {
+    position: relative;
     min-height: 72px;
     border: 1.5px dashed var(--border);
     border-radius: var(--radius-sm);
@@ -881,8 +882,14 @@
     background: #eeeeee;
   }
   .drop-area .empty-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-4);
     font-size: 12px;
+    margin: auto;
     text-align: center;
   }
   .drop-area.has-chip .empty-hint { display: none; }
@@ -981,7 +988,7 @@
   .data-table td { color: var(--text-2); }
   .data-table tr:hover td { background: var(--bg-soft); }
 
-  /* ===== 분석 결과 렌더링 (객관식 단일) ===== */
+  /* ===== 분석 결과 렌더링 (객관식 단일/중복) ===== */
   .result-container {
     display: flex;
     flex-direction: column;
@@ -1023,12 +1030,7 @@
     font-weight: 500;
     font-size: 12px;
   }
-  .result-sub {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-2);
-    line-height: 1.7;
-  }
+  .result-sub { font-size: 13px; color: var(--text-2); line-height: 1.6; }
   .result-unsupported {
     font-size: 12px;
     color: var(--text-3);
@@ -1954,7 +1956,7 @@
         <div class="zone-card">
           <div class="zone-header">
             <div class="zone-header-main">
-              <div class="zone-title">분석 대상 문항</div>
+              <div class="zone-title">보고 싶은 문항</div>
               <button type="button" id="target-clear-btn" class="zone-clear-btn">모두 삭제</button>
             </div>
             <div class="zone-limit"><span id="target-count">0</span> / 10</div>
@@ -1966,7 +1968,7 @@
         <div class="zone-card">
           <div class="zone-header">
             <div class="zone-header-main">
-              <div class="zone-title">분석 기준 문항</div>
+              <div class="zone-title">그룹별 비교</div>
               <button type="button" id="criterion-clear-btn" class="zone-clear-btn">삭제</button>
             </div>
             <div class="zone-limit"><span id="criterion-count">0</span> / 1</div>
@@ -1982,7 +1984,7 @@
 
       <div class="data-area">
         <div id="result-container" class="result-container">
-          <div class="result-empty">분석 대상 문항을 좌측에서 드래그해 주세요.</div>
+          <div class="result-empty">보고 싶은 문항을 좌측에서 드래그해 주세요.</div>
         </div>
       </div>
     </main>
@@ -2656,7 +2658,7 @@ function setupSelectionAndDragDrop() {
       if (items.length === 0) return;
 
       const limit = parseInt(zone.dataset.limit, 10) || 10;
-      const zoneName = zone.dataset.zone === 'target' ? '분석 대상' : '분석 기준';
+      const zoneName = zone.dataset.zone === 'target' ? '보고 싶은 문항' : '그룹별 비교';
       const existingLabels = new Set(
         Array.from(zone.querySelectorAll('.chip')).map(c => c.dataset.label)
       );
@@ -2667,7 +2669,7 @@ function setupSelectionAndDragDrop() {
         if (!data || !data.label) continue;
         if (zone.dataset.zone === 'criterion') {
           const entry = resultState.codebookByLabel.get(data.label);
-          if (!entry || entry.role !== 'raw' || entry.type !== '객관식 단일') continue;
+          if (!entry || entry.role !== 'raw' || !isSingleChoiceType(entry.type)) continue;
         }
         if (existingLabels.has(data.label)) continue;
         const current = zone.querySelectorAll('.chip').length;
@@ -3633,6 +3635,97 @@ function getFilteredLabelDataRows() {
   });
 }
 
+function isSingleChoiceType(type) {
+  return cleanCell(type).includes('객관식 단일');
+}
+
+function isMultiChoiceType(type) {
+  return cleanCell(type).includes('객관식 중복');
+}
+
+function supportsResultType(type) {
+  return isSingleChoiceType(type) || isMultiChoiceType(type);
+}
+
+function getCriterionEntry(criterionLabel) {
+  return resultState.codebookByLabel.get(criterionLabel) || (() => {
+    const candidate = getCandidateByKey(criterionLabel);
+    if (!candidate) return null;
+    return {
+      label: candidate.label,
+      type: '객관식 단일',
+      role: 'raw',
+      options: candidate.options || []
+    };
+  })();
+}
+
+function getExpandedMultiOptionItems(targetLabel, entry) {
+  if (!entry || !isMultiChoiceType(entry.type)) return [];
+
+  const items = [];
+  const usedLabels = new Set();
+  const headerMap = filterState.headerMap || new Map();
+
+  (entry.options || []).forEach(option => {
+    const expandedLabel = `${targetLabel}__${option}`;
+    if (!headerMap.has(expandedLabel)) return;
+    items.push({ option, label: expandedLabel });
+    usedLabels.add(expandedLabel);
+  });
+
+  resultState.codebookByLabel.forEach((candidate, label) => {
+    if (!candidate || cleanCell(candidate.role).toLowerCase() !== 'expanded') return;
+    if (!isMultiChoiceType(candidate.type)) return;
+    if (!label.startsWith(`${targetLabel}__`)) return;
+    if (!headerMap.has(label) || usedLabels.has(label)) return;
+
+    const option = cleanCell(label.slice(targetLabel.length + 2));
+    if (!option || option.includes('기타_텍스트') || option.includes('기타 텍스트')) return;
+    items.push({ option, label });
+    usedLabels.add(label);
+  });
+
+  return items;
+}
+
+function isMarkedMultiSelected(value) {
+  const normalized = cleanCell(value).toLowerCase();
+  return normalized === '선택'
+    || normalized === '1'
+    || normalized === 'y'
+    || normalized === 'yes'
+    || normalized === 'true'
+    || normalized === 'selected';
+}
+
+function getMultiSelectionsFromRow(row, rawIdx, expandedItems) {
+  const selected = [];
+  const seen = new Set();
+
+  (expandedItems || []).forEach(item => {
+    const idx = filterState.headerMap.get(item.label);
+    if (idx === undefined) return;
+    if (!isMarkedMultiSelected((row || [])[idx])) return;
+    if (seen.has(item.option)) return;
+    seen.add(item.option);
+    selected.push(item.option);
+  });
+
+  if (rawIdx === undefined) return selected;
+
+  const rawValue = cleanCell((row || [])[rawIdx]);
+  if (!rawValue) return selected;
+
+  rawValue.split('|').map(cleanCell).filter(Boolean).forEach(option => {
+    if (seen.has(option)) return;
+    seen.add(option);
+    selected.push(option);
+  });
+
+  return selected;
+}
+
 /* ---------- 공통 포맷 ---------- */
 function formatPercent(value) {
   const num = Number(value);
@@ -3684,16 +3777,7 @@ function aggregateSingle(targetLabel, criterionLabel, rows) {
 
   let groupResults = null;
   if (criterionLabel) {
-    const critEntry = resultState.codebookByLabel.get(criterionLabel) || (() => {
-      const candidate = getCandidateByKey(criterionLabel);
-      if (!candidate) return null;
-      return {
-        label: candidate.label,
-        type: '객관식 단일',
-        role: 'raw',
-        options: candidate.options || []
-      };
-    })();
+    const critEntry = getCriterionEntry(criterionLabel);
     const cIdx = filterState.headerMap.get(criterionLabel);
     if (critEntry && cIdx !== undefined) {
       const groupOrder = [...critEntry.options];
@@ -3747,8 +3831,121 @@ function aggregateSingle(targetLabel, criterionLabel, rows) {
     totalResults: visibleTotalResults,
     visualType: 'choice',
     criterionLabel: groupResults ? criterionLabel : null,
-    groupResults
+    groupResults,
+    isMulti: false
   };
+}
+
+function aggregateMulti(targetLabel, criterionLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry) return null;
+
+  const tIdx = filterState.headerMap ? filterState.headerMap.get(targetLabel) : undefined;
+  const expandedItems = getExpandedMultiOptionItems(targetLabel, entry);
+  if (tIdx === undefined && expandedItems.length === 0) return null;
+
+  const optionOrder = [...entry.options];
+  const optionSet = new Set(optionOrder);
+  const totalCount = {};
+  optionOrder.forEach(o => totalCount[o] = 0);
+  let totalN = 0;
+
+  rows.forEach(row => {
+    const selectedOptions = getMultiSelectionsFromRow(row, tIdx, expandedItems);
+    if (selectedOptions.length === 0) return;
+
+    selectedOptions.forEach(option => {
+      if (!optionSet.has(option)) {
+        optionSet.add(option);
+        optionOrder.push(option);
+        totalCount[option] = 0;
+      }
+      totalCount[option] = (totalCount[option] || 0) + 1;
+    });
+    totalN += 1;
+  });
+
+  const totalResults = optionOrder.map(option => ({
+    option,
+    count: totalCount[option] || 0,
+    pct: totalN > 0 ? ((totalCount[option] || 0) / totalN) * 100 : 0
+  }));
+
+  const visibleOptionOrder = optionOrder.filter(option => (totalCount[option] || 0) > 0);
+  const visibleOptionSet = new Set(visibleOptionOrder);
+  const visibleTotalResults = totalResults.filter(result => visibleOptionSet.has(result.option));
+
+  let groupResults = null;
+  if (criterionLabel) {
+    const critEntry = getCriterionEntry(criterionLabel);
+    const cIdx = filterState.headerMap.get(criterionLabel);
+    if (critEntry && cIdx !== undefined) {
+      const groupOrder = [...critEntry.options];
+      const groupSet = new Set(groupOrder);
+      const byGroup = new Map();
+      const createGroupState = () => ({
+        n: 0,
+        count: Object.fromEntries(optionOrder.map(option => [option, 0]))
+      });
+
+      groupOrder.forEach(groupValue => {
+        byGroup.set(groupValue, createGroupState());
+      });
+
+      rows.forEach(row => {
+        const groupValue = cleanCell((row || [])[cIdx]);
+        const selectedOptions = getMultiSelectionsFromRow(row, tIdx, expandedItems);
+        if (groupValue === '' || selectedOptions.length === 0) return;
+
+        if (!groupSet.has(groupValue)) {
+          groupSet.add(groupValue);
+          groupOrder.push(groupValue);
+          byGroup.set(groupValue, createGroupState());
+        }
+
+        const group = byGroup.get(groupValue);
+        group.n += 1;
+
+        selectedOptions.forEach(option => {
+          if (group.count[option] === undefined) group.count[option] = 0;
+          group.count[option] += 1;
+        });
+      });
+
+      groupResults = groupOrder.map(groupValue => {
+        const group = byGroup.get(groupValue);
+        return {
+          value: groupValue,
+          label: `${critEntry.label}: ${groupValue}`,
+          n: group.n,
+          results: visibleOptionOrder.map(option => ({
+            option,
+            count: group.count[option] || 0,
+            pct: group.n > 0 ? ((group.count[option] || 0) / group.n) * 100 : 0
+          }))
+        };
+      });
+    }
+  }
+
+  return {
+    targetLabel,
+    codebookEntry: entry,
+    totalN,
+    optionOrder: visibleOptionOrder,
+    totalResults: visibleTotalResults,
+    criterionLabel: groupResults ? criterionLabel : null,
+    groupResults,
+    isMulti: true
+  };
+}
+
+function aggregateResultQuestion(targetLabel, criterionLabel, rows) {
+  const entry = resultState.codebookByLabel.get(targetLabel);
+  if (!entry) return null;
+  if (isSingleChoiceType(entry.type)) return aggregateSingle(targetLabel, criterionLabel, rows);
+  if (isMultiChoiceType(entry.type)) return aggregateMulti(targetLabel, criterionLabel, rows);
+  return null;
 }
 
 function isSelectedBinaryValue(value) {
@@ -4048,34 +4245,32 @@ function buildChoiceDataTableHtml(data) {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
     const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
-    const isMultiple = data.codebookEntry && data.codebookEntry.type === '객관식 중복';
-    const helperText = isMultiple
-      ? '<div class="result-table-note">복수 응답은 비율 합계가 100%를 넘을 수 있습니다.</div>'
-      : '';
-    const tableHtml = `
-      <table class="result-table">
-        <thead>
-          <tr>
-            <th>응답 보기</th>
-            <th class="num">비율(%)</th>
-            <th class="num">빈도수 (명)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${totalResults.map(r => `
+    return `
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
             <tr>
-              <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
-              <td class="num">${formatPercent(r.pct)}</td>
-              <td class="num">${r.count.toLocaleString()}</td>
+              <th>응답 보기</th>
+              <th class="num">비율(%)</th>
+              <th class="num">빈도수 (명)</th>
             </tr>
-          `).join('')}
-          <tr class="total-row">
-            <td>합계</td>
-            <td class="num">${formatPercent(sumPct)}</td>
-            <td class="num">${totalN.toLocaleString()}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            ${totalResults.map(r => `
+              <tr>
+                <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+                <td class="num">${formatPercent(r.pct)}</td>
+                <td class="num">${r.count.toLocaleString()}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td>합계</td>
+              <td class="num">${formatPercent(sumPct)}</td>
+              <td class="num">${totalN.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     `;
     return wrapResultTable(tableHtml, helperText);
   }
@@ -4850,9 +5045,9 @@ function buildSingleSectionHtml(data, rows) {
   const otherHtml = buildOtherResponsesHtml(targetLabel, rows);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
-  const fullText = buildQuestionFullHtml(codebookEntry);
-  const visualClass = getResultVisualClass(!!groupResults);
-
+  const fullText = codebookEntry.full
+    ? `<div class="result-sub">Q. ${escapeHtml(codebookEntry.full)}</div>`
+    : '';
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="single">
       <div class="result-header">
@@ -4860,6 +5055,7 @@ function buildSingleSectionHtml(data, rows) {
           ${escapeHtml(targetLabel)}
         </div>
         ${fullText}
+        ${noteText}
       </div>
       <div class="${visualClass}">
         <div class="result-chart-col">${chartHtml}</div>
@@ -4914,7 +5110,7 @@ function buildUnsupportedSection(label, entry) {
         ${fullText}
       </div>
       <div class="result-unsupported">
-        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong>, <strong>객관식 중복</strong>, <strong>객관식 순위</strong> 문항을 지원합니다.
+        이 문항 유형(<strong>${escapeHtml(typeText)}</strong>)의 시각화는 아직 준비 중이에요. 현재는 <strong>객관식 단일</strong> 문항만 지원합니다.
       </div>
     </section>
   `;
@@ -4940,7 +5136,7 @@ async function renderResults() {
 
   const targetLabels = getTargetChipLabels();
   if (targetLabels.length === 0) {
-    container.innerHTML = '<div class="result-empty">분석 대상 문항을 좌측에서 드래그해 주세요.</div>';
+    container.innerHTML = '<div class="result-empty">보고 싶은 문항을 좌측에서 드래그해 주세요.</div>';
     return;
   }
 
@@ -4957,25 +5153,10 @@ async function renderResults() {
   const sections = targetLabels.map(label => {
     const entry = resultState.codebookByLabel.get(label);
     if (!entry) return buildUnsupportedSection(label, null);
-    if (entry.type === '객관식 단일') {
-      const data = aggregateSingle(label, criterionLabel, filteredRows);
-      if (!data) return buildUnsupportedSection(label, entry);
-      return buildSingleSectionHtml(data, filteredRows);
-    }
-    if (entry.type === '객관식 중복') {
-      if (entry.role && entry.role !== 'raw') return buildUnsupportedSection(label, entry);
-      const data = aggregateMultiple(label, criterionLabel, filteredRows);
-      if (!data) return buildUnsupportedSection(label, entry);
-      return buildMultipleSectionHtml(data, filteredRows);
-    }
-    if (entry.type === '객관식 순위') {
-      // raw 문항만 분석 대상으로 사용 (expanded 는 자동 결합)
-      if (entry.role && entry.role !== 'raw') return buildUnsupportedSection(label, entry);
-      const data = aggregateRank(label, criterionLabel, filteredRows);
-      if (!data) return buildUnsupportedSection(label, entry);
-      return buildRankSection(data, filteredRows);
-    }
-    return buildUnsupportedSection(label, entry);
+    if (entry.type !== '객관식 단일') return buildUnsupportedSection(label, entry);
+    const data = aggregateSingle(label, criterionLabel, filteredRows);
+    if (!data) return buildUnsupportedSection(label, entry);
+    return buildSectionHtml(data, filteredRows);
   }).join('');
 
   container.innerHTML = sections;
