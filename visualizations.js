@@ -1435,7 +1435,8 @@ function setupSavedModal() {
   const closeDataUpdateBtn = document.getElementById('close-data-update-btn');
   const dataUpdateList = document.getElementById('data-update-list');
   const dataUpdateFileInput = document.getElementById('data-update-file-input');
-  let lastReplacedDataKey = '';
+  const applyDataUpdateBtn = document.getElementById('apply-data-update-btn');
+  let pendingDataUpdates = {};
 
   function refreshCount() {
     if (savedCountBadge) savedCountBadge.textContent = loadSurveys().length;
@@ -1449,6 +1450,14 @@ function setupSavedModal() {
       surveys,
       current: surveys.find(s => s.id === currentId)
     };
+  }
+
+  function resetPendingDataUpdates() {
+    pendingDataUpdates = {};
+    if (dataUpdateFileInput) {
+      dataUpdateFileInput.value = '';
+      delete dataUpdateFileInput.dataset.targetKey;
+    }
   }
 
   function openSurvey(id) {
@@ -1710,6 +1719,128 @@ function setupSavedModal() {
     renderResults();
   }
 
+  function renderDataUpdateList() {
+    if (!dataUpdateList) return;
+    const { current } = getCurrentSurvey();
+    if (!current || !current.files) {
+      dataUpdateList.innerHTML = '<div class="saved-empty">현재 연결된 데이터가 없습니다.</div>';
+      if (applyDataUpdateBtn) applyDataUpdateBtn.disabled = true;
+      return;
+    }
+    const items = [
+      { key: 'codebook', label: '문항 코드북', file: current.files.codebook },
+      { key: 'value', label: '응답 데이터셋_숫자형', file: current.files.value },
+      { key: 'label', label: '응답 데이터셋_라벨형', file: current.files.label }
+    ];
+    dataUpdateList.innerHTML = items.map(item => {
+      const pending = pendingDataUpdates[item.key];
+      const filename = (pending && pending.file && pending.file.name) || (item.file && item.file.name) || '파일 없음';
+      return `
+        <div class="saved-item">
+          <div class="saved-main">
+            <div class="saved-title">${escapeHtml(item.label)}</div>
+            <div class="saved-meta">${escapeHtml(filename)}</div>
+            ${pending ? '<div class="saved-meta">교체 대기중</div>' : ''}
+          </div>
+          <div class="saved-actions">
+            <button type="button" class="saved-rename" data-file-update="${item.key}">교체하기</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    dataUpdateList.querySelectorAll('[data-file-update]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!dataUpdateFileInput) return;
+        dataUpdateFileInput.dataset.targetKey = btn.dataset.fileUpdate;
+        dataUpdateFileInput.click();
+      });
+    });
+
+    if (applyDataUpdateBtn) {
+      applyDataUpdateBtn.disabled = Object.keys(pendingDataUpdates).length === 0;
+    }
+  }
+
+  async function handleDataFileReplace(file, key) {
+    if (!file || !key) return;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!['csv', 'xlsx'].includes(ext)) {
+      throw new Error('지원하지 않는 파일 형식입니다. .csv 또는 .xlsx 파일만 업로드할 수 있습니다.');
+    }
+    const parsedUpload = await readTabularFile(file);
+    const fileResult = validateFileForKey(key, parsedUpload.rows);
+    if (!fileResult.ok) throw new Error(fileResult.error);
+
+    pendingDataUpdates[key] = {
+      file: {
+        name: file.name,
+        size: file.size,
+        contentType: parsedUpload.contentType,
+        content: parsedUpload.content
+      },
+      rows: parsedUpload.rows
+    };
+    renderDataUpdateList();
+  }
+
+  async function applyDataFileUpdates() {
+    const { currentId, surveys, current } = getCurrentSurvey();
+    if (!currentId || !current) {
+      alert('현재 대시보드를 찾을 수 없습니다.');
+      return;
+    }
+    const idx = surveys.findIndex(s => s.id === currentId);
+    if (idx < 0) return;
+    if (Object.keys(pendingDataUpdates).length === 0) {
+      alert('먼저 교체할 파일을 선택해 주세요.');
+      return;
+    }
+
+    const currentFiles = surveys[idx].files || {};
+    const rowsByKey = {
+      codebook: pendingDataUpdates.codebook ? pendingDataUpdates.codebook.rows : await loadCodebookRows(currentFiles.codebook),
+      value: pendingDataUpdates.value ? pendingDataUpdates.value.rows : await loadCodebookRows(currentFiles.value),
+      label: pendingDataUpdates.label ? pendingDataUpdates.label.rows : await loadCodebookRows(currentFiles.label)
+    };
+    const bundleResult = validateBundleConsistency(rowsByKey);
+    if (!bundleResult.ok) {
+      alert(`${bundleResult.error}\n\n파일을 다시 교체한 뒤 분석하기를 다시 눌러 주세요.`);
+      return;
+    }
+
+    const nextFiles = { ...(surveys[idx].files || {}) };
+    for (const key of ['codebook', 'value', 'label']) {
+      const pending = pendingDataUpdates[key];
+      if (!pending || !pending.file) continue;
+      let storedRef = pending.file;
+      try {
+        const persisted = await persistStoredFile(currentId, key, pending.file);
+        if (persisted) storedRef = persisted;
+      } catch (_) {}
+      nextFiles[key] = storedRef;
+    }
+
+    surveys[idx].files = nextFiles;
+    surveys[idx].updatedAt = new Date().toISOString();
+    if (!saveSurveys(surveys)) return;
+
+    resultState.codebookByLabel = new Map();
+    try { await setupFilters(); } catch (_) {}
+    try {
+      const rows = await loadCodebookRows(nextFiles.codebook);
+      if (rows) {
+        resultState.codebookByLabel = buildCodebookIndex(rows);
+        renderTree(buildQuestionTree(rows));
+      }
+    } catch (_) {}
+
+    resetPendingDataUpdates();
+    renderDataUpdateList();
+    if (dataUpdateModal) dataUpdateModal.classList.remove('show');
+    renderResults();
+  }
+
   refreshCount();
 
   if (saveBtn) saveBtn.addEventListener('click', saveCurrentSurvey);
@@ -1729,14 +1860,30 @@ function setupSavedModal() {
 
   if (dataUpdateBtn && dataUpdateModal) {
     dataUpdateBtn.addEventListener('click', () => {
+      resetPendingDataUpdates();
       renderDataUpdateList();
       dataUpdateModal.classList.add('show');
     });
   }
   if (closeDataUpdateBtn && dataUpdateModal) {
-    closeDataUpdateBtn.addEventListener('click', () => dataUpdateModal.classList.remove('show'));
+    closeDataUpdateBtn.addEventListener('click', () => {
+      resetPendingDataUpdates();
+      dataUpdateModal.classList.remove('show');
+    });
     dataUpdateModal.addEventListener('click', e => {
-      if (e.target === dataUpdateModal) dataUpdateModal.classList.remove('show');
+      if (e.target === dataUpdateModal) {
+        resetPendingDataUpdates();
+        dataUpdateModal.classList.remove('show');
+      }
+    });
+  }
+  if (applyDataUpdateBtn) {
+    applyDataUpdateBtn.addEventListener('click', async () => {
+      try {
+        await applyDataFileUpdates();
+      } catch (err) {
+        alert((err && err.message) || '파일 분석 중 오류가 발생했습니다. 업로드 파일을 다시 확인해 주세요.');
+      }
     });
   }
 
@@ -1757,7 +1904,10 @@ function setupSavedModal() {
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     if (listModal) listModal.classList.remove('show');
-    if (dataUpdateModal) dataUpdateModal.classList.remove('show');
+    if (dataUpdateModal) {
+      resetPendingDataUpdates();
+      dataUpdateModal.classList.remove('show');
+    }
   });
 }
 
