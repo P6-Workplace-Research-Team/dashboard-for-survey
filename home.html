@@ -851,6 +851,13 @@ function arrayBufferToBase64(buf) {
   return btoa(bin);
 }
 
+function base64ToArrayBuffer(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
 // 업로드 파일의 형식과 필수 컬럼을 점검하는 검증 로직입니다.
 function parseCSV(text, maxRows) {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
@@ -915,6 +922,21 @@ async function readTabularFile(file, maxRows = 50) {
     };
   }
   throw new Error('unsupported');
+}
+
+function readRowsFromStoredFile(fileRec) {
+  if (!fileRec) return [];
+  if (fileRec.contentType === 'csv-text') {
+    return parseCSV(fileRec.content);
+  }
+  if (fileRec.contentType === 'xlsx-base64') {
+    const buf = base64ToArrayBuffer(fileRec.content);
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, raw: true });
+    return rows.map(r => (r || []).map(v => v == null ? '' : String(v)));
+  }
+  return [];
 }
 
 const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role'];
@@ -1250,19 +1272,6 @@ function validateBundleConsistency(rowsByKey) {
       return;
     }
 
-    const bundleResult = validateBundleConsistency({
-      codebook: key === 'codebook' ? parsed.rows : parsedState.codebook,
-      value: key === 'value' ? parsed.rows : parsedState.value,
-      label: key === 'label' ? parsed.rows : parsedState.label
-    });
-    if (!bundleResult.ok) {
-      setZoneError(zone, bundleResult.error);
-      state[key] = null;
-      parsedState[key] = null;
-      updateStart();
-      return;
-    }
-
     let content;
     let contentType;
     if (parsed.type === 'csv') {
@@ -1290,6 +1299,18 @@ function validateBundleConsistency(rowsByKey) {
       titleInput.classList.add('error');
       titleError.classList.add('show');
       titleInput.focus();
+      return;
+    }
+
+    uploadErr.classList.remove('show');
+    const bundleResult = validateBundleConsistency({
+      codebook: readRowsFromStoredFile(state.codebook),
+      value: readRowsFromStoredFile(state.value),
+      label: readRowsFromStoredFile(state.label)
+    });
+    if (!bundleResult.ok) {
+      uploadErr.textContent = `${bundleResult.error} 파일을 다시 확인하고 다시 업로드해 주세요.`;
+      uploadErr.classList.add('show');
       return;
     }
 
