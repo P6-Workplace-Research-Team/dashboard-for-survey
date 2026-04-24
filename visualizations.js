@@ -4814,18 +4814,24 @@ function buildDataTableHtml(data, hiddenGroups = new Set()) {
    ========================================================= */
 
 // 원 문항 라벨에서 순위별 expanded 컬럼 목록을 찾는다
-// pattern: `${targetLabel}__N순위`
+// pattern: `${targetLabel}__N순위` 또는 `${targetLabel}_N순위`
 function findRankExpandedColumns(targetLabel) {
   const headerMap = filterState.headerMap;
   if (!headerMap) return [];
-  const cols = [];
-  for (let n = 1; n <= 30; n++) {
-    const name = `${targetLabel}__${n}순위`;
-    const idx = headerMap.get(name);
-    if (idx === undefined) break;
-    cols.push({ rank: n, label: name, colIdx: idx });
-  }
-  return cols;
+  const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escapeRegExp(targetLabel)}(?:__|_)(\\d+)순위$`);
+  return Array.from(headerMap.entries())
+    .map(([label, colIdx]) => {
+      const match = String(label || '').match(pattern);
+      if (!match) return null;
+      return {
+        rank: Number(match[1]),
+        label,
+        colIdx
+      };
+    })
+    .filter(item => item && Number.isFinite(item.rank))
+    .sort((a, b) => a.rank - b.rank);
 }
 
 function aggregateRank(targetLabel, criterionLabel, rows) {
