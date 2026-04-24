@@ -837,7 +837,7 @@ function setupSelectionAndDragDrop() {
       const items = Array.isArray(data.items) ? data.items : (data.label ? [data] : []);
       if (items.length === 0) return;
 
-      const limit = parseInt(zone.dataset.limit, 10) || 10;
+  const limit = parseInt(zone.dataset.limit, 10) || 20;
       const zoneName = zone.dataset.zone === 'target' ? '보고 싶은 문항' : '그룹별 비교';
       const existingLabels = new Set(
         Array.from(zone.querySelectorAll('.chip')).map(c => c.dataset.label)

@@ -1,4 +1,4 @@
-# 인식DB 대시보드 현재 UI/기능 정의서
+﻿# 인식DB 대시보드 현재 UI/기능 정의서
 
 이 문서는 현재 [home.html](C:\Users\user\Documents\Claude\Projects\인식DB 대시보드_\home.html)과 [dashboard.html](C:\Users\user\Documents\Claude\Projects\인식DB 대시보드_\dashboard.html)에 반영된 실제 화면, 디자인, 기능, 검증 규칙을 사람이 이해하기 쉽게 정리한 문서이다.
 
@@ -420,7 +420,7 @@
 
 제한 수:
 
-- 대상 문항: 최대 10개
+- 대상 문항: 최대 20개
 - 기준 문항: 최대 2개
 
 동작:
@@ -681,7 +681,7 @@
 - 현재는 우측 카드에서 드롭다운으로 `1개 문항만` 선택하는 방식으로 동작한다.
 - 드롭다운의 기본값은 `분석 기준 문항 없음`이다.
 - 선택 가능한 문항은 현재 데이터셋에 존재하는 `객관식 단일` + `raw` 문항으로 제한한다.
-- 분석 대상 문항은 기존처럼 드래그앤드롭으로 최대 10개까지 추가할 수 있다.
+- 분석 대상 문항은 기존처럼 드래그앤드롭으로 최대 20개까지 추가할 수 있다.
 
 ### 9.6 데이터 테이블/보조 텍스트 가독성 조정
 
@@ -700,3 +700,4 @@ The current UI applies the following shared rules to every `객관식 순위` re
 - In group comparison, hiding a group in the legend removes it from both visualization and table output.
 - Group-level rank summaries are displayed as a table with groups on rows and rank positions on columns.
 - Rank data tables keep a total row, and the total row leaves `가중 점수` and `종합 순위` as `-`.
+
