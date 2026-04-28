@@ -1,6 +1,7 @@
 # Design System
 
 > 폰트: Pretendard / 모든 색상은 아래 Figma Variables만 사용. 임의 hex 값 사용 금지.
+> 이 문서는 공통 토큰과 재사용 컴포넌트만 정의한다. 화면별 레이아웃, 간격, 상태별 세부 CSS는 각 화면 구현 파일과 화면 스펙 문서에서 관리한다.
 
 ---
 
@@ -31,12 +32,12 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 | `Body-3` | 본문 3 | 14px | Medium (500) |
 | `Label-1` | 라벨 1 | 14px | Regular (400) |
 | `Label-1-strong` | 라벨 1 강조 | 14px | Semibold (600) |
-| `Label-2` | 라벨 2 | 12px | Regular (400) |
-| `Label-2-strong` | 라벨 2 강조 | 12px | Semibold (600) |
+| `Label-2` | 라벨 2 | 13px | Regular (400) |
+| `Label-2-strong` | 라벨 2 강조 | 13px | Semibold (600) |
 | `Button-1` | 버튼 1 | 14px | Regular (400) |
 | `Button-1-strong` | 버튼 1 강조 | 14px | Semibold (600) |
-| `Button-2` | 버튼 2 | 12px | Regular (400) |
-| `Button-2-strong` | 버튼 2 강조 | 12px | Semibold (600) |
+| `Button-2` | 버튼 2 | 13px | Regular (400) |
+| `Button-2-strong` | 버튼 2 강조 | 13px | Semibold (600) |
 | `Caption-1` | 캡션 1 | 12px | Regular (400) |
 
 - Line-height: Heading `120%` / 나머지 `160%`
@@ -79,11 +80,11 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --body-3-size: 14px;
   --label-1-size: 14px;      /* Regular */
   --label-1-strong: 600;     /* Semibold */
-  --label-2-size: 12px;      /* Regular */
+  --label-2-size: 13px;      /* Regular */
   --label-2-strong: 600;     /* Semibold */
   --button-1-size: 14px;     /* Regular */
   --button-1-strong: 600;    /* Semibold — Focus, Black variant */
-  --button-2-size: 12px;     /* Regular */
+  --button-2-size: 13px;     /* Regular */
   --button-2-strong: 600;    /* Semibold */
   --caption-1-size: 12px;
 
@@ -96,6 +97,83 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --font-weight-regular: 400;
 }
 ```
+
+---
+
+## Common Components
+
+### Logo
+
+| 항목 | 기준 |
+|------|------|
+| 자산 | `assets/purple6studio_한줄_black.png` |
+| 사용 위치 | 홈 상단, 대시보드 헤더 |
+| 표시 규칙 | 로고 이미지는 왜곡 없이 표시하고, 링크 또는 브랜드 영역 자체의 텍스트 장식은 제거한다. |
+
+### Button-1
+
+주요 화면 액션과 헤더 유틸리티에 쓰는 기본 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
+
+| Variant | 용도 | 배경 | 텍스트 | 보더 |
+|---------|------|------|--------|------|
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
+
+- 타입 토큰: 기본은 `Button-1`을 사용하고, `Focus`와 `Black` variant만 `Button-1-strong`을 사용한다.
+- 패딩: 상하 7px, 좌우 14px / border-radius: `--radius-8`
+- 아이콘이 있을 때는 텍스트 앞에 둔다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
+- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
+
+### Button-2
+
+목록, 모달, 반복 항목 안의 작은 액션 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
+
+| Variant | 용도 | 배경 | 텍스트 | 보더 |
+|---------|------|------|--------|------|
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
+
+- 타입 토큰: 기본은 `Button-2`를 사용하고, `Focus`와 `Black` variant만 `Button-2-strong`을 사용한다.
+- 패딩: 상하 6px, 좌우 12px / border-radius: `--radius-8`
+- 아이콘이 있을 때는 텍스트 앞에 둔다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
+- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
+
+### Checkbox
+
+필터, 범례, 표시/숨김 설정처럼 다중 선택 또는 토글성 선택에 사용한다.
+
+| 항목 | 기준 |
+|------|------|
+| 크기 | 14px × 14px |
+| 모양 | 정사각형, border-radius `--radius-4` |
+| Default 보더 | 1px solid `neutral-700` |
+| Checked 배경 | `neutral-900` |
+| Checked 아이콘 | `assets/icons/check_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg`, 12px × 12px, 중앙 정렬, `White`로 필터 적용 |
+
+- 체크박스 자체보다 라벨 전체를 클릭 영역으로 사용하는 것을 기본으로 한다.
+- 범례와 연결된 체크박스는 색상 swatch와 함께 표시한다.
+
+### Number Tag
+
+개수, 선택 수, 필터 선택 수처럼 짧은 숫자를 보여주는 pill 태그다.
+
+| 항목 | 기준 |
+|------|------|
+| 배경 | `neutral-900` |
+| 텍스트 | `White`, `Label-2-strong` |
+| 크기 | 가로·세로 hug, 좌우 padding 6px |
+| 형태 | `--radius-pill` |
+| 사용 예 | 저장된 대시보드 개수, 필터 선택 개수 |
+
+- 값이 0이어도 맥락상 필요한 경우에는 표시한다.
 
 ---
 
@@ -124,9 +202,11 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 | 변수명 | 값 | 용도 |
 |--------|----|------|
-| `low-4` | `#CF9D9D` | 에러 보더, 에러 텍스트 |
+| `error-bg` | `#FFEBEE` | 오류 상태 카드 배경 |
+| `error-text` | `#D32F2F` | 오류 메시지 텍스트 |
+| `low-4` | `#CF9D9D` | 에러 보더, 삭제 hover |
 | `low-3` | `#D4AEAE` | — |
-| `low-2` | `#DAC3C3` | 에러 배경 |
+| `low-2` | `#DAC3C3` | 보조 에러 배경 |
 
 ### Data Visualization (대시보드 전용)
 
@@ -165,6 +245,8 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --neutral-50:  #f8f8f8;
 
   /* error */
+  --error-bg: #ffebee;
+  --error-text: #d32f2f;
   --low-4: #cf9d9d;
   --low-3: #d4aeae;
   --low-2: #dac3c3;
@@ -183,5 +265,15 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --high-4: #859db2;   --low-4: #cf9d9d;
   --high-3: #9eafbf;   --low-3: #d4aeae;
   --high-2: #b1bec9;   --low-2: #dac3c3;
+
+  /* border radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-20: 20px;
+  --radius-pill: 999px;
 }
 ```
