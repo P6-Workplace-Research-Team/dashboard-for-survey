@@ -1892,6 +1892,7 @@ function choiceNeutralColor(index) {
   return CHOICE_NEUTRAL_PALETTE[idx % CHOICE_NEUTRAL_PALETTE.length];
 }
 
+const CHOICE_BAR_CHART_TYPES = ['bar_horizontal', 'bar_vertical'];
 const CHOICE_CHART_TYPES = ['bar_horizontal', 'bar_vertical', 'bar_horizontal_100', 'pie'];
 const CHOICE_CHART_TYPE_LABELS = {
   bar_horizontal: '가로 막대',
@@ -1899,7 +1900,6 @@ const CHOICE_CHART_TYPE_LABELS = {
   bar_horizontal_100: '가로 막대 (100% 누적)',
   pie: '원/파이'
 };
-const CHOICE_CHART_TYPE_MAX_OPTIONS = 6;
 const RANK_CHART_TYPES = ['lollipop', 'stacked'];
 const RANK_CHART_TYPE_LABELS = {
   lollipop: '가중 평균',
@@ -1948,6 +1948,12 @@ const resultState = {
   codebookRowsByLabel: new Map(),
   hiddenGroupKeys: new Map(),
   hiddenRankKeys: new Map(),
+  hiddenTableKeys: new Set(),
+  choiceViewModes: new Map(),
+  choiceBarChartTypes: new Map(),
+  choiceSortModes: new Map(),
+  rankViewModes: new Map(),
+  rankSortModes: new Map(),
   numericHistogramConfigs: new Map(),
   numericOpenViewModes: new Map(),
   scaleViewModes: new Map(),
@@ -1963,7 +1969,11 @@ const resultState = {
   rankSortByScore: new Map(),
   openRankMenus: new Set(),
   tooltipEl: null,
-  initialized: false
+  initialized: false,
+  customGroupDefs: new Map(),        // Map<criterionLabel, Array<{id, name}>>
+  customGroupAssignments: new Map(), // Map<criterionLabel, Map<groupValue, groupId>>
+  customGroupModes: new Set(),       // Set<targetLabel> - 그룹으로 묶어보기 활성화된 문항
+  groupConfigModalState: null
 };
 
 const TARGET_SCALE_COMPARE_VIEW_KEY = '__target_scale_compare__';
@@ -3373,10 +3383,211 @@ function aggregateMultiple(targetLabel, criterionLabel, rows) {
   };
 }
 
+function getChoiceChartViewMode(targetLabel) {
+  return resultState.choiceViewModes.get(targetLabel) || 'horizontal';
+}
+
+function getRankChartViewMode(targetLabel) {
+  return resultState.rankViewModes.get(targetLabel) || 'horizontal';
+}
+
+function isResultTableVisible(targetLabel) {
+  return !resultState.hiddenTableKeys.has(targetLabel);
+}
+
+function buildResultTableToggleHtml(targetLabel) {
+  return `
+    <label class="result-table-toggle">
+      <input type="checkbox" data-result-table-toggle="true" data-target="${escapeHtml(targetLabel)}" ${isResultTableVisible(targetLabel) ? 'checked' : ''}>
+      <span>데이터 표 보기</span>
+    </label>
+  `;
+}
+
+function buildResultSidePanelHtml(legendHtml, targetLabel) {
+  const footerHtml = `<div class="legend-footer">${buildResultTableToggleHtml(targetLabel)}</div>`;
+  if (legendHtml && legendHtml.includes('</aside>')) {
+    return legendHtml.replace(/<\/aside>\s*$/, `${footerHtml}</aside>`);
+  }
+  return `<aside class="legend-panel result-table-toggle-panel">${footerHtml}</aside>`;
+}
+
+function getChoiceChartSortMode(targetLabel) {
+  return resultState.choiceSortModes.get(targetLabel) || 'default';
+}
+
+function getRankChartSortMode(targetLabel) {
+  return resultState.rankSortModes.get(targetLabel) || 'default';
+}
+
+function sortRowsByMetric(rows, metricFn, sortMode) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (sortMode !== 'desc') return safeRows;
+  return safeRows
+    .map((row, index) => ({ row, index, metric: Number(metricFn(row)) || 0 }))
+    .sort((a, b) => (b.metric - a.metric) || (a.index - b.index))
+    .map(item => item.row);
+}
+
+function getChoiceChartRows(data) {
+  if (!data) return [];
+  return sortRowsByMetric(data.totalResults, row => row.pct, getChoiceChartSortMode(data.targetLabel));
+}
+
+function getRankDisplayedPct(row, hiddenRanks = new Set()) {
+  if (!row) return 0;
+  const rankedPct = Array.isArray(row.perRank)
+    ? row.perRank.reduce((sum, pr, rankIndex) => sum + (hiddenRanks.has(rankIndex) ? 0 : (pr.pct || 0)), 0)
+    : 0;
+  const allRankPct = Array.isArray(row.perRank)
+    ? row.perRank.reduce((sum, pr) => sum + (pr.pct || 0), 0)
+    : 0;
+  const nonRankedPct = Math.max(0, (row.totalPct || 0) - allRankPct);
+  return rankedPct + nonRankedPct;
+}
+
+function getRankChartRows(data, hiddenRanks = new Set()) {
+  if (!data) return [];
+  return sortRowsByMetric(data.totalResults, row => getRankDisplayedPct(row, hiddenRanks), getRankChartSortMode(data.targetLabel));
+}
+
+function buildChartViewToggleHtml(targetLabel, activeMode, chartType) {
+  const activeSort = chartType === 'rank'
+    ? getRankChartSortMode(targetLabel)
+    : getChoiceChartSortMode(targetLabel);
+  const modeOptions = [
+    { mode: 'horizontal', label: '가로 막대' },
+    { mode: 'vertical', label: '세로 막대' },
+    { mode: 'pie', label: '원형 그래프' },
+    { mode: 'stacked', label: '누적 막대' }
+  ];
+  const modeSelect = `
+    <label class="chart-type-select-wrap">
+      <span class="chart-type-select-label">그래프 유형</span>
+      <select class="chart-type-select"
+              data-chart-view-select="true"
+              data-chart-type="${escapeHtml(chartType)}"
+              data-target="${escapeHtml(targetLabel)}">
+        ${modeOptions.map(item => `<option value="${item.mode}" ${activeMode === item.mode ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+      </select>
+    </label>
+  `;
+  const sortButtons = [
+    { mode: 'default', label: '기본 순서' },
+    { mode: 'desc', label: '응답률 높은 순' }
+  ].map(item => `
+    <button type="button"
+            class="result-view-btn ${activeSort === item.mode ? 'active' : ''}"
+            data-chart-sort="${item.mode}"
+            data-chart-type="${escapeHtml(chartType)}"
+            data-target="${escapeHtml(targetLabel)}">
+      ${escapeHtml(item.label)}
+    </button>
+  `).join('');
+  return `
+    <div class="chart-view-controls">
+      ${modeSelect}
+      <div class="result-view-toggle">${sortButtons}</div>
+    </div>
+  `;
+}
+
+function buildPieChartHtml(data) {
+  const rows = getChoiceChartRows(data).filter(r => (r.pct || 0) > 0);
+  if (rows.length === 0) return '<div class="result-empty">표시할 데이터가 없습니다.</div>';
+  const r = 72;
+  const c = 80;
+  let acc = 0;
+  const segs = rows.map((row, idx) => {
+    const pct = Math.max(0, row.pct || 0);
+    const angle = (pct / 100) * Math.PI * 2;
+    const start = acc;
+    const end = acc + angle;
+    acc = end;
+    const x1 = c + r * Math.cos(start - Math.PI / 2);
+    const y1 = c + r * Math.sin(start - Math.PI / 2);
+    const x2 = c + r * Math.cos(end - Math.PI / 2);
+    const y2 = c + r * Math.sin(end - Math.PI / 2);
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const color = rankColor(idx);
+    const tip = encodeURIComponent(JSON.stringify({ kind: 'basic-bar', option: row.option, pct: row.pct, count: row.count }));
+    const d = `M ${c} ${c} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    return `<path d="${d}" fill="${color}" data-tip="${tip}"></path>`;
+  }).join('');
+  const legend = rows.map((row, idx) => `
+    <div class="pie-legend-item">
+      <span class="legend-swatch" style="background:${rankColor(idx)}"></span>
+      <span>${escapeHtml(row.option)} (${formatPercent(row.pct)})</span>
+    </div>
+  `).join('');
+  return `
+    <div class="pie-chart-wrap">
+      <svg class="pie-chart" viewBox="0 0 160 160" aria-label="원형 그래프">${segs}</svg>
+      <div class="pie-legend">${legend}</div>
+    </div>
+  `;
+}
+
+function buildStackedBarChartHtml(data) {
+  const rows = getChoiceChartRows(data).filter(r => (r.pct || 0) > 0);
+  if (rows.length === 0) return '<div class="result-empty">표시할 데이터가 없습니다.</div>';
+  const segs = rows.map((row, idx) => {
+    const width = Math.max(0, Math.min(100, row.pct || 0));
+    const tip = encodeURIComponent(JSON.stringify({ kind: 'basic-bar', option: row.option, pct: row.pct, count: row.count }));
+    const label = width >= 8 ? `<span class="stacked-seg-label">${formatPercent(row.pct)}</span>` : '';
+    return `<div class="stacked-seg" style="width:${width}%; background:${rankColor(idx)}" data-tip="${tip}">${label}</div>`;
+  }).join('');
+  const legend = rows.map((row, idx) => `
+    <div class="pie-legend-item">
+      <span class="legend-swatch" style="background:${rankColor(idx)}"></span>
+      <span>${escapeHtml(row.option)}</span>
+    </div>
+  `).join('');
+  return `
+    <div class="stacked-chart-wrap">
+      <div class="stacked-track">${segs}</div>
+      <div class="pie-legend">${legend}</div>
+    </div>
+  `;
+}
+
+function buildVerticalPercentAxisHtml() {
+  const ticks = [100, 75, 50, 25, 0];
+  return `
+    <div class="vbar-axis" aria-hidden="true">
+      ${ticks.map(tick => `<span class="vbar-axis-label" style="bottom:${tick}%;">${tick}%</span>`).join('')}
+    </div>
+  `;
+}
+
+function buildVerticalPercentGridHtml() {
+  const ticks = [100, 75, 50, 25, 0];
+  return `
+    <div class="vbar-grid" aria-hidden="true">
+      ${ticks.map(tick => `<span class="vbar-grid-line" style="bottom:${tick}%;"></span>`).join('')}
+    </div>
+  `;
+}
+
+function buildVerticalChartShell(rowHtml, className = '') {
+  return `
+    <div class="vbar-chart ${className}">
+      <div class="vbar-chart-body">
+        ${buildVerticalPercentAxisHtml()}
+        <div class="vbar-plot">
+          ${buildVerticalPercentGridHtml()}
+          ${rowHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function buildBasicChartHtml(data) {
-  const rows = data.totalResults;
+  const rows = getChoiceChartRows(data);
   const rowHtml = rows.map(r => {
-    const widthStr = `${Math.max(0, Math.min(100, r.pct))}%`;
+    const pct = Math.max(0, Math.min(100, r.pct));
+    const widthStr = `${pct}%`;
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
@@ -3387,13 +3598,14 @@ function buildBasicChartHtml(data) {
       pct: r.pct,
       count: r.count
     }));
+    const innerValueHtml = pct >= 6 ? `<span class="hbar-fill-value">${formatPercent(r.pct)}</span>` : '';
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${SINGLE_BAR_COLOR};"
-               data-tip="${tip}"></div>
+               data-tip="${tip}">${innerValueHtml}</div>
         </div>
         <div class="hbar-value">${formatPercent(r.pct)}</div>
       </div>
@@ -3403,10 +3615,11 @@ function buildBasicChartHtml(data) {
 }
 
 function buildGroupCompareChartHtml(data, hidden) {
-  const rows = data.totalResults;
+  const rows = getChoiceChartRows(data);
   const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
   const rowHtml = rows.map(r => {
-    const widthStr = `${Math.max(0, Math.min(100, r.pct))}%`;
+    const pct = Math.max(0, Math.min(100, r.pct));
+    const widthStr = `${pct}%`;
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
@@ -3417,13 +3630,14 @@ function buildGroupCompareChartHtml(data, hidden) {
       pct: r.pct,
       count: r.count
     }));
+    const innerValueHtml = pct >= 6 ? `<span class="hbar-fill-value">${formatPercent(r.pct)}</span>` : '';
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${COMPARE_BAR_COLOR};"
-               data-tip="${tip}"></div>
+               data-tip="${tip}">${innerValueHtml}</div>
         </div>
         <div class="hbar-value">${formatPercent(r.pct)}</div>
       </div>
@@ -3459,6 +3673,88 @@ function buildGroupCompareChartHtml(data, hidden) {
   `;
 }
 
+function buildVerticalBarChartHtml(data) {
+  const rows = getChoiceChartRows(data);
+  const rowHtml = rows.map(r => {
+    const pct = Math.max(0, Math.min(100, r.pct));
+    const heightStr = `${pct}%`;
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'basic-bar',
+      option: r.option,
+      pct: r.pct,
+      count: r.count
+    }));
+    const innerValueHtml = pct >= 6 ? `<span class="vbar-fill-value">${formatPercent(r.pct)}</span>` : '';
+    return `
+      <div class="vbar-item">
+        <div class="vbar-value">${formatPercent(r.pct)}</div>
+        <div class="vbar-track">
+          <div class="vbar-fill"
+               style="height:${heightStr}; background:${SINGLE_BAR_COLOR};"
+               data-tip="${tip}">${innerValueHtml}</div>
+        </div>
+        <div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+      </div>
+    `;
+  }).join('');
+  return buildVerticalChartShell(rowHtml);
+}
+
+function buildGroupCompareVerticalChartHtml(data, hidden) {
+  const rows = getChoiceChartRows(data);
+  const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
+  const itemWidth = Math.max(72, 36 + ((displayGroups.length + 1) * 18));
+  const rowHtml = rows.map(r => {
+    const overallHeight = `${Math.max(0, Math.min(100, r.pct))}%`;
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    const overallTip = encodeURIComponent(JSON.stringify({
+      kind: 'compare-bar',
+      option: r.option,
+      pct: r.pct,
+      count: r.count
+    }));
+    const groupBarsHtml = displayGroups.map(g => {
+      const color = getGroupColor(data.groupResults, g.value);
+      const gr = g.results.find(x => x.option === r.option) || { pct: 0, count: 0 };
+      const pct = Math.max(0, Math.min(100, gr.pct));
+      const height = `${pct}%`;
+      const tip = encodeURIComponent(JSON.stringify({
+        kind: 'group-dot',
+        groupLabel: g.label,
+        option: r.option,
+        pct: gr.pct,
+        count: gr.count
+      }));
+      const labelHtml = '';
+      return `<div class="vbar-fill vbar-fill-group"
+                   style="height:${height}; background:${color};"
+                   data-tip="${tip}">${labelHtml}</div>`;
+    }).join('');
+    return `
+      <div class="vbar-item group-compare" style="flex-basis:${itemWidth}px;">
+        <div class="vbar-value">${formatPercent(r.pct)}</div>
+        <div class="vbar-track vbar-group-track">
+          <div class="vbar-group-bars">
+            <div class="vbar-fill vbar-fill-overall"
+                 style="height:${overallHeight}; background:${COMPARE_BAR_COLOR};"
+                 data-tip="${overallTip}"></div>
+            ${groupBarsHtml}
+          </div>
+        </div>
+        <div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+      </div>
+    `;
+  }).join('');
+  return buildVerticalChartShell(rowHtml, 'group-compare');
+}
+
 function getDisplayGroupResults(groupResults, hidden) {
   if (!Array.isArray(groupResults)) return [];
   return groupResults.filter(group => {
@@ -3480,32 +3776,70 @@ function getDisplayGroupResults(groupResults, hidden) {
 }
 
 function getGroupColor(groupResults, groupValue) {
+  // 사용자 정의 그룹은 _customColor를 직접 사용
+  const found = groupResults.find(g => g.value === groupValue);
+  if (found && found._customColor) return found._customColor;
   const baseGroups = getDisplayGroupResults(groupResults);
   const idx = baseGroups.findIndex(group => group.value === groupValue);
   return GROUP_PALETTE[(idx < 0 ? 0 : idx) % GROUP_PALETTE.length];
+}
+
+// 사용자 정의 그룹 색상: GROUP_PALETTE 앞부분과 겹치지 않게 별도 파레트 사용
+const CUSTOM_GROUP_PALETTE = [
+  '#9b7fd4', '#5ba89e', '#d47f7f', '#7fa8d4',
+  '#d4a85b', '#7fd47f', '#d45b9b', '#5b7fd4'
+];
+
+function getCustomGroupColor(criterionLabel, groupId) {
+  const defs = resultState.customGroupDefs.get(criterionLabel) || [];
+  const idx = defs.findIndex(d => d.id === groupId);
+  return CUSTOM_GROUP_PALETTE[(idx < 0 ? 0 : idx) % CUSTOM_GROUP_PALETTE.length];
+}
+
+function nextCustomGroupId(criterionLabel) {
+  const defs = resultState.customGroupDefs.get(criterionLabel) || [];
+  const ids = new Set(defs.map(d => d.id));
+  let n = 1;
+  while (ids.has('cg' + n)) n++;
+  return 'cg' + n;
 }
 
 function buildLegendHtml(data, hidden) {
   if (!data.groupResults) return '';
   const displayGroups = getDisplayGroupResults(data.groupResults);
   if (displayGroups.length === 0) return '';
+  const criterionLabel = data.criterionLabel || null;
+  const defs = criterionLabel ? (resultState.customGroupDefs.get(criterionLabel) || []) : [];
+  const assignments = criterionLabel ? (resultState.customGroupAssignments.get(criterionLabel) || new Map()) : new Map();
+
   const items = displayGroups.map((g) => {
     const color = getGroupColor(data.groupResults, g.value);
     const isHidden = hidden.has(g.value);
+    const assignedId = assignments.get(g.value) || '';
+    const assignedDef = defs.find(def => def.id === assignedId) || null;
+    const assignedBadge = assignedDef
+      ? `<span class="legend-group-badge"><span class="legend-swatch" style="background:${getCustomGroupColor(criterionLabel, assignedDef.id)}"></span>${escapeHtml(assignedDef.name)}</span>`
+      : '';
+
     return `
-      <label class="legend-item ${isHidden ? 'disabled' : ''}" data-group="${escapeHtml(g.value)}">
-        <input type="checkbox" ${isHidden ? '' : 'checked'}>
-        <span class="legend-swatch" style="background:${color}"></span>
-        <span>${escapeHtml(g.label)}</span>
-      </label>
+      <div class="legend-row">
+        <label class="legend-item ${isHidden ? 'disabled' : ''}" data-group="${escapeHtml(g.value)}">
+          <input type="checkbox" ${isHidden ? '' : 'checked'}>
+          <span class="legend-swatch" style="background:${color}"></span>
+          <span>${escapeHtml(g.label)}</span>
+        </label>
+        ${assignedBadge}
+      </div>
     `;
   }).join('');
+
   return `
     <aside class="legend-panel">
       <div class="legend" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">${items}</div>
       <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
         <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
         <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+        ${criterionLabel ? `<button type="button" class="legend-action-btn" data-open-group-config="true" data-target="${escapeHtml(data.targetLabel)}" data-criterion="${escapeHtml(criterionLabel)}">그룹 설정</button>` : ''}
       </div>
     </aside>
   `;
@@ -4868,6 +5202,7 @@ function buildNumericOpenSection(data) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+  const showTable = isResultTableVisible(targetLabel);
   const viewMode = groupResults ? 'box' : (resultState.numericOpenViewModes.get(targetLabel) || 'histogram');
   const chartHtml = groupResults
     ? buildNumericOpenGroupChartHtml(data, hiddenGroups)
@@ -4877,10 +5212,11 @@ function buildNumericOpenSection(data) {
           maxBinCount: data.maxBinCount,
           numberUnit: codebookEntry && codebookEntry.numberUnit
         });
-  const tableHtml = buildDataTableHtml(data, hiddenGroups);
+  const tableHtml = showTable ? buildDataTableHtml(data, hiddenGroups) : '';
   const fullText = buildQuestionFullHtml(codebookEntry);
   const controlsHtml = buildNumericOpenControlsHtml(targetLabel, data.interval, data.start, !!groupResults, viewMode);
-  const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '<aside class="legend-panel" aria-hidden="true"></aside>';
+  const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
+  const sidePanelHtml = buildResultSidePanelHtml(legendHtml, targetLabel);
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="numeric-open">
       <div class="result-header">
@@ -4890,7 +5226,7 @@ function buildNumericOpenSection(data) {
       </div>
       <div class="result-visual has-legend numeric-open-visual">
         <div class="result-chart-col">${chartHtml}</div>
-        ${legendHtml}
+        ${sidePanelHtml}
       </div>
       ${tableHtml}
     </section>
@@ -5476,6 +5812,7 @@ function applyRankSortToData(data, sortByScore) {
 function buildRankControlsHtml(targetLabel, options = {}) {
   const {
     chartType = 'lollipop',
+    viewMode = 'horizontal',
     sortByScore = false
   } = options;
   const safeTarget = escapeHtml(targetLabel);
@@ -5495,13 +5832,33 @@ function buildRankControlsHtml(targetLabel, options = {}) {
       </div>
     </div>
   `;
+  const orientationHtml = chartType === 'stacked' ? `
+    <div class="choice-controls-group">
+      <span class="choice-controls-label">막대 방향</span>
+      <div class="result-view-toggle" role="tablist" aria-label="순위 막대 방향">
+        ${[
+          { mode: 'horizontal', label: '가로 막대' },
+          { mode: 'vertical', label: '세로 막대' }
+        ].map(item => `
+          <button type="button"
+                  class="result-view-btn ${item.mode === viewMode ? 'active' : ''}"
+                  data-rank-view-mode="${item.mode}"
+                  data-target="${safeTarget}"
+                  role="tab"
+                  aria-selected="${item.mode === viewMode ? 'true' : 'false'}">
+            ${escapeHtml(item.label)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
   const sortHtml = `
     <label class="choice-controls-sort">
       <input type="checkbox" data-rank-sort-by-score data-target="${safeTarget}" ${sortByScore ? 'checked' : ''}>
       <span class="choice-controls-sort-label">가중 평균 높은 순서로 정렬</span>
     </label>
   `;
-  return `<div class="choice-controls">${chartTypeHtml}${sortHtml}</div>`;
+  return `<div class="choice-controls">${chartTypeHtml}${orientationHtml}${sortHtml}</div>`;
 }
 
 function buildRankSummaryHtml(data) {
@@ -5597,7 +5954,7 @@ function buildRankLollipopChartHtml(data) {
 }
 
 function buildRankStackChartHtml(data, hiddenRanks) {
-  const rows = data.totalResults;
+  const rows = getRankChartRows(data, hiddenRanks);
   const rankLabels = data.rankLabels;
   const rowHtml = rows.map(r => {
     const labelTip = encodeURIComponent(JSON.stringify({
@@ -5619,9 +5976,10 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
+      const innerValueHtml = w >= 4 ? `<span class="rank-seg-value">${formatPercent(pr.pct)}</span>` : '';
       return `<div class="rank-stack-seg"
                    style="width:${w}%; background:${color};"
-                   data-tip="${tip}"></div>`;
+                   data-tip="${tip}">${innerValueHtml}</div>`;
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
     const fallbackWidth = Math.max(0, Math.min(100, nonRankedPct));
@@ -5632,8 +5990,9 @@ function buildRankStackChartHtml(data, hiddenRanks) {
       pct: nonRankedPct,
       count: nonRankedCount
     }));
+    const fallbackLabelHtml = fallbackWidth >= 4 ? `<span class="rank-seg-value">${formatPercent(nonRankedPct)}</span>` : '';
     const fallbackHtml = fallbackWidth > 0
-      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}"></div>`
+      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}">${fallbackLabelHtml}</div>`
       : "";
     const trackHtml = `${segments}${fallbackHtml}`;
     const displayedPct = visiblePct + nonRankedPct;
@@ -5647,6 +6006,58 @@ function buildRankStackChartHtml(data, hiddenRanks) {
     `;
   }).join('');
   return `<div class="rank-stack-chart">${rowHtml}</div>`;
+}
+
+function buildRankVerticalStackChartHtml(data, hiddenRanks) {
+  const rows = getRankChartRows(data, hiddenRanks);
+  const rankLabels = data.rankLabels || [];
+  const rowHtml = rows.map(r => {
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    const rankedCount = r.perRank.reduce((s, pr) => s + (pr.count || 0), 0);
+    const nonRankedCount = Math.max(0, (r.totalCount || 0) - rankedCount);
+    const nonRankedPct = Math.max(0, (r.totalPct || 0) - r.perRank.reduce((s, pr) => s + (pr.pct || 0), 0));
+    const segments = r.perRank.map((pr, ri) => {
+      if (hiddenRanks.has(ri)) return "";
+      const h = Math.max(0, pr.pct);
+      if (h <= 0) return "";
+      const color = rankColor(ri);
+      const tip = encodeURIComponent(JSON.stringify({
+        kind: 'rank-seg',
+        option: r.option,
+        rankLabel: rankLabels[ri],
+        pct: pr.pct,
+        count: pr.count
+      }));
+      const labelHtml = h >= 8 ? `<span class="vbar-seg-value">${formatPercent(pr.pct)}</span>` : '';
+      return `<div class="vbar-stack-seg"
+                   style="height:${Math.min(100, h)}%; background:${color};"
+                   data-tip="${tip}">${labelHtml}</div>`;
+    }).join("");
+    const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
+    const fallbackHeight = Math.max(0, Math.min(100, nonRankedPct));
+    const fallbackTip = encodeURIComponent(JSON.stringify({
+      kind: 'rank-nonranked',
+      option: r.option,
+      rankLabel: '비순위 응답',
+      pct: nonRankedPct,
+      count: nonRankedCount
+    }));
+    const fallbackHtml = fallbackHeight > 0
+      ? `<div class="vbar-stack-seg" style="height:${fallbackHeight}%; background:#b88383;" data-tip="${fallbackTip}">${fallbackHeight >= 8 ? `<span class="vbar-seg-value">${formatPercent(nonRankedPct)}</span>` : ''}</div>`
+      : "";
+    const displayedPct = visiblePct + nonRankedPct;
+    return `
+      <div class="vbar-item rank-stack">
+        <div class="vbar-value">${formatPercent(displayedPct)}</div>
+        <div class="vbar-track vbar-stack-track">${segments}${fallbackHtml}</div>
+        <div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+      </div>
+    `;
+  }).join('');
+  return buildVerticalChartShell(rowHtml, 'rank-stack');
 }
 
 function buildRankLegendHtml(data, hiddenRanks) {
@@ -5891,9 +6302,11 @@ function buildRankSection(data, rows) {
   const sortByScore = !groupResults ? getRankSortByScore(targetLabel) : false;
   const displayData = !groupResults && sortByScore ? applyRankSortToData(data, true) : data;
   const chartType = !groupResults ? getRankChartType(targetLabel) : 'lollipop';
+  const viewMode = groupResults ? 'horizontal' : getRankChartViewMode(targetLabel);
   const controlsHtml = !groupResults
     ? buildRankControlsHtml(targetLabel, {
         chartType,
+        viewMode,
         sortByScore
       })
     : '';
@@ -5903,18 +6316,22 @@ function buildRankSection(data, rows) {
     chartHtml = buildRankGroupTextHtml(displayData, hiddenGroups);
     legendHtml = buildRankGroupLegendHtml(displayData, hiddenGroups);
   } else {
-    chartHtml = chartType === 'stacked'
-      ? buildRankStackChartHtml(displayData, hiddenRanks)
-      : buildRankLollipopChartHtml(displayData);
-    legendHtml = chartType === 'stacked'
-      ? buildRankLegendHtml(displayData, hiddenRanks)
-      : '<aside class="legend-panel is-placeholder" aria-hidden="true"></aside>';
+    if (chartType === 'stacked') {
+      chartHtml = viewMode === 'vertical'
+        ? buildRankVerticalStackChartHtml(displayData, hiddenRanks)
+        : buildRankStackChartHtml(displayData, hiddenRanks);
+      legendHtml = buildRankLegendHtml(displayData, hiddenRanks);
+    } else {
+      chartHtml = buildRankLollipopChartHtml(displayData);
+      legendHtml = '<aside class="legend-panel is-placeholder" aria-hidden="true"></aside>';
+    }
   }
   const tableHtml = buildRankDataTableHtml(displayData, hiddenGroups);
   const formulaNoteHtml = buildRankFormulaNoteHtml(displayData);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
+  const sidePanelHtml = buildResultSidePanelHtml(legendHtml, targetLabel);
 
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="rank">
@@ -5928,7 +6345,7 @@ function buildRankSection(data, rows) {
       ${formulaNoteHtml}
       <div class="result-visual has-legend">
         <div class="result-chart-col">${chartHtml}</div>
-        ${legendHtml}
+        ${sidePanelHtml}
       </div>
       ${tableHtml}
     </section>
@@ -6126,15 +6543,16 @@ function setupScaleCompareModal() {
 }
 
 /* ---------- 객관식 단일: 그래프 모양 / 정렬 컨트롤 ---------- */
-function getSingleChoiceChartType(targetLabel, visibleOptionCount) {
+function getSingleChoiceChartType(targetLabel) {
   const stored = resultState.singleChoiceChartTypes.get(targetLabel);
   const fallback = 'bar_horizontal';
-  const value = CHOICE_CHART_TYPES.includes(stored) ? stored : fallback;
-  // 보기 개수가 한도를 넘으면 가로 막대로 강제 폴백
-  if (visibleOptionCount > CHOICE_CHART_TYPE_MAX_OPTIONS && value !== 'bar_horizontal') {
-    return 'bar_horizontal';
-  }
-  return value;
+  return CHOICE_CHART_TYPES.includes(stored) ? stored : fallback;
+}
+
+function getChoiceBarChartType(targetLabel) {
+  const stored = resultState.choiceBarChartTypes.get(targetLabel);
+  const fallback = 'bar_horizontal';
+  return CHOICE_BAR_CHART_TYPES.includes(stored) ? stored : fallback;
 }
 
 function getSingleChoiceSortByRate(targetLabel) {
@@ -6169,6 +6587,9 @@ function buildChoiceControlsHtml(targetLabel, options) {
   const {
     showChartType = false,
     chartType = 'bar_horizontal',
+    chartTypes = CHOICE_CHART_TYPES,
+    stateScope = 'single',
+    showSort = true,
     sortByRate = false,
     isMenuOpen = false
   } = options || {};
@@ -6184,10 +6605,11 @@ function buildChoiceControlsHtml(targetLabel, options) {
           <img class="choice-chart-type-chevron" src="${chevron}" alt="" aria-hidden="true">
         </button>
         <div class="choice-chart-type-menu" role="listbox" ${isMenuOpen ? '' : 'hidden'}>
-          ${CHOICE_CHART_TYPES.map(type => `
+          ${chartTypes.map(type => `
             <button type="button"
                     class="choice-chart-type-option ${type === chartType ? 'is-active' : ''}"
                     data-choice-chart-type="${type}"
+                    data-choice-chart-scope="${escapeHtml(stateScope)}"
                     data-target="${safeTarget}"
                     role="option"
                     aria-selected="${type === chartType ? 'true' : 'false'}">
@@ -6199,12 +6621,12 @@ function buildChoiceControlsHtml(targetLabel, options) {
     </div>
   ` : '';
 
-  const sortHtml = `
+  const sortHtml = showSort ? `
     <label class="choice-controls-sort">
       <input type="checkbox" data-choice-sort-by-rate data-target="${safeTarget}" ${sortByRate ? 'checked' : ''}>
       <span class="choice-controls-sort-label">응답 비율이 높은 순서로 정렬</span>
     </label>
-  `;
+  ` : '';
 
   return `<div class="choice-controls">${chartTypeHtml}${sortHtml}</div>`;
 }
@@ -6407,38 +6829,281 @@ function buildSingleChoiceChartByType(data, chartType) {
   return buildBasicChartHtml(data);
 }
 
+function ensureGroupConfigModal() {
+  let modal = document.getElementById('group-config-modal');
+  if (modal) return modal;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <div class="modal-backdrop" id="group-config-modal" role="dialog" aria-modal="true" aria-labelledby="group-config-modal-title">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title" id="group-config-modal-title">그룹 설정</div>
+          <button class="modal-close" id="close-group-config-btn" aria-label="닫기">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="group-config-note">범례 항목을 원하는 그룹으로 지정한 뒤 적용하면 묶음 보기로 전환됩니다.</div>
+          <div id="group-config-list"></div>
+          <div class="group-config-divider"></div>
+          <div class="group-config-heading">그룹 이름</div>
+          <div id="group-config-defs"></div>
+          <button type="button" class="legend-action-btn" id="group-config-add-btn">+ 그룹 추가</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="modal-action-btn" id="group-config-reset-btn">원래대로 보기</button>
+          <button type="button" class="modal-action-btn primary" id="group-config-apply-btn">적용</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrapper.firstElementChild);
+  return document.getElementById('group-config-modal');
+}
+
+function closeGroupConfigModal() {
+  const modal = document.getElementById('group-config-modal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  resultState.groupConfigModalState = null;
+}
+
+function renderGroupConfigModal() {
+  const state = resultState.groupConfigModalState;
+  const modal = ensureGroupConfigModal();
+  const listEl = document.getElementById('group-config-list');
+  const defsEl = document.getElementById('group-config-defs');
+  if (!modal || !listEl || !defsEl || !state) return;
+
+  const defs = resultState.customGroupDefs.get(state.criterionLabel) || [];
+  const assignments = resultState.customGroupAssignments.get(state.criterionLabel) || new Map();
+  const optionRows = state.groupOptions.map(groupValue => {
+    const selectedId = assignments.get(groupValue) || '';
+    const optionsHtml = [
+      `<option value="">—</option>`,
+      ...defs.map(def => `<option value="${escapeHtml(def.id)}" ${selectedId === def.id ? 'selected' : ''}>${escapeHtml(def.name)}</option>`),
+      `<option value="__new__">+ 새 그룹</option>`
+    ].join('');
+    return `
+      <div class="group-config-row">
+        <div class="group-config-label">${escapeHtml(groupValue)}</div>
+        <select class="group-config-select" data-group-value="${escapeHtml(groupValue)}">${optionsHtml}</select>
+      </div>
+    `;
+  }).join('');
+  listEl.innerHTML = optionRows || '<div class="group-config-empty">지정할 수 있는 항목이 없습니다.</div>';
+
+  const defsRows = defs.map(def => `
+    <div class="group-config-def-row">
+      <span class="legend-swatch" style="background:${getCustomGroupColor(state.criterionLabel, def.id)}"></span>
+      <input type="text" class="group-config-name-input" data-group-id="${escapeHtml(def.id)}" value="${escapeHtml(def.name)}" maxlength="20">
+      <button type="button" class="group-config-del-btn" data-group-id="${escapeHtml(def.id)}">×</button>
+    </div>
+  `).join('');
+  defsEl.innerHTML = defsRows || '<div class="group-config-empty">생성된 그룹이 없습니다.</div>';
+
+  listEl.querySelectorAll('.group-config-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const groupValue = sel.dataset.groupValue;
+      if (!groupValue) return;
+      let selectedId = sel.value;
+      const defsNow = resultState.customGroupDefs.get(state.criterionLabel) || [];
+      if (selectedId === '__new__') {
+        const newId = nextCustomGroupId(state.criterionLabel);
+        defsNow.push({ id: newId, name: `그룹 ${defsNow.length + 1}` });
+        resultState.customGroupDefs.set(state.criterionLabel, defsNow);
+        selectedId = newId;
+      }
+      const nextAssignments = resultState.customGroupAssignments.get(state.criterionLabel) || new Map();
+      if (selectedId) nextAssignments.set(groupValue, selectedId);
+      else nextAssignments.delete(groupValue);
+      resultState.customGroupAssignments.set(state.criterionLabel, nextAssignments);
+      renderGroupConfigModal();
+    });
+  });
+
+  defsEl.querySelectorAll('.group-config-name-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const groupId = input.dataset.groupId;
+      const defsNow = resultState.customGroupDefs.get(state.criterionLabel) || [];
+      const target = defsNow.find(def => def.id === groupId);
+      if (target) target.name = input.value.trim() || target.name;
+      renderGroupConfigModal();
+    });
+  });
+  defsEl.querySelectorAll('.group-config-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupId = btn.dataset.groupId;
+      if (!groupId) return;
+      const defsNow = (resultState.customGroupDefs.get(state.criterionLabel) || []).filter(def => def.id !== groupId);
+      resultState.customGroupDefs.set(state.criterionLabel, defsNow);
+      const nextAssignments = resultState.customGroupAssignments.get(state.criterionLabel) || new Map();
+      for (const [key, val] of nextAssignments) {
+        if (val === groupId) nextAssignments.delete(key);
+      }
+      resultState.customGroupAssignments.set(state.criterionLabel, nextAssignments);
+      renderGroupConfigModal();
+    });
+  });
+}
+
+function openGroupConfigModal(targetLabel, criterionLabel) {
+  if (!targetLabel || !criterionLabel) return;
+  const data = aggregateResultQuestion(targetLabel, criterionLabel, getFilteredLabelDataRows(), getFilteredValueDataRows(), getFilteredRowIndexes());
+  const groupOptions = (data && Array.isArray(data.groupResults))
+    ? data.groupResults.map(group => group.value).filter(Boolean)
+    : [];
+  resultState.groupConfigModalState = { targetLabel, criterionLabel, groupOptions };
+  const modal = ensureGroupConfigModal();
+  renderGroupConfigModal();
+  modal.classList.add('show');
+}
+
+function setupGroupConfigModal() {
+  const modal = ensureGroupConfigModal();
+  const closeBtn = document.getElementById('close-group-config-btn');
+  const addBtn = document.getElementById('group-config-add-btn');
+  const applyBtn = document.getElementById('group-config-apply-btn');
+  const resetBtn = document.getElementById('group-config-reset-btn');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeGroupConfigModal);
+  if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeGroupConfigModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('show')) closeGroupConfigModal();
+  });
+
+  if (addBtn) addBtn.addEventListener('click', () => {
+    const state = resultState.groupConfigModalState;
+    if (!state) return;
+    const defs = resultState.customGroupDefs.get(state.criterionLabel) || [];
+    defs.push({ id: nextCustomGroupId(state.criterionLabel), name: `그룹 ${defs.length + 1}` });
+    resultState.customGroupDefs.set(state.criterionLabel, defs);
+    renderGroupConfigModal();
+  });
+
+  if (applyBtn) applyBtn.addEventListener('click', () => {
+    const state = resultState.groupConfigModalState;
+    if (!state) return;
+    const assignments = resultState.customGroupAssignments.get(state.criterionLabel) || new Map();
+    const hasAny = [...assignments.values()].some(Boolean);
+    if (hasAny) resultState.customGroupModes.add(state.targetLabel);
+    else resultState.customGroupModes.delete(state.targetLabel);
+    closeGroupConfigModal();
+    renderResults();
+  });
+
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    const state = resultState.groupConfigModalState;
+    if (!state) return;
+    resultState.customGroupModes.delete(state.targetLabel);
+    closeGroupConfigModal();
+    renderResults();
+  });
+}
+
 /* ---------- 섹션 dispatch ---------- */
+/**
+ * 사용자 정의 그룹으로 groupResults를 합산하는 헬퍼
+ * - single-choice: group.results 합산
+ * - multi-choice:  group.perOption 합산
+ * - 그룹에 배정되지 않은 항목은 합산에서 제외됨
+ */
+function buildCustomGroupData(data) {
+  const { criterionLabel, groupResults, optionOrder } = data;
+  if (!criterionLabel || !groupResults || groupResults.length === 0) return null;
+  const defs = resultState.customGroupDefs.get(criterionLabel) || [];
+  const assignments = resultState.customGroupAssignments.get(criterionLabel) || new Map();
+  if (defs.length === 0) return null;
+  // 최소 1개 이상 배정된 그룹만 포함
+  const hasAny = [...assignments.values()].some(v => v);
+  if (!hasAny) return null;
+
+  function mergeIntoGroup(groups, label, color) {
+    if (groups.length === 0) return null;
+    const n = groups.reduce((s, g) => s + (g.n || 0), 0);
+    const opts = optionOrder || [];
+    // single-choice
+    if (groups[0] && Array.isArray(groups[0].results)) {
+      const results = opts.map(opt => {
+        const count = groups.reduce((s, g) => {
+          const r = g.results.find(r => r.option === opt);
+          return s + (r ? (r.count || 0) : 0);
+        }, 0);
+        return { option: opt, count, pct: n > 0 ? (count / n) * 100 : 0 };
+      });
+      return { value: label, label, n, results, _customColor: color };
+    }
+    // multi-choice
+    if (groups[0] && Array.isArray(groups[0].perOption)) {
+      const perOption = opts.map(opt => {
+        const count = groups.reduce((s, g) => {
+          const r = g.perOption.find(r => r.option === opt);
+          return s + (r ? (r.count || 0) : 0);
+        }, 0);
+        return { option: opt, count, pct: n > 0 ? (count / n) * 100 : 0 };
+      });
+      return { value: label, label, n, perOption, _customColor: color };
+    }
+    return null;
+  }
+
+  const mergedGroupResults = defs.map(def => {
+    const color = getCustomGroupColor(criterionLabel, def.id);
+    const members = groupResults.filter(g => assignments.get(g.value) === def.id);
+    return mergeIntoGroup(members, def.name, color);
+  }).filter(Boolean);
+
+  if (mergedGroupResults.length === 0) return null;
+  return { ...data, groupResults: mergedGroupResults, isCustomGroupView: true };
+}
+
+
 function buildChoiceSectionHtml(data, rows) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
+
+  // 사용자 정의 그룹 보기 모드: 활성화 시 그룹을 사용자 정의 그룹으로 합산
+  const customGroupOn = resultState.customGroupModes.has(targetLabel);
+  const customGroupData = (customGroupOn && groupResults) ? buildCustomGroupData(data) : null;
+  const baseData = customGroupData || data;
+
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+  // 그룹 묶기 뷰에서는 숨김 그룹 필터 미적용 (그룹 단위로 통합됐으므로)
+  const displayHidden = customGroupData ? new Set() : hiddenGroups;
 
   // 객관식 단일(그룹 비교 없음)에 한해 정렬 옵션 적용.
   const sortByRate = !data.isMulti && !groupResults
     ? getSingleChoiceSortByRate(targetLabel)
     : false;
-  const displayData = sortByRate ? applyChoiceSortToData(data, true) : data;
-  const visibleOptionCount = (displayData.totalResults || []).length;
+  const displayData = sortByRate ? applyChoiceSortToData(baseData, true) : baseData;
 
-  // 컨트롤 영역: 객관식 단일이고 그룹 비교가 아닐 때만 노출.
-  const showControls = !data.isMulti && !groupResults;
-  const showChartType = showControls && visibleOptionCount <= CHOICE_CHART_TYPE_MAX_OPTIONS;
-  const chartType = showChartType ? getSingleChoiceChartType(targetLabel, visibleOptionCount) : 'bar_horizontal';
+  const isSingleWithoutGroup = !data.isMulti && !groupResults;
+  const showControls = isSingleWithoutGroup || data.isMulti || !!groupResults;
+  const chartTypes = isSingleWithoutGroup ? CHOICE_CHART_TYPES : CHOICE_BAR_CHART_TYPES;
+  const chartType = isSingleWithoutGroup
+    ? getSingleChoiceChartType(targetLabel)
+    : getChoiceBarChartType(targetLabel);
   const isMenuOpen = resultState.openChoiceMenus.has(targetLabel);
   const controlsHtml = showControls
     ? buildChoiceControlsHtml(targetLabel, {
-        showChartType,
+        showChartType: true,
         chartType,
+        chartTypes,
+        stateScope: isSingleWithoutGroup ? 'single' : 'bar',
+        showSort: isSingleWithoutGroup,
         sortByRate,
         isMenuOpen
       })
     : '';
 
   const chartHtml = groupResults
-    ? buildGroupCompareChartHtml(displayData, hiddenGroups)
+    ? (chartType === 'bar_vertical'
+        ? buildGroupCompareVerticalChartHtml(displayData, displayHidden)
+        : buildGroupCompareChartHtml(displayData, displayHidden))
     : buildSingleChoiceChartByType(displayData, chartType);
-  const legendHtml = groupResults ? buildLegendHtml(displayData, hiddenGroups) : '';
-  const tableHtml = buildDataTableHtml(displayData, hiddenGroups);
+  // legend는 항상 원본 data 기준으로 (그룹 설정 버튼/체크 유지)
+  const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
+  const tableHtml = buildDataTableHtml(displayData, displayHidden);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -6468,11 +7133,12 @@ function buildScaleSection(data, rows) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+  const showTable = isResultTableVisible(targetLabel);
   const viewMode = getScaleViewMode(targetLabel);
   const hideMidpoint = isScaleMidpointHidden(targetLabel);
   const chartHtml = buildScaleChartHtml(data, hiddenGroups, viewMode);
   const legendHtml = (!data.isDerivedScale && viewMode === 'distribution') ? buildScaleLegendHtml(data) : '';
-  const tableHtml = buildDataTableHtml(data, hiddenGroups);
+  const tableHtml = showTable ? buildDataTableHtml(data, hiddenGroups) : '';
   const compareTriggerHtml = '';
   const compareSectionHtml = '';
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -6481,7 +7147,8 @@ function buildScaleSection(data, rows) {
     hideMidpoint
   });
   const groupControlsHtml = groupResults ? buildScaleGroupControlsHtml(data, hiddenGroups) : '';
-  const visualClass = getResultVisualClass(!!legendHtml);
+  const sidePanelHtml = buildResultSidePanelHtml(legendHtml, targetLabel);
+  const visualClass = getResultVisualClass(true);
 
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="scale">
@@ -6493,7 +7160,7 @@ function buildScaleSection(data, rows) {
       </div>
       <div class="${visualClass}">
         <div class="result-chart-col">${chartHtml}</div>
-        ${legendHtml}
+        ${sidePanelHtml}
       </div>
       ${tableHtml}
       ${compareTriggerHtml}
@@ -6505,6 +7172,8 @@ function buildScaleSection(data, rows) {
 function buildTargetScaleCompareSection(compareData) {
   if (!compareData || !compareData.baseData) return '';
   const hiddenGroups = resultState.hiddenGroupKeys.get(compareData.targetLabel) || new Set();
+  const tableKey = TARGET_SCALE_COMPARE_VIEW_KEY;
+  const showTable = isResultTableVisible(tableKey);
   const hasGroups = Array.isArray(compareData.groups) && compareData.groups.length > 0;
   let viewMode = resultState.scaleViewModes.get(TARGET_SCALE_COMPARE_VIEW_KEY) || 'mean';
   if (hasGroups && viewMode === 'distribution') {
@@ -6520,7 +7189,8 @@ function buildTargetScaleCompareSection(compareData) {
   const compareSectionHtml = viewMode === 'distribution'
     ? buildScaleCompareDistributionSectionHtml(compareData)
     : buildScaleCompareSectionHtml(compareData, hiddenGroups, { showHeader: false, flush: true });
-  const tableHtml = buildScaleCompareDataTableHtml(compareData, hiddenGroups);
+  const tableHtml = showTable ? buildScaleCompareDataTableHtml(compareData, hiddenGroups) : '';
+  const tableToggleHtml = `<div class="result-side-toggle-row">${buildResultTableToggleHtml(tableKey)}</div>`;
   return `
     <section class="result-section" data-target="${escapeHtml(compareData.targetLabel)}" data-type="scale-compare">
       <div class="result-header">
@@ -6528,6 +7198,7 @@ function buildTargetScaleCompareSection(compareData) {
         ${toggleHtml}
       </div>
       ${compareSectionHtml}
+      ${tableToggleHtml}
       ${tableHtml}
     </section>
   `;
@@ -6861,7 +7532,7 @@ function attachResultEventListeners(container) {
       openScaleCompareModal(targetLabel);
     });
   });
-  // 객관식 단일: 그래프 모양 드롭다운 트리거
+  // 객관식: 그래프 모양 드롭다운 트리거
   container.querySelectorAll('[data-choice-chart-type-trigger]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -6874,15 +7545,22 @@ function attachResultEventListeners(container) {
       renderResults();
     });
   });
-  // 객관식 단일: 그래프 모양 옵션 선택
+  // 객관식: 그래프 모양 옵션 선택
   container.querySelectorAll('[data-choice-chart-type]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
       const targetLabel = btn.dataset.target;
       const type = btn.dataset.choiceChartType;
-      if (!targetLabel || !CHOICE_CHART_TYPES.includes(type)) return;
-      resultState.singleChoiceChartTypes.set(targetLabel, type);
+      const scope = btn.dataset.choiceChartScope;
+      if (!targetLabel) return;
+      if (scope === 'bar') {
+        if (!CHOICE_BAR_CHART_TYPES.includes(type)) return;
+        resultState.choiceBarChartTypes.set(targetLabel, type);
+      } else {
+        if (!CHOICE_CHART_TYPES.includes(type)) return;
+        resultState.singleChoiceChartTypes.set(targetLabel, type);
+      }
       resultState.openChoiceMenus.delete(targetLabel);
       renderResults();
     });
@@ -6918,6 +7596,17 @@ function attachResultEventListeners(container) {
       if (!targetLabel || !RANK_CHART_TYPES.includes(type)) return;
       resultState.rankChartTypes.set(targetLabel, type);
       resultState.openRankMenus.delete(targetLabel);
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-rank-view-mode]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      const mode = btn.dataset.rankViewMode === 'vertical' ? 'vertical' : 'horizontal';
+      if (!targetLabel) return;
+      resultState.rankViewModes.set(targetLabel, mode);
       renderResults();
     });
   });
@@ -6977,6 +7666,13 @@ function attachResultEventListeners(container) {
         }
         renderResults();
       });
+    });
+  });
+  container.querySelectorAll('[data-open-group-config]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      openGroupConfigModal(btn.dataset.target, btn.dataset.criterion);
     });
   });
 }
@@ -7172,6 +7868,7 @@ async function initResultFeature() {
   try { setupSelectionAndDragDrop && setupSelectionAndDragDrop(); } catch (_) {}
   try { setupOtherResponseModal && setupOtherResponseModal(); } catch (_) {}
   try { setupScaleCompareModal && setupScaleCompareModal(); } catch (_) {}
+  try { setupGroupConfigModal && setupGroupConfigModal(); } catch (_) {}
   try { setupTitleRename && setupTitleRename(); } catch (_) {}
   try { setupSavedModal && setupSavedModal(); } catch (_) {}
   try { await setupFilters(); } catch (_) {}
