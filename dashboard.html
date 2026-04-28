@@ -19,21 +19,27 @@
         <div id="project-title" class="project-title">설문조사 제목</div>
         <input id="project-title-input" class="project-title-input" type="text" maxlength="50" hidden>
         <button id="title-edit-btn" class="title-edit-btn" type="button" aria-label="제목 바꾸기" title="제목 바꾸기">
-            <img class="icon" src="assets/icons/edit_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png" alt="">
+            <img class="icon" src="assets/icons/edit_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
         </button>
       </div>
     </div>
     <div class="header-actions">
-      <button class="header-btn" type="button" id="dashboard-data-update-btn">데이터 업데이트</button>
-      <button class="header-btn primary" type="button" id="dashboard-save-btn">현재 대시보드 저장하기</button>
-      <div class="header-divider" aria-hidden="true"></div>
-      <button id="dashboard-list-btn" class="list-btn" type="button">
-            <img class="icon" src="assets/icons/menu_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
-        저장된 대시보드 리스트
-        <span class="count" id="saved-count">0</span>
+      <button class="dashboard-header-btn" type="button" id="dashboard-data-update-btn">
+        <img class="dashboard-header-btn-icon" src="assets/icons/autorenew_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
+        데이터 업데이트
       </button>
-      <button class="create-btn" type="button" id="new-analysis-btn">
-            <img class="icon" src="assets/icons/new_window_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
+      <button class="dashboard-header-btn is-button-1-black" type="button" id="dashboard-save-btn">
+        <img class="dashboard-header-btn-icon" src="assets/icons/arrow_downward_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
+        현재 대시보드 저장하기
+      </button>
+      <div class="header-divider" aria-hidden="true"></div>
+      <button id="dashboard-list-btn" class="dashboard-header-btn" type="button">
+        <img class="dashboard-header-btn-icon" src="assets/icons/menu_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
+        저장된 대시보드 리스트
+        <span class="dashboard-number-tag" id="saved-count">0</span>
+      </button>
+      <button class="dashboard-header-btn" type="button" id="new-analysis-btn">
+        <img class="dashboard-header-btn-icon" src="assets/icons/new_window_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
         새 대시보드 만들기
       </button>
     </div>
@@ -48,7 +54,7 @@
           </div>
           <div class="panel-search-wrap">
             <input type="text" class="panel-search" id="panel-search" placeholder="문항 검색">
-              <img class="panel-search-icon" src="assets/icons/search_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png" alt="">
+              <img class="panel-search-icon" src="assets/icons/search_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
           </div>
         </div>
         <div id="question-tree">
@@ -60,7 +66,7 @@
         </div>
       </aside>
       <button class="panel-toggle" id="panel-toggle" type="button" aria-label="패널 확장">
-              <img class="panel-toggle-icon" src="assets/icons/arrow_forward_ios_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png" alt="">
+              <img class="panel-toggle-icon" src="assets/icons/keyboard_arrow_right_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
       </button>
     </div>
 
@@ -129,7 +135,7 @@
     <div class="modal-header">
       <div class="modal-title" id="list-modal-title">저장된 대시보드 리스트</div>
       <button class="modal-close" id="close-list-btn" aria-label="닫기">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
       </button>
     </div>
     <div class="modal-body" id="saved-list"></div>
@@ -141,7 +147,7 @@
     <div class="modal-header">
       <div class="modal-title" id="data-update-modal-title">데이터 업데이트</div>
       <button class="modal-close" id="close-data-update-btn" aria-label="닫기">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
       </button>
     </div>
     <div class="modal-body">
@@ -160,7 +166,7 @@
     <div class="modal-header">
       <div class="modal-title" id="other-response-modal-title">기타 응답</div>
       <button class="modal-close" id="close-other-response-btn" aria-label="닫기">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
       </button>
     </div>
     <div class="modal-body">
@@ -175,7 +181,7 @@
     <div class="modal-header">
       <div class="modal-title" id="scale-compare-modal-title">다른 문항과 묶어서 보기</div>
       <button class="modal-close" id="close-scale-compare-btn" aria-label="닫기">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
       </button>
     </div>
     <div class="modal-body">

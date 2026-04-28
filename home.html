@@ -133,7 +133,7 @@
     <button id="start-btn" class="primary-btn" type="button" disabled>대시보드 만들기</button>
 
     <a class="guide-banner" href="#" id="guide-link">
-      <span class="guide-desc">문항 코드북과 응답 데이터셋이 무엇인지 모르겠거나, 아직 만들지 않았다면 아래 가이드를 참고해 주세요.</span>
+      <span class="guide-desc">문항 코드북과 응답 데이터셋을 만드는 방법은 아래 가이드를 참고해주세요.</span>
       <span class="guide-link">가이드 보러 가기 →</span>
     </a>
   </main>
@@ -146,7 +146,7 @@
     <div class="modal-header">
       <div class="modal-title" id="list-modal-title">저장된 대시보드 리스트</div>
       <button class="modal-close" id="close-list-btn" aria-label="닫기">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
       </button>
     </div>
     <div class="modal-body" id="saved-list"></div>
@@ -691,7 +691,7 @@ function validateBundleConsistency(rowsByKey) {
   });
 
   function resetZone(zone) {
-    zone.classList.remove('done');
+    zone.classList.remove('done', 'has-error');
     zone.parentElement.classList.remove('has-error');
     zone.parentElement.querySelector('.dz-error-msg').textContent = '';
     zone.querySelector('.done-filename').textContent = '';
@@ -699,12 +699,14 @@ function validateBundleConsistency(rowsByKey) {
 
   function setZoneError(zone, msg) {
     zone.classList.remove('done');
+    zone.classList.add('has-error');
     zone.parentElement.classList.add('has-error');
-    zone.parentElement.querySelector('.dz-error-msg').textContent = msg;
+    zone.parentElement.querySelector('.dz-error-msg').textContent = msg.replace(/\. /g, '.\n');
   }
 
   function setZoneDone(zone, filename) {
     zone.parentElement.classList.remove('has-error');
+    zone.classList.remove('has-error');
     zone.classList.add('done');
     zone.parentElement.querySelector('.dz-error-msg').textContent = '';
     zone.querySelector('.done-filename').textContent = filename;

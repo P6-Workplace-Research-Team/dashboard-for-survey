@@ -114,40 +114,49 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 주요 화면 액션과 헤더 유틸리티에 쓰는 기본 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
 
-| Variant | 용도 | 배경 | 텍스트 | 보더 | 굵기 |
-|---------|------|------|--------|------|------|
-| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` | Medium |
-| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` | Semibold |
-| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 | Semibold |
-| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` | Medium |
+| Variant | 용도 | 배경 | 텍스트 | 보더 |
+|---------|------|------|--------|------|
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
 
-- 타입 토큰: `Button-1` / `Button-1-strong`
+- 타입 토큰: 기본은 `Button-1`을 사용하고, `Focus`와 `Black` variant만 `Button-1-strong`을 사용한다.
+- 패딩: 상하 7px, 좌우 14px / border-radius: `--radius-8`
 - 아이콘이 있을 때는 텍스트 앞에 둔다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
 - 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
 
 ### Button-2
 
-목록, 모달, 반복 항목 안의 작은 액션 버튼이다.
+목록, 모달, 반복 항목 안의 작은 액션 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
 
 | Variant | 용도 | 배경 | 텍스트 | 보더 |
 |---------|------|------|--------|------|
-| Default | 이름 바꾸기, 교체하기 같은 일반 액션 | `White` | `neutral-600` | `neutral-200` |
-| Hover | 일반 액션 hover | `White` | `Black` | `Black` |
-| Delete Hover | 삭제 액션 hover | `White` | `low-4` | `low-4` |
-| Active | 확정 또는 선택 상태 | `Black` | `White` | 없음 |
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
 
-- 타입 토큰: `Button-2` / `Button-2-strong`
-- 삭제처럼 위험도가 있는 액션은 hover에서만 error 계열을 사용한다.
+- 타입 토큰: 기본은 `Button-2`를 사용하고, `Focus`와 `Black` variant만 `Button-2-strong`을 사용한다.
+- 패딩: 상하 6px, 좌우 12px / border-radius: `--radius-8`
+- 아이콘이 있을 때는 텍스트 앞에 둔다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
+- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
 
 ### Checkbox
 
 필터, 범례, 표시/숨김 설정처럼 다중 선택 또는 토글성 선택에 사용한다.
 
-| 상태 | 기준 |
+| 항목 | 기준 |
 |------|------|
-| Default | 네이티브 checkbox 사용 |
-| Checked | `Black` 또는 해당 화면의 주 텍스트 색을 accent color로 사용 |
-| Disabled/비활성 | 텍스트와 보조 마커를 흐리게 표시 |
+| 크기 | 14px × 14px |
+| 모양 | 정사각형, border-radius `--radius-4` |
+| Default 보더 | 1px solid `neutral-700` |
+| Checked 배경 | `neutral-900` |
+| Checked 아이콘 | `assets/icons/check_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg`, 12px × 12px, 중앙 정렬, `White`로 필터 적용 |
 
 - 체크박스 자체보다 라벨 전체를 클릭 영역으로 사용하는 것을 기본으로 한다.
 - 범례와 연결된 체크박스는 색상 swatch와 함께 표시한다.
@@ -158,12 +167,12 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 | 항목 | 기준 |
 |------|------|
-| 배경 | `Black` 또는 `neutral-900` |
+| 배경 | `neutral-900` |
 | 텍스트 | `White`, `Label-2-strong` |
-| 형태 | pill radius, 최소 너비를 보장 |
+| 크기 | 가로·세로 hug, 좌우 padding 6px |
+| 형태 | `--radius-pill` |
 | 사용 예 | 저장된 대시보드 개수, 필터 선택 개수 |
 
-- 숫자만 단독으로 보여주고, 단위가 필요하면 태그 바깥의 라벨에서 설명한다.
 - 값이 0이어도 맥락상 필요한 경우에는 표시한다.
 
 ---
@@ -256,5 +265,15 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --high-4: #859db2;   --low-4: #cf9d9d;
   --high-3: #9eafbf;   --low-3: #d4aeae;
   --high-2: #b1bec9;   --low-2: #dac3c3;
+
+  /* border radius */
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-20: 20px;
+  --radius-pill: 999px;
 }
 ```

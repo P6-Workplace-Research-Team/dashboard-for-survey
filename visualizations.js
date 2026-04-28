@@ -513,7 +513,7 @@ function renderTree(tree) {
     return;
   }
 
-  const chevron = 'assets/icons/arrow_forward_ios_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.png';
+  const chevron = 'assets/icons/keyboard_arrow_right_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg';
   function appendQuestionCard(parent, item, cat1Name, cat2Name) {
     const card = document.createElement('div');
     const hasFull = item.full && item.full.trim() !== '';
@@ -1877,6 +1877,35 @@ const ALLOCATION_PALETTE = [
 const SINGLE_BAR_COLOR = '#4a4a4a';
 const COMPARE_BAR_COLOR = '#d9d9d9';
 
+// 객관식 단일 — 100% 누적 막대 / 파이에서 사용하는 무채색 팔레트.
+// data_visualization.md §4 컬러 규칙 + design_system.md neutral 토큰 기준.
+const CHOICE_NEUTRAL_PALETTE = [
+  '#363636', // neutral-800
+  '#777777', // neutral-600
+  '#afafaf', // neutral-400
+  '#525252', // neutral-700
+  '#919191', // neutral-500
+  '#cccccc'  // neutral-300
+];
+function choiceNeutralColor(index) {
+  const idx = Math.max(0, Number(index) || 0);
+  return CHOICE_NEUTRAL_PALETTE[idx % CHOICE_NEUTRAL_PALETTE.length];
+}
+
+const CHOICE_CHART_TYPES = ['bar_horizontal', 'bar_vertical', 'bar_horizontal_100', 'pie'];
+const CHOICE_CHART_TYPE_LABELS = {
+  bar_horizontal: '가로 막대',
+  bar_vertical: '세로 막대',
+  bar_horizontal_100: '가로 막대 (100% 누적)',
+  pie: '원/파이'
+};
+const CHOICE_CHART_TYPE_MAX_OPTIONS = 6;
+const RANK_CHART_TYPES = ['lollipop', 'stacked'];
+const RANK_CHART_TYPE_LABELS = {
+  lollipop: '점 그래프',
+  stacked: '누적 막대'
+};
+
 // 객관식 순위: 무채색 계열 안에서 순위별 차이를 조금 더 크게 둡니다.
 const RANK_PALETTE = [
   '#1f1f1f', '#555555', '#8b8b8b', '#b1b1b1', '#c7c7c7', '#d9d9d9', '#e6e6e6', '#f0f0f0'
@@ -1884,6 +1913,19 @@ const RANK_PALETTE = [
 function rankColor(idx) {
   if (idx < RANK_PALETTE.length) return RANK_PALETTE[idx];
   return RANK_PALETTE[RANK_PALETTE.length - 1];
+}
+
+function getRankWeight(rankCount, rankIndex) {
+  return Math.max(1, (2 * (rankCount - rankIndex)) - 1);
+}
+
+function formatRankAverage(value) {
+  return Number.isFinite(value) ? value.toFixed(1) : '0.0';
+}
+
+function buildRankWeightFormulaText(rankCount) {
+  const parts = Array.from({ length: rankCount }, (_, idx) => `${idx + 1}순위×${getRankWeight(rankCount, idx)}`);
+  return `가중 평균 = (${parts.join(' + ')}) ÷ 전체 응답자 수`;
 }
 
 const SCALE_DIVERGING_PALETTE = [
@@ -1907,6 +1949,13 @@ const resultState = {
   scaleCompareSelections: new Map(),
   targetScaleCompareMode: false,
   otherResponseTexts: new Map(),
+  dataTableCollapsed: new Map(),
+  singleChoiceChartTypes: new Map(),
+  singleChoiceSortByRate: new Map(),
+  openChoiceMenus: new Set(),
+  rankChartTypes: new Map(),
+  rankSortByScore: new Map(),
+  openRankMenus: new Set(),
   tooltipEl: null,
   initialized: false
 };
@@ -2164,6 +2213,12 @@ function formatPercent(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return '0.0%';
   return `${(Math.round((num + 1e-10) * 10) / 10).toFixed(1)}%`;
+}
+
+function formatOneDecimal(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '0.0';
+  return (Math.round((num + 1e-10) * 10) / 10).toFixed(1);
 }
 
 function isOtherOption(option) {
@@ -3484,10 +3539,19 @@ function buildGroupedCountHeader(label, count, colspan) {
 
 function wrapResultTable(tableHtml, noteHtml = '') {
   return `
-    <div class="result-table-wrap">
-      ${tableHtml}
+    <div class="data-table-section" data-data-table-section>
+      <button type="button" class="data-table-toggle" data-data-table-toggle aria-expanded="true">
+        <img class="data-table-toggle-icon data-table-toggle-icon-up" src="assets/icons/keyboard_arrow_up_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
+        <img class="data-table-toggle-icon data-table-toggle-icon-down" src="assets/icons/keyboard_arrow_down_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
+        <span class="data-table-toggle-label" data-label-expanded="데이터 테이블 숨기기" data-label-collapsed="데이터 테이블 펼치기">데이터 테이블 숨기기</span>
+      </button>
+      <div class="data-table-body" data-data-table-body>
+        <div class="result-table-wrap">
+          ${tableHtml}
+        </div>
+        ${noteHtml}
+      </div>
     </div>
-    ${noteHtml}
   `;
 }
 
@@ -3495,34 +3559,32 @@ function buildChoiceDataTableHtml(data) {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
     const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
-    return `
-      <div class="result-table-wrap">
-        <table class="result-table">
-          <thead>
+    const tableHtml = `
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>응답 보기</th>
+            <th class="num">비율(%)</th>
+            <th class="num">응답 수(명)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${totalResults.map(r => `
             <tr>
-              <th>응답 보기</th>
-              <th class="num">비율(%)</th>
-              <th class="num">응답 수(명)</th>
+              <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+              <td class="num">${formatPercent(r.pct)}</td>
+              <td class="num">${r.count.toLocaleString()}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${totalResults.map(r => `
-              <tr>
-                <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
-                <td class="num">${formatPercent(r.pct)}</td>
-                <td class="num">${r.count.toLocaleString()}</td>
-              </tr>
-            `).join('')}
-            <tr class="total-row">
-              <td>합계</td>
-              <td class="num">${formatPercent(sumPct)}</td>
-              <td class="num">${totalN.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          `).join('')}
+          <tr class="total-row">
+            <td>합계</td>
+            <td class="num">${formatPercent(sumPct)}</td>
+            <td class="num">${totalN.toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
     `;
-    return wrapResultTable(tableHtml, helperText);
+    return wrapResultTable(tableHtml);
   }
 
   const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
@@ -3581,11 +3643,22 @@ function buildChoiceDataTableHtml(data) {
 }
 
 function allocationColor(index) {
-  return ALLOCATION_PALETTE[Math.max(0, Number(index) || 0) % ALLOCATION_PALETTE.length];
+  const idx = Math.max(0, Number(index) || 0);
+  const cssPalette = [
+    'var(--color-1)',
+    'var(--color-2)',
+    'var(--color-3)',
+    'var(--color-4)',
+    'var(--color-5)',
+    'var(--color-6)',
+    'var(--color-7)',
+    'var(--color-8)'
+  ];
+  return cssPalette[idx % cssPalette.length];
 }
 
 function buildRatioAllocationStackHtml(results, options = {}) {
-  const { groupLabel = '', n = 0 } = options;
+  const { groupLabel = '', n = 0, showLabels = true } = options;
   const safeResults = Array.isArray(results) ? results : [];
   const segmentsHtml = safeResults.map((result, index) => {
     const width = Math.max(0, Math.min(100, Number(result.pct) || 0));
@@ -3600,7 +3673,7 @@ function buildRatioAllocationStackHtml(results, options = {}) {
       <div class="allocation-segment ${width < 10 ? 'is-narrow' : ''}"
            style="width:${width}%; background:${allocationColor(index)};"
            data-tip="${tip}">
-        <span class="allocation-segment-value">${formatPercent(result.pct)}</span>
+        <span class="allocation-segment-value">${formatOneDecimal(result.pct)}</span>
       </div>
     `;
   }).join('');
@@ -3613,13 +3686,10 @@ function buildRatioAllocationStackHtml(results, options = {}) {
       pct: result.pct,
       count: n || result.count || 0
     }));
+    const posClass = index === 0 ? 'is-start' : (index === safeResults.length - 1 ? 'is-end' : 'is-center');
     return `
-      <div class="allocation-item-label" style="width:${width}%;" data-tip="${tip}">
-        <span class="allocation-item-name">
-          <span class="allocation-item-swatch" style="background:${allocationColor(index)};"></span>
-          <span class="allocation-item-text">${escapeHtml(result.option)}</span>
-        </span>
-        <span class="allocation-item-value">${formatPercent(result.pct)}</span>
+      <div class="allocation-item-label ${posClass}" style="width:${width}%;" data-tip="${tip}">
+        <span class="allocation-item-text">${escapeHtml(result.option)}</span>
       </div>
     `;
   }).join('');
@@ -3627,7 +3697,7 @@ function buildRatioAllocationStackHtml(results, options = {}) {
   return `
     <div class="allocation-stack-wrap">
       <div class="allocation-stack-track">${segmentsHtml}</div>
-      <div class="allocation-label-row">${labelsHtml}</div>
+      ${showLabels ? `<div class="allocation-label-row">${labelsHtml}</div>` : ''}
     </div>
   `;
 }
@@ -3643,16 +3713,16 @@ function buildRatioAllocationChartHtml(data, hiddenGroups = new Set()) {
 
   const displayGroups = getDisplayGroupResults(data.groupResults, hiddenGroups);
   if (displayGroups.length === 0) return '<div class="result-empty">표시할 그룹이 없습니다.</div>';
-  const rowsHtml = displayGroups.map(group => {
+  const rowsHtml = displayGroups.map((group, index) => {
     const color = getGroupColor(data.groupResults, group.value);
+    const isLast = index === displayGroups.length - 1;
     return `
       <div class="allocation-group-row">
         <div class="allocation-group-label" style="--group-color:${color};">
           <strong>${escapeHtml(group.label)}</strong>
-          <span>N=${Number(group.n || 0).toLocaleString()}</span>
         </div>
         <div class="allocation-group-stack">
-          ${buildRatioAllocationStackHtml(group.results, { groupLabel: group.label, n: group.n })}
+          ${buildRatioAllocationStackHtml(group.results, { groupLabel: group.label, n: group.n, showLabels: isLast })}
         </div>
       </div>
     `;
@@ -3751,7 +3821,7 @@ function buildRatioAllocationSection(data) {
   const invalidNote = data.invalidN > 0
     ? ` 합계가 100이 아니거나 비어 있는 응답 ${Number(data.invalidN).toLocaleString()}건은 제외했습니다.`
     : '';
-  const noteHtml = `<div class="result-table-note">주관식 비율 배분 문항으로, 각 응답자의 항목별 합계가 100인 값을 평균 비중으로 표시합니다.${invalidNote}</div>`;
+  const noteHtml = `<div class="result-table-note allocation-note">각 응답자는 두 항목의 합이 100이 되도록 값을 나누어 기입했고, 차트는 그 기입값의 평균을 보여줍니다.${invalidNote}</div>`;
 
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="ratio-allocation">
@@ -3760,11 +3830,10 @@ function buildRatioAllocationSection(data) {
         ${fullText}
       </div>
       <div class="${visualClass}">
-        <div class="result-chart-col">${chartHtml}</div>
+        <div class="result-chart-col">${chartHtml}${noteHtml}</div>
         ${legendHtml}
       </div>
       ${tableHtml}
-      ${noteHtml}
     </section>
   `;
 }
@@ -5208,15 +5277,16 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
     if (touched || raw !== '') respondentN += 1;
   });
 
-  // weighted score: rank i (1-indexed) 는 (rankCount - i + 1)점
-  // 종합 순위 판정에 사용
+  // weighted average: 최하위 1점, 상위로 갈수록 2점씩 증가
   const weightedScore = {};
+  const weightedAverage = {};
   optionOrder.forEach(o => {
     weightedScore[o] = 0;
     rankCols.forEach((rc, ri) => {
-      const w = rankCount - ri;
+      const w = getRankWeight(rankCount, ri);
       weightedScore[o] += (perRankCount[ri][o] || 0) * w;
     });
+    weightedAverage[o] = respondentN > 0 ? weightedScore[o] / respondentN : 0;
   });
 
   const rawOnlyCount = {};
@@ -5242,19 +5312,19 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
   });
 
   // 종합 순위 계산 (내림차순, 동률이면 공동 순위)
-  const sortedVisible = [...visibleOptionOrder].sort((a, b) => weightedScore[b] - weightedScore[a]);
+  const sortedVisible = [...visibleOptionOrder].sort((a, b) => weightedAverage[b] - weightedAverage[a]);
   const ranking = [];
   let currentPos = 0;
   let lastScore = null;
   let seen = 0;
   sortedVisible.forEach(opt => {
     seen += 1;
-    const sc = weightedScore[opt];
+    const sc = weightedAverage[opt];
     if (lastScore === null || sc !== lastScore) {
       currentPos = seen;
       lastScore = sc;
     }
-    ranking.push({ option: opt, position: currentPos, score: sc });
+    ranking.push({ option: opt, position: currentPos, score: weightedScore[opt], weightedAverage: sc });
   });
 
   // per-option, per-rank 비율 표 데이터
@@ -5268,6 +5338,7 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
     return {
       option: opt,
       score: weightedScore[opt],
+      weightedAverage: weightedAverage[opt],
       perRank,
       totalPct: perRank.reduce((s, r) => s + r.pct, 0) + (respondentN > 0 ? ((rawOnlyCount[opt] || 0) / respondentN) * 100 : 0),
       totalCount: perRank.reduce((s, r) => s + r.count, 0) + (rawOnlyCount[opt] || 0)
@@ -5334,25 +5405,28 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
         }
         // group 내부 가중 점수
         const gScore = {};
+        const gAverage = {};
         visibleOptionOrder.forEach(opt => {
           gScore[opt] = 0;
           rankCols.forEach((rc, ri) => {
-            const w = rankCount - ri;
+            const w = getRankWeight(rankCount, ri);
             gScore[opt] += (bucket.perRankCount[ri][opt] || 0) * w;
           });
+          gAverage[opt] = bucket.n > 0 ? gScore[opt] / bucket.n : 0;
         });
-        const gSorted = [...visibleOptionOrder].sort((a, b) => gScore[b] - gScore[a]);
+        const gSorted = [...visibleOptionOrder].sort((a, b) => gAverage[b] - gAverage[a]);
         const gRanking = [];
         let pos = 0; let last = null; let n = 0;
         gSorted.forEach(opt => {
           n += 1;
-          const sc = gScore[opt];
+          const sc = gAverage[opt];
           if (last === null || sc !== last) { pos = n; last = sc; }
-          gRanking.push({ option: opt, position: pos, score: sc });
+          gRanking.push({ option: opt, position: pos, score: gScore[opt], weightedAverage: sc });
         });
         const gPerOption = nonzeroOptionOrder.map(opt => ({
           option: opt,
           score: gScore[opt],
+          weightedAverage: gAverage[opt],
           totalCount: rankCols.reduce((sum, _rc, ri) => sum + (bucket.perRankCount[ri][opt] || 0), 0) + (gRawOnlyCount[opt] || 0),
           perRank: rankCols.map((rc, ri) => {
             const c = bucket.perRankCount[ri][opt] || 0;
@@ -5375,6 +5449,7 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
     targetLabel,
     codebookEntry: entry,
     rankCount,
+    rankWeights: rankCols.map((_, idx) => getRankWeight(rankCount, idx)),
     rankLabels: rankCols.map(rc => `${rc.rank}순위`),
     respondentN,
     optionOrder: visibleOptionOrder,
@@ -5384,6 +5459,60 @@ function aggregateRank(targetLabel, criterionLabel, rows) {
     criterionLabel: groupResults ? criterionLabel : null,
     groupResults
   };
+}
+
+function getRankChartType(targetLabel) {
+  const stored = resultState.rankChartTypes.get(targetLabel);
+  return RANK_CHART_TYPES.includes(stored) ? stored : 'lollipop';
+}
+
+function getRankSortByScore(targetLabel) {
+  return !!resultState.rankSortByScore.get(targetLabel);
+}
+
+function applyRankSortToData(data, sortByScore) {
+  if (!sortByScore || !data) return data;
+  const sortedTotal = [...data.totalResults].sort((a, b) => {
+    if (b.weightedAverage !== a.weightedAverage) return b.weightedAverage - a.weightedAverage;
+    return data.optionOrder.indexOf(a.option) - data.optionOrder.indexOf(b.option);
+  });
+  const newOrder = sortedTotal.map(item => item.option);
+  return {
+    ...data,
+    optionOrder: newOrder,
+    totalResults: sortedTotal
+  };
+}
+
+function buildRankControlsHtml(targetLabel, options = {}) {
+  const {
+    chartType = 'lollipop',
+    sortByScore = false
+  } = options;
+  const safeTarget = escapeHtml(targetLabel);
+  const chartTypeHtml = `
+    <div class="choice-controls-group">
+      <div class="result-view-toggle" role="tablist" aria-label="순위 그래프 형태">
+        ${RANK_CHART_TYPES.map(type => `
+          <button type="button"
+                  class="result-view-btn ${type === chartType ? 'active' : ''}"
+                  data-rank-chart-type="${type}"
+                  data-target="${safeTarget}"
+                  role="tab"
+                  aria-selected="${type === chartType ? 'true' : 'false'}">
+            ${escapeHtml(RANK_CHART_TYPE_LABELS[type])}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  const sortHtml = `
+    <label class="choice-controls-sort">
+      <input type="checkbox" data-rank-sort-by-score data-target="${safeTarget}" ${sortByScore ? 'checked' : ''}>
+      <span class="choice-controls-sort-label">가중 평균 점수가 높은 순서로 정렬</span>
+    </label>
+  `;
+  return `<div class="choice-controls">${chartTypeHtml}${sortHtml}</div>`;
 }
 
 function buildRankSummaryHtml(data) {
@@ -5401,6 +5530,69 @@ function buildRankSummaryHtml(data) {
         <div class="rank-summary-title">종합 순위</div>
         <div>${tokens}</div>
       </div>
+    </div>
+  `;
+}
+
+function buildRankFormulaNoteHtml(data) {
+  return `
+    <div class="rank-formula-note">
+      ${escapeHtml(buildRankWeightFormulaText(data.rankCount))}
+    </div>
+  `;
+}
+
+function buildRankLollipopChartHtml(data) {
+  const rows = data.totalResults || [];
+  const axisMin = 0;
+  const axisMax = Math.max(axisMin, ...((data.rankWeights || []).map(Number)));
+  const axisTicks = [];
+  for (let tick = axisMin; tick <= axisMax; tick += 1) axisTicks.push(tick);
+  const pctFor = (value) => {
+    const safeValue = Math.max(axisMin, Math.min(axisMax, Number(value) || 0));
+    if (axisMax === axisMin) return 0;
+    return ((safeValue - axisMin) / (axisMax - axisMin)) * 100;
+  };
+  const rowHtml = rows.map((r, index) => {
+    const rankObj = data.ranking.find(item => item.option === r.option);
+    const posText = rankObj ? `${rankObj.position}위` : '-';
+    const valueText = formatRankAverage(r.weightedAverage);
+    const leftPct = pctFor(r.weightedAverage);
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'rank-lollipop',
+      option: r.option,
+      weightedAverage: r.weightedAverage,
+      rankPosition: posText
+    }));
+    return `
+      <div class="rank-point-row">
+        <div class="rank-point-label" title="${escapeHtml(r.option)}" data-tip="${tip}">${escapeHtml(r.option)}</div>
+        <div class="rank-point-track" data-tip="${tip}">
+          <div class="rank-point-line" style="width:${leftPct}%;"></div>
+          <div class="rank-point-dot" style="left:${leftPct}%;"></div>
+        </div>
+        <div class="rank-point-value">${valueText}</div>
+        <div class="rank-point-rank">${escapeHtml(posText)}</div>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="rank-point-chart">
+      <div class="rank-point-guides" aria-hidden="true">
+        ${axisTicks.map(tick => {
+          const leftPct = pctFor(tick);
+          return `<span class="rank-point-guide" style="left:${leftPct}%;"></span>`;
+        }).join('')}
+      </div>
+      ${rowHtml}
+      <div class="rank-point-axis" aria-hidden="true">
+        ${axisTicks.map(tick => {
+          const leftPct = pctFor(tick);
+          const cls = tick === axisMin ? 'is-start' : (tick === axisMax ? 'is-end' : 'is-mid');
+          return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
+        }).join('')}
+      </div>
+      <div class="rank-point-axis-title">가중 평균 점수</div>
     </div>
   `;
 }
@@ -5561,7 +5753,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
     const topRow = [
       `<th rowspan="2">응답 보기</th>`,
       ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
-      `<th rowspan="2" class="num group-col">가중 점수</th>`,
+      `<th rowspan="2" class="num group-col">가중 평균</th>`,
       `<th rowspan="2" class="num">종합 순위</th>`
     ].join('');
     const subRow = [
@@ -5575,7 +5767,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
         <tr>
           <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
           ${rankCells}
-          <td class="num">${rankObj ? r.score.toLocaleString() : '-'}</td>
+          <td class="num">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
           <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
         </tr>
       `;
@@ -5604,7 +5796,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
     `;
     return wrapResultTable(
       tableHtml,
-      `<div class="result-table-note">가중 점수는 상위 순위에 더 큰 가중치를 주는 방식으로 계산합니다. 1순위 응답 건수에는 ${data.rankCount}점을, 2순위에는 ${Math.max(data.rankCount - 1, 0)}점을 부여하는 식으로 내려가며 합산합니다.</div>`
+      ``
     );
   }
 
@@ -5616,9 +5808,9 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
     ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, blockColspan))
   ].join('');
   const midRow = [
-    ...[null, ...displayGroups].map(() => [
-      ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
-      `<th rowspan="2" class="num group-col">가중점수</th>`,
+      ...[null, ...displayGroups].map(() => [
+        ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
+      `<th rowspan="2" class="num group-col">가중 평균</th>`,
       `<th rowspan="2" class="num">종합순위</th>`
     ].join(''))
   ].join('');
@@ -5639,14 +5831,13 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
         .join('');
       const rk = g.ranking.find(x => x.option === r.option);
       const po = rk ? rk.position : '-';
-      const sc = rk ? rk.score : 0;
-      return `${perRankCells}<td class="num group-col">${rk ? sc.toLocaleString() : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
+      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
     }).join('');
     return `
       <tr>
         <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
         ${rankCells}
-        <td class="num group-col">${totalRank ? r.score.toLocaleString() : '-'}</td>
+        <td class="num group-col">${totalRank ? formatRankAverage(r.weightedAverage) : '-'}</td>
         <td class="num">${totalPos === '-' ? '-' : `${totalPos}위`}</td>
         ${groupCells}
       </tr>
@@ -5689,7 +5880,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   `;
   return wrapResultTable(
     tableHtml,
-    `<div class="result-table-note">가중 점수는 상위 순위에 더 큰 가중치를 주는 방식으로 계산합니다. 1순위 응답 건수에는 ${data.rankCount}점을, 2순위에는 ${Math.max(data.rankCount - 1, 0)}점을 부여하는 식으로 내려가며 합산합니다.</div>`
+    ``
   );
 }
 
@@ -5697,18 +5888,30 @@ function buildRankSection(data, rows) {
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenRanks = resultState.hiddenRankKeys.get(targetLabel) || new Set();
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
-
-  const summaryHtml = buildRankSummaryHtml(data);
+  const sortByScore = !groupResults ? getRankSortByScore(targetLabel) : false;
+  const displayData = !groupResults && sortByScore ? applyRankSortToData(data, true) : data;
+  const chartType = !groupResults ? getRankChartType(targetLabel) : 'lollipop';
+  const controlsHtml = !groupResults
+    ? buildRankControlsHtml(targetLabel, {
+        chartType,
+        sortByScore
+      })
+    : '';
   let chartHtml = '';
   let legendHtml = '';
   if (groupResults) {
-    chartHtml = buildRankGroupTextHtml(data, hiddenGroups);
-    legendHtml = buildRankGroupLegendHtml(data, hiddenGroups);
+    chartHtml = buildRankGroupTextHtml(displayData, hiddenGroups);
+    legendHtml = buildRankGroupLegendHtml(displayData, hiddenGroups);
   } else {
-    chartHtml = buildRankStackChartHtml(data, hiddenRanks);
-    legendHtml = buildRankLegendHtml(data, hiddenRanks);
+    chartHtml = chartType === 'stacked'
+      ? buildRankStackChartHtml(displayData, hiddenRanks)
+      : buildRankLollipopChartHtml(displayData);
+    legendHtml = chartType === 'stacked'
+      ? buildRankLegendHtml(displayData, hiddenRanks)
+      : '<aside class="legend-panel is-placeholder" aria-hidden="true"></aside>';
   }
-  const tableHtml = buildRankDataTableHtml(data, hiddenGroups);
+  const tableHtml = buildRankDataTableHtml(displayData, hiddenGroups);
+  const formulaNoteHtml = buildRankFormulaNoteHtml(displayData);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -5721,15 +5924,12 @@ function buildRankSection(data, rows) {
         </div>
         ${fullText}
       </div>
-      ${summaryHtml ? `
-      <div class="result-visual rank-summary-row has-legend">
-        <div class="result-chart-col">${summaryHtml}</div>
-        <aside class="legend-panel" aria-hidden="true"></aside>
-      </div>` : ''}
+      ${controlsHtml}
       <div class="result-visual has-legend">
         <div class="result-chart-col">${chartHtml}</div>
         ${legendHtml}
       </div>
+      ${formulaNoteHtml}
       ${tableHtml}
     </section>
   `;
@@ -5925,16 +6125,318 @@ function setupScaleCompareModal() {
   });
 }
 
+/* ---------- 객관식 단일: 그래프 모양 / 정렬 컨트롤 ---------- */
+function getSingleChoiceChartType(targetLabel, visibleOptionCount) {
+  const stored = resultState.singleChoiceChartTypes.get(targetLabel);
+  const fallback = 'bar_horizontal';
+  const value = CHOICE_CHART_TYPES.includes(stored) ? stored : fallback;
+  // 보기 개수가 한도를 넘으면 가로 막대로 강제 폴백
+  if (visibleOptionCount > CHOICE_CHART_TYPE_MAX_OPTIONS && value !== 'bar_horizontal') {
+    return 'bar_horizontal';
+  }
+  return value;
+}
+
+function getSingleChoiceSortByRate(targetLabel) {
+  return !!resultState.singleChoiceSortByRate.get(targetLabel);
+}
+
+function applyChoiceSortToData(data, sortByRate) {
+  if (!sortByRate || !data) return data;
+  const sortedTotal = [...data.totalResults].sort((a, b) => {
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    return data.optionOrder.indexOf(a.option) - data.optionOrder.indexOf(b.option);
+  });
+  const newOrder = sortedTotal.map(r => r.option);
+  const sortedGroupResults = data.groupResults
+    ? data.groupResults.map(g => ({
+        ...g,
+        results: newOrder.map(opt => {
+          const found = (g.results || []).find(r => r.option === opt);
+          return found || { option: opt, count: 0, pct: 0 };
+        })
+      }))
+    : null;
+  return {
+    ...data,
+    optionOrder: newOrder,
+    totalResults: sortedTotal,
+    groupResults: sortedGroupResults
+  };
+}
+
+function buildChoiceControlsHtml(targetLabel, options) {
+  const {
+    showChartType = false,
+    chartType = 'bar_horizontal',
+    sortByRate = false,
+    isMenuOpen = false
+  } = options || {};
+  const safeTarget = escapeHtml(targetLabel);
+  const chevron = 'assets/icons/keyboard_arrow_down_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg';
+
+  const chartTypeHtml = showChartType ? `
+    <div class="choice-controls-group">
+      <span class="choice-controls-label">그래프 모양 선택</span>
+      <div class="choice-chart-type-select ${isMenuOpen ? 'is-open' : ''}" data-choice-chart-type-select data-target="${safeTarget}">
+        <button type="button" class="choice-chart-type-trigger" data-choice-chart-type-trigger data-target="${safeTarget}" aria-haspopup="listbox" aria-expanded="${isMenuOpen ? 'true' : 'false'}">
+          <span class="choice-chart-type-current">${escapeHtml(CHOICE_CHART_TYPE_LABELS[chartType] || CHOICE_CHART_TYPE_LABELS.bar_horizontal)}</span>
+          <img class="choice-chart-type-chevron" src="${chevron}" alt="" aria-hidden="true">
+        </button>
+        <div class="choice-chart-type-menu" role="listbox" ${isMenuOpen ? '' : 'hidden'}>
+          ${CHOICE_CHART_TYPES.map(type => `
+            <button type="button"
+                    class="choice-chart-type-option ${type === chartType ? 'is-active' : ''}"
+                    data-choice-chart-type="${type}"
+                    data-target="${safeTarget}"
+                    role="option"
+                    aria-selected="${type === chartType ? 'true' : 'false'}">
+              ${escapeHtml(CHOICE_CHART_TYPE_LABELS[type])}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  const sortHtml = `
+    <label class="choice-controls-sort">
+      <input type="checkbox" data-choice-sort-by-rate data-target="${safeTarget}" ${sortByRate ? 'checked' : ''}>
+      <span class="choice-controls-sort-label">응답 비율이 높은 순서로 정렬</span>
+    </label>
+  `;
+
+  return `<div class="choice-controls">${chartTypeHtml}${sortHtml}</div>`;
+}
+
+/* ---------- 객관식 단일: 세로 막대 차트 ---------- */
+function buildVerticalBarChartHtml(data) {
+  const rows = data.totalResults;
+  const maxPctValue = rows.reduce((max, row) => Math.max(max, row.pct || 0), 0);
+  const axisMax = Math.max(20, Math.ceil(maxPctValue / 20) * 20);
+  const guideMarks = [];
+  for (let mark = 20; mark <= axisMax; mark += 20) guideMarks.push(mark);
+  const colsHtml = rows.map(r => {
+    const pct = Math.max(0, Math.min(axisMax, r.pct));
+    const scaledPct = axisMax > 0 ? (pct / axisMax) * 100 : 0;
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'basic-bar',
+      option: r.option,
+      pct: r.pct,
+      count: r.count
+    }));
+    return `
+      <div class="vbar-col" style="--vbar-pct:${scaledPct}%; --vbar-raw-pct:${pct}%;">
+        <div class="vbar-value">${formatPercent(r.pct)}</div>
+        <div class="vbar-track">
+          <div class="vbar-fill" data-tip="${tip}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  const labelsHtml = rows.map(r => {
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    return `<div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
+  }).join('');
+  const guidesHtml = guideMarks.map(mark => `
+    <div class="vbar-guide" style="bottom:${(mark / axisMax) * 100}%;">
+      <span class="vbar-guide-line"></span>
+      <span class="vbar-guide-label">${mark}%</span>
+    </div>
+  `).join('');
+  return `
+    <div class="vbar-chart">
+      <div class="vbar-plot">
+        <div class="vbar-guides" aria-hidden="true">${guidesHtml}</div>
+        <div class="vbar-track-row">${colsHtml}</div>
+      </div>
+      <div class="vbar-label-row">${labelsHtml}</div>
+    </div>
+  `;
+}
+
+/* ---------- 객관식 단일: 가로 100% 누적 ---------- */
+function buildStacked100ChartHtml(data) {
+  const rows = data.totalResults;
+  const segmentsHtml = rows.map((r, i) => {
+    const width = Math.max(0, Math.min(100, r.pct));
+    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'basic-bar',
+      option: r.option,
+      pct: r.pct,
+      count: r.count
+    }));
+    return `
+      <div class="stack100-segment ${width < 8 ? 'is-narrow' : ''}"
+           style="flex:0 0 ${width}%; background:${color};"
+           data-tip="${tip}">
+        <span class="stack100-segment-value">${formatPercent(r.pct)}</span>
+      </div>
+    `;
+  }).join('');
+  const topValuesHtml = rows.map(r => {
+    const width = Math.max(0, Math.min(100, r.pct));
+    return `
+      <div class="stack100-topvalue-slot ${width < 8 ? 'is-visible' : ''}" style="flex:0 0 ${width}%;">
+        <span class="stack100-topvalue">${formatPercent(r.pct)}</span>
+      </div>
+    `;
+  }).join('');
+  const labelHtml = rows.map((r, i) => {
+    const width = Math.max(0, Math.min(100, r.pct));
+    const posClass = i === 0 ? 'is-start' : (i === rows.length - 1 ? 'is-end' : 'is-center');
+    return `
+      <div class="stack100-label-slot ${posClass}" style="flex:0 0 ${width}%;">
+        <span class="stack100-label-text">${escapeHtml(r.option)}</span>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="stack100-chart">
+      <div class="stack100-topvalues" aria-hidden="true">${topValuesHtml}</div>
+      <div class="stack100-track">${segmentsHtml}</div>
+      <div class="stack100-label-row">${labelHtml}</div>
+    </div>
+  `;
+}
+
+/* ---------- 객관식 단일: 원/파이 ---------- */
+function buildPieChartHtml(data) {
+  const rows = data.totalResults;
+  const cx = 160;
+  const cy = 160;
+  const r = 142;
+  const totalPct = rows.reduce((s, x) => s + (x.pct || 0), 0) || 100;
+  let angleAcc = -Math.PI / 2; // 12시 방향에서 시작
+  const slices = rows.map((row, i) => {
+    const fraction = (row.pct || 0) / totalPct;
+    if (!Number.isFinite(fraction) || fraction <= 0) return null;
+    const startAngle = angleAcc;
+    let endAngle = angleAcc + fraction * Math.PI * 2;
+    angleAcc = endAngle;
+    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'basic-bar',
+      option: row.option,
+      pct: row.pct,
+      count: row.count
+    }));
+    const midAngle = startAngle + ((endAngle - startAngle) / 2);
+    const placeOutside = fraction < 0.12 || cleanCell(row.option).length > 10;
+    const insideX = cx + (r * 0.58) * Math.cos(midAngle);
+    const insideY = cy + (r * 0.58) * Math.sin(midAngle);
+    const lineStartX = cx + (r * 0.9) * Math.cos(midAngle);
+    const lineStartY = cy + (r * 0.9) * Math.sin(midAngle);
+    const lineMidX = cx + (r + 12) * Math.cos(midAngle);
+    const lineMidY = cy + (r + 12) * Math.sin(midAngle);
+    const lineEndX = cx + (r + 28) * Math.cos(midAngle);
+    const lineEndY = cy + (r + 28) * Math.sin(midAngle);
+    const textAnchor = Math.cos(midAngle) >= 0 ? 'start' : 'end';
+    const textX = lineEndX + (textAnchor === 'start' ? 4 : -4);
+    const textY = lineEndY;
+    const label = placeOutside
+      ? `
+        <g class="pie-label-group is-outside">
+          <polyline class="pie-label-line" points="${lineStartX.toFixed(2)},${lineStartY.toFixed(2)} ${lineMidX.toFixed(2)},${lineMidY.toFixed(2)} ${lineEndX.toFixed(2)},${lineEndY.toFixed(2)}"></polyline>
+          <text class="pie-label is-outside" x="${textX.toFixed(2)}" y="${textY.toFixed(2)}" text-anchor="${textAnchor}">
+            <tspan class="pie-label-value">${formatPercent(row.pct)}</tspan>
+          </text>
+        </g>
+      `
+      : `
+        <text class="pie-label is-inside" x="${insideX.toFixed(2)}" y="${insideY.toFixed(2)}" text-anchor="middle">
+          <tspan class="pie-label-value" x="${insideX.toFixed(2)}" dy="0.35em">${formatPercent(row.pct)}</tspan>
+        </text>
+      `;
+    if (fraction >= 0.999) {
+      // 단일 100% 보기는 원 전체로 그린다.
+      return {
+        slice: `<circle class="pie-slice" cx="${cx}" cy="${cy}" r="${r}" fill="${color}" data-tip="${tip}"></circle>`,
+        label: `
+          <text class="pie-label is-inside is-full" x="${cx}" y="${cy}" text-anchor="middle">
+            <tspan class="pie-label-value" x="${cx}" dy="0.35em">${formatPercent(row.pct)}</tspan>
+          </text>
+        `
+      };
+    }
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${x1.toFixed(3)} ${y1.toFixed(3)} A ${r} ${r} 0 ${largeArc} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} Z`;
+    return {
+      slice: `<path class="pie-slice" d="${path}" fill="${color}" data-tip="${tip}"></path>`,
+      label
+    };
+  }).filter(Boolean);
+  const slicesHtml = slices.map(item => item.slice).join('');
+  const labelsHtml = slices.map(item => item.label).join('');
+  const legendHtml = rows.map((row, i) => {
+    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
+    return `
+      <div class="pie-legend-item">
+        <span class="pie-legend-swatch" style="background:${color};"></span>
+        <span class="pie-legend-name" title="${escapeHtml(row.option)}">${escapeHtml(row.option)}</span>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="pie-chart">
+      <div class="pie-svg-wrap">
+        <svg class="pie-svg" viewBox="0 0 320 320" role="img" aria-label="원 그래프">
+          ${slicesHtml}
+          ${labelsHtml}
+        </svg>
+      </div>
+      <div class="pie-legend">${legendHtml}</div>
+    </div>
+  `;
+}
+
+function buildSingleChoiceChartByType(data, chartType) {
+  if (chartType === 'bar_vertical') return buildVerticalBarChartHtml(data);
+  if (chartType === 'bar_horizontal_100') return buildStacked100ChartHtml(data);
+  if (chartType === 'pie') return buildPieChartHtml(data);
+  return buildBasicChartHtml(data);
+}
+
 /* ---------- 섹션 dispatch ---------- */
 function buildChoiceSectionHtml(data, rows) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
+
+  // 객관식 단일(그룹 비교 없음)에 한해 정렬 옵션 적용.
+  const sortByRate = !data.isMulti && !groupResults
+    ? getSingleChoiceSortByRate(targetLabel)
+    : false;
+  const displayData = sortByRate ? applyChoiceSortToData(data, true) : data;
+  const visibleOptionCount = (displayData.totalResults || []).length;
+
+  // 컨트롤 영역: 객관식 단일이고 그룹 비교가 아닐 때만 노출.
+  const showControls = !data.isMulti && !groupResults;
+  const showChartType = showControls && visibleOptionCount <= CHOICE_CHART_TYPE_MAX_OPTIONS;
+  const chartType = showChartType ? getSingleChoiceChartType(targetLabel, visibleOptionCount) : 'bar_horizontal';
+  const isMenuOpen = resultState.openChoiceMenus.has(targetLabel);
+  const controlsHtml = showControls
+    ? buildChoiceControlsHtml(targetLabel, {
+        showChartType,
+        chartType,
+        sortByRate,
+        isMenuOpen
+      })
+    : '';
+
   const chartHtml = groupResults
-    ? buildGroupCompareChartHtml(data, hiddenGroups)
-    : buildBasicChartHtml(data);
-  const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
-  const tableHtml = buildDataTableHtml(data, hiddenGroups);
+    ? buildGroupCompareChartHtml(displayData, hiddenGroups)
+    : buildSingleChoiceChartByType(displayData, chartType);
+  const legendHtml = groupResults ? buildLegendHtml(displayData, hiddenGroups) : '';
+  const tableHtml = buildDataTableHtml(displayData, hiddenGroups);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -5949,6 +6451,7 @@ function buildChoiceSectionHtml(data, rows) {
         <div class="result-title">${escapeHtml(targetLabel)}</div>
         ${fullText}
       </div>
+      ${controlsHtml}
       <div class="${visualClass}">
         <div class="result-chart-col">${chartHtml}</div>
         ${legendHtml}
@@ -6220,8 +6723,41 @@ function alignScaleCompareCharts(container) {
   });
 }
 
+function applyDataTableCollapsed(wrapper, btn, collapsed) {
+  if (!wrapper || !btn) return;
+  wrapper.classList.toggle('is-collapsed', !!collapsed);
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  const labelEl = btn.querySelector('.data-table-toggle-label');
+  if (labelEl) {
+    const expandedText = labelEl.dataset.labelExpanded || '데이터 테이블 숨기기';
+    const collapsedText = labelEl.dataset.labelCollapsed || '데이터 테이블 펼치기';
+    labelEl.textContent = collapsed ? collapsedText : expandedText;
+  }
+}
+
+function ensureChoiceMenuOutsideClose() {
+  if (resultState._choiceMenuOutsideBound) return;
+  resultState._choiceMenuOutsideBound = true;
+  document.addEventListener('click', (e) => {
+    if (resultState.openChoiceMenus.size === 0 && resultState.openRankMenus.size === 0) return;
+    const within = e.target && e.target.closest && (e.target.closest('[data-choice-chart-type-select]') || e.target.closest('[data-rank-chart-type-select]'));
+    if (within) return;
+    resultState.openChoiceMenus.clear();
+    resultState.openRankMenus.clear();
+    renderResults();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (resultState.openChoiceMenus.size === 0 && resultState.openRankMenus.size === 0) return;
+    resultState.openChoiceMenus.clear();
+    resultState.openRankMenus.clear();
+    renderResults();
+  });
+}
+
 function attachResultEventListeners(container) {
   ensureTooltip();
+  ensureChoiceMenuOutsideClose();
   container.querySelectorAll('[data-tip]').forEach(el => {
     el.addEventListener('mouseenter', onTipEnter);
     el.addEventListener('mousemove', onTipMove);
@@ -6232,6 +6768,23 @@ function attachResultEventListeners(container) {
       e.preventDefault();
       e.stopPropagation();
       openOtherResponsesModal(btn.dataset.openOther || '', e);
+    });
+  });
+  container.querySelectorAll('[data-data-table-toggle]').forEach(btn => {
+    const section = btn.closest('.result-section');
+    const wrapper = btn.closest('[data-data-table-section]');
+    if (!section || !wrapper) return;
+    const targetLabel = section.dataset.target || '';
+    const sectionType = section.dataset.type || '';
+    const stateKey = `${sectionType}::${targetLabel}`;
+    const initiallyCollapsed = !!resultState.dataTableCollapsed.get(stateKey);
+    applyDataTableCollapsed(wrapper, btn, initiallyCollapsed);
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = !(resultState.dataTableCollapsed.get(stateKey) || false);
+      resultState.dataTableCollapsed.set(stateKey, next);
+      applyDataTableCollapsed(wrapper, btn, next);
     });
   });
   container.querySelectorAll('[data-scale-mode]').forEach(btn => {
@@ -6322,6 +6875,75 @@ function attachResultEventListeners(container) {
       const targetLabel = btn.dataset.openScaleCompare;
       if (!targetLabel) return;
       openScaleCompareModal(targetLabel);
+    });
+  });
+  // 객관식 단일: 그래프 모양 드롭다운 트리거
+  container.querySelectorAll('[data-choice-chart-type-trigger]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      if (!targetLabel) return;
+      const wasOpen = resultState.openChoiceMenus.has(targetLabel);
+      resultState.openChoiceMenus.clear();
+      if (!wasOpen) resultState.openChoiceMenus.add(targetLabel);
+      renderResults();
+    });
+  });
+  // 객관식 단일: 그래프 모양 옵션 선택
+  container.querySelectorAll('[data-choice-chart-type]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      const type = btn.dataset.choiceChartType;
+      if (!targetLabel || !CHOICE_CHART_TYPES.includes(type)) return;
+      resultState.singleChoiceChartTypes.set(targetLabel, type);
+      resultState.openChoiceMenus.delete(targetLabel);
+      renderResults();
+    });
+  });
+  // 객관식 단일: 응답 비율 정렬 체크박스
+  container.querySelectorAll('[data-choice-sort-by-rate]').forEach(input => {
+    input.addEventListener('change', e => {
+      e.stopPropagation();
+      const targetLabel = input.dataset.target;
+      if (!targetLabel) return;
+      resultState.singleChoiceSortByRate.set(targetLabel, !!input.checked);
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-rank-chart-type-trigger]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      if (!targetLabel) return;
+      const wasOpen = resultState.openRankMenus.has(targetLabel);
+      resultState.openRankMenus.clear();
+      if (!wasOpen) resultState.openRankMenus.add(targetLabel);
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-rank-chart-type]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      const type = btn.dataset.rankChartType;
+      if (!targetLabel || !RANK_CHART_TYPES.includes(type)) return;
+      resultState.rankChartTypes.set(targetLabel, type);
+      resultState.openRankMenus.delete(targetLabel);
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-rank-sort-by-score]').forEach(input => {
+    input.addEventListener('change', e => {
+      e.stopPropagation();
+      const targetLabel = input.dataset.target;
+      if (!targetLabel) return;
+      resultState.rankSortByScore.set(targetLabel, !!input.checked);
+      renderResults();
     });
   });
   container.querySelectorAll('.legend').forEach(legend => {
@@ -6436,6 +7058,8 @@ function formatTooltipHtml(d) {
     case "rank-seg":
     case "rank-nonranked":
       return [line(escapeHtml(d.option)), line(escapeHtml(d.rankLabel)), line(pct(d.pct)), line(n(d.count))].join("");
+    case "rank-lollipop":
+      return [line(escapeHtml(d.option)), line(`가중 평균 점수: ${escapeHtml(formatRankAverage(d.weightedAverage))}`), line(`종합 순위: ${escapeHtml(d.rankPosition)}`)].join("");
     case "rank-group-text": {
       const head = [line(escapeHtml(d.groupLabel)), line(escapeHtml(d.option))];
       const perRank = (d.perRank || []).map(pr => line(`${escapeHtml(pr.rankLabel)}: ${pct(pr.pct)}`));
@@ -6583,7 +7207,6 @@ if (document.readyState === 'loading') {
 } else {
   setTimeout(() => { initResultFeature(); }, 0);
 }
-
 
 
 
