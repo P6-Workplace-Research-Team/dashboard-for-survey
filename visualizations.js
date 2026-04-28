@@ -3430,15 +3430,6 @@ function buildGroupCompareChartHtml(data, hidden) {
     `;
   }).join('');
 
-  const pathsHtml = displayGroups.map((g) => {
-    const color = getGroupColor(data.groupResults, g.value);
-    const pcts = rows.map((r) => {
-      const gr = g.results.find(x => x.option === r.option) || { pct: 0, count: 0 };
-      return Math.max(0, Math.min(100, gr.pct)).toFixed(4);
-    }).join(',');
-    return `<path class="group-path" d="" stroke="${color}" vector-effect="non-scaling-stroke" data-pcts="${pcts}" />`;
-  }).join('');
-
   const dotsHtml = displayGroups.map((g) => {
     const color = getGroupColor(data.groupResults, g.value);
     return rows.map((r, i) => {
@@ -3462,9 +3453,6 @@ function buildGroupCompareChartHtml(data, hidden) {
     <div class="hbar-chart group-compare">
       ${rowHtml}
       <div class="hbar-group-overlay">
-        <svg class="group-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-          ${pathsHtml}
-        </svg>
         ${dotsHtml}
       </div>
     </div>
@@ -4522,21 +4510,9 @@ function buildScaleCompareSectionHtml(compareData, hiddenGroups, options = {}) {
       </div>
     `;
   }).join('');
-  const linePaths = hasGroups
-    ? [
-      `<path class="scale-compare-line is-overall"
-            data-means="${compareData.questions.map(question => (question.totalN > 0 && Number.isFinite(question.mean) ? question.mean.toFixed(4) : '')).join('|')}"></path>`,
-      ...visibleGroups.map(group => `
-      <path class="scale-compare-line"
-            stroke="${group.color}"
-            data-means="${group.points.map(point => (point && point.n > 0 && Number.isFinite(point.mean) ? point.mean.toFixed(4) : '')).join('|')}"></path>
-    `)
-    ].join('')
-    : '';
   const chartHtml = `
     <div class="scale-compare-chart ${hasGroups ? 'is-group' : ''}" data-scale-compare-chart="true" data-max-score="${compareData.maxScore}">
       <div class="scale-compare-rows-wrap">
-        ${hasGroups ? `<div class="scale-compare-overlay"><svg class="scale-compare-line-svg">${linePaths}</svg></div>` : ''}
         ${rowHtml}
       </div>
     </div>
@@ -4548,7 +4524,7 @@ function buildScaleCompareSectionHtml(compareData, hiddenGroups, options = {}) {
       ${showHeader ? `<div class="scale-compare-header">
         <div class="scale-compare-title">다중 문항 비교</div>
         <div class="scale-compare-sub">
-          ${hasGroups ? '연한 회색 점은 전체 평균이고, 그룹 점은 같은 그룹끼리 점선으로 연결됩니다.' : '선택한 문항들의 평균값을 한 화면에서 비교합니다.'}
+          ${hasGroups ? '연한 회색 점은 전체 평균이고, 색상 점은 각 그룹의 평균입니다.' : '선택한 문항들의 평균값을 한 화면에서 비교합니다.'}
         </div>
       </div>` : ''}
       <div class="${visualClass} scale-compare-card">
@@ -6651,14 +6627,12 @@ function alignGroupCompareCharts(container) {
   if (!container) return;
   container.querySelectorAll('.hbar-chart.group-compare').forEach(chart => {
     const overlay = chart.querySelector('.hbar-group-overlay');
-    const svg = chart.querySelector('.group-line-svg');
     const rows = Array.from(chart.querySelectorAll('.hbar-row'));
-    if (!overlay || !svg || rows.length === 0) return;
+    if (!overlay || rows.length === 0) return;
 
     const overlayRect = overlay.getBoundingClientRect();
     const width = overlay.clientWidth;
-    const height = overlay.clientHeight;
-    if (!width || !height) return;
+    if (!width) return;
 
     const trackMetrics = rows.map(row => {
       const track = row.querySelector('.hbar-track');
@@ -6668,22 +6642,6 @@ function alignGroupCompareCharts(container) {
         left: rect.left - overlayRect.left,
         width: rect.width
       };
-    });
-
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
-    svg.querySelectorAll('.group-path').forEach(path => {
-      const pcts = String(path.dataset.pcts || '')
-        .split(',')
-        .map(v => Number(v))
-        .filter(v => Number.isFinite(v));
-      const d = pcts.map((pct, i) => {
-        const metric = trackMetrics[i] || { centerY: 0, left: 0, width: 0 };
-        const x = metric.left + ((pct / 100) * metric.width);
-        const y = metric.centerY;
-        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-      }).join(' ');
-      path.setAttribute('d', d);
     });
 
     chart.querySelectorAll('.group-dot').forEach(dot => {
