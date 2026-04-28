@@ -32,12 +32,12 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 | `Body-3` | 본문 3 | 14px | Medium (500) |
 | `Label-1` | 라벨 1 | 14px | Regular (400) |
 | `Label-1-strong` | 라벨 1 강조 | 14px | Semibold (600) |
-| `Label-2` | 라벨 2 | 12px | Regular (400) |
-| `Label-2-strong` | 라벨 2 강조 | 12px | Semibold (600) |
+| `Label-2` | 라벨 2 | 13px | Regular (400) |
+| `Label-2-strong` | 라벨 2 강조 | 13px | Semibold (600) |
 | `Button-1` | 버튼 1 | 14px | Regular (400) |
 | `Button-1-strong` | 버튼 1 강조 | 14px | Semibold (600) |
-| `Button-2` | 버튼 2 | 12px | Regular (400) |
-| `Button-2-strong` | 버튼 2 강조 | 12px | Semibold (600) |
+| `Button-2` | 버튼 2 | 13px | Regular (400) |
+| `Button-2-strong` | 버튼 2 강조 | 13px | Semibold (600) |
 | `Caption-1` | 캡션 1 | 12px | Regular (400) |
 
 - Line-height: Heading `120%` / 나머지 `160%`
@@ -80,11 +80,11 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --body-3-size: 14px;
   --label-1-size: 14px;      /* Regular */
   --label-1-strong: 600;     /* Semibold */
-  --label-2-size: 12px;      /* Regular */
+  --label-2-size: 13px;      /* Regular */
   --label-2-strong: 600;     /* Semibold */
   --button-1-size: 14px;     /* Regular */
   --button-1-strong: 600;    /* Semibold — Focus, Black variant */
-  --button-2-size: 12px;     /* Regular */
+  --button-2-size: 13px;     /* Regular */
   --button-2-strong: 600;    /* Semibold */
   --caption-1-size: 12px;
 

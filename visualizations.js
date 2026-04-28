@@ -1902,17 +1902,24 @@ const CHOICE_CHART_TYPE_LABELS = {
 const CHOICE_CHART_TYPE_MAX_OPTIONS = 6;
 const RANK_CHART_TYPES = ['lollipop', 'stacked'];
 const RANK_CHART_TYPE_LABELS = {
-  lollipop: '점 그래프',
-  stacked: '누적 막대'
+  lollipop: '가중 평균',
+  stacked: '응답 비율'
 };
 
-// 객관식 순위: 무채색 계열 안에서 순위별 차이를 조금 더 크게 둡니다.
-const RANK_PALETTE = [
-  '#1f1f1f', '#555555', '#8b8b8b', '#b1b1b1', '#c7c7c7', '#d9d9d9', '#e6e6e6', '#f0f0f0'
+const RANK_LOLLIPOP_COLOR = 'var(--neutral-700)';
+const RANK_STACK_PALETTE = [
+  'var(--neutral-800)',
+  'var(--neutral-400)',
+  'var(--neutral-300)',
+  'var(--neutral-400)',
+  'var(--neutral-400)',
+  'var(--neutral-400)',
+  'var(--neutral-400)',
+  'var(--neutral-400)'
 ];
-function rankColor(idx) {
-  if (idx < RANK_PALETTE.length) return RANK_PALETTE[idx];
-  return RANK_PALETTE[RANK_PALETTE.length - 1];
+function rankStackColor(idx) {
+  if (idx < RANK_STACK_PALETTE.length) return RANK_STACK_PALETTE[idx];
+  return RANK_STACK_PALETTE[RANK_STACK_PALETTE.length - 1];
 }
 
 function getRankWeight(rankCount, rankIndex) {
@@ -1920,12 +1927,11 @@ function getRankWeight(rankCount, rankIndex) {
 }
 
 function formatRankAverage(value) {
-  return Number.isFinite(value) ? value.toFixed(1) : '0.0';
+  return Number.isFinite(value) ? value.toFixed(2) : '0.00';
 }
 
 function buildRankWeightFormulaText(rankCount) {
-  const parts = Array.from({ length: rankCount }, (_, idx) => `${idx + 1}순위×${getRankWeight(rankCount, idx)}`);
-  return `가중 평균 = (${parts.join(' + ')}) ÷ 전체 응답자 수`;
+  return `가중 평균은 순위가 높을수록 더 큰 점수를 반영해 계산한 평균값입니다. 산출식 예시: 3순위까지 선택할 수 있는 경우, (1순위×5 + 2순위×3 + 3순위×1) ÷ 전체 응답자 수`;
 }
 
 const SCALE_DIVERGING_PALETTE = [
@@ -3564,7 +3570,7 @@ function buildChoiceDataTableHtml(data) {
         <thead>
           <tr>
             <th>응답 보기</th>
-            <th class="num">비율(%)</th>
+            <th class="num">응답 비율(%)</th>
             <th class="num">응답 수(명)</th>
           </tr>
         </thead>
@@ -3595,8 +3601,8 @@ function buildChoiceDataTableHtml(data) {
     ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, 2))
   ].join('');
   const topRow2 = [
-    `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th>`,
-    ...displayGroups.map(() => `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th>`)
+    `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th>`,
+    ...displayGroups.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th>`)
   ].join('');
 
   const bodyRows = totalResults.map(r => {
@@ -3732,13 +3738,12 @@ function buildRatioAllocationChartHtml(data, hiddenGroups = new Set()) {
 
 function buildRatioAllocationDataTableHtml(data, hiddenGroups = new Set()) {
   if (!data.groupResults) {
-    const sumPct = data.totalResults.reduce((sum, result) => sum + (result.pct || 0), 0);
     const tableHtml = `
-      <table class="result-table">
+      <table class="result-table ratio-allocation-table">
         <thead>
           <tr>
             <th>배분 항목</th>
-            <th class="num">평균 비중(%)</th>
+            <th class="num">평균 배분값</th>
             <th class="num">응답 수(명)</th>
           </tr>
         </thead>
@@ -3746,15 +3751,10 @@ function buildRatioAllocationDataTableHtml(data, hiddenGroups = new Set()) {
           ${data.totalResults.map(result => `
             <tr>
               <td>${escapeHtml(result.option)}</td>
-              <td class="num mean-value">${formatPercent(result.pct)}</td>
+              <td class="num mean-value">${formatOneDecimal(result.pct)}</td>
               <td class="num">${Number(result.count || 0).toLocaleString()}</td>
             </tr>
           `).join('')}
-          <tr class="total-row">
-            <td>합계</td>
-            <td class="num">${formatPercent(sumPct)}</td>
-            <td class="num">${Number(data.totalN || 0).toLocaleString()}</td>
-          </tr>
         </tbody>
       </table>
     `;
@@ -3768,41 +3768,31 @@ function buildRatioAllocationDataTableHtml(data, hiddenGroups = new Set()) {
     ...displayGroups.map(group => buildGroupedCountHeader(group.label, group.n, 2))
   ].join('');
   const subRow = [
-    `<th class="num group-col">평균 비중(%)</th><th class="num">응답 수(명)</th>`,
-    ...displayGroups.map(() => `<th class="num group-col">평균 비중(%)</th><th class="num">응답 수(명)</th>`)
+    `<th class="num group-col">평균 배분값</th><th class="num">응답 수(명)</th>`,
+    ...displayGroups.map(() => `<th class="num group-col">평균 배분값</th><th class="num">응답 수(명)</th>`)
   ].join('');
   const bodyRows = data.totalResults.map(result => {
     const groupCells = displayGroups.map(group => {
       const groupResult = group.results.find(item => item.option === result.option) || { pct: 0, count: 0 };
-      return `<td class="num group-col mean-value">${formatPercent(groupResult.pct)}</td><td class="num">${Number(group.n || groupResult.count || 0).toLocaleString()}</td>`;
+      return `<td class="num group-col mean-value">${formatOneDecimal(groupResult.pct)}</td><td class="num">${Number(group.n || groupResult.count || 0).toLocaleString()}</td>`;
     }).join('');
     return `
       <tr>
         <td>${escapeHtml(result.option)}</td>
-        <td class="num group-col mean-value">${formatPercent(result.pct)}</td>
+        <td class="num group-col mean-value">${formatOneDecimal(result.pct)}</td>
         <td class="num">${Number(result.count || 0).toLocaleString()}</td>
         ${groupCells}
       </tr>
     `;
   }).join('');
-  const totalGroupCells = displayGroups.map(group => {
-    const totalPct = (group.results || []).reduce((sum, result) => sum + (result.pct || 0), 0);
-    return `<td class="num group-col">${formatPercent(totalPct)}</td><td class="num">${Number(group.n || 0).toLocaleString()}</td>`;
-  }).join('');
   const tableHtml = `
-    <table class="result-table">
+    <table class="result-table ratio-allocation-table">
       <thead>
         <tr>${topRow}</tr>
         <tr>${subRow}</tr>
       </thead>
       <tbody>
         ${bodyRows}
-        <tr class="total-row">
-          <td>합계</td>
-          <td class="num group-col">${formatPercent(data.totalResults.reduce((sum, result) => sum + (result.pct || 0), 0))}</td>
-          <td class="num">${Number(data.totalN || 0).toLocaleString()}</td>
-          ${totalGroupCells}
-        </tr>
       </tbody>
     </table>
   `;
@@ -3946,12 +3936,34 @@ function buildScaleTrackHtml(scoreResults, maxScore, options = {}) {
     return `
       <div class="scale-segment"
            style="width:${width}%; background:${getScaleColor(result.score, maxScore)};"
-           ${interactive ? `data-tip="${tip}"` : ''}></div>
+           ${interactive ? `data-tip="${tip}"` : ''}>
+        ${!muted ? `<span class="scale-segment-value">${formatPercent(result.pct)}</span>` : ''}
+      </div>
     `;
   }).join('');
   return `
     <div class="scale-bar ${muted ? 'is-muted' : ''}">
       <div class="scale-track ${muted ? 'is-muted' : ''}">${segments}</div>
+    </div>
+  `;
+}
+
+function buildScaleEdgeLabelsHtml(scoreResults) {
+  const items = Array.isArray(scoreResults) ? scoreResults : [];
+  if (items.length < 2) return '';
+  const first = items[0];
+  const last = items[items.length - 1];
+  const firstLabel = cleanCell(first && first.label);
+  const lastLabel = cleanCell(last && last.label);
+  const firstDefault = first ? `${first.score}점` : '';
+  const lastDefault = last ? `${last.score}점` : '';
+  const leftCopy = firstLabel && firstLabel !== firstDefault ? firstLabel : '';
+  const rightCopy = lastLabel && lastLabel !== lastDefault ? lastLabel : '';
+  if (!leftCopy && !rightCopy) return '';
+  return `
+    <div class="scale-edge-labels" aria-hidden="true">
+      <span class="scale-edge-label is-left">${escapeHtml(leftCopy)}</span>
+      <span class="scale-edge-label is-right">${escapeHtml(rightCopy)}</span>
     </div>
   `;
 }
@@ -3984,6 +3996,7 @@ function buildScaleMeanOnlyHtml(mean, maxScore, meanTipData, scoreResults, optio
         ${buildScaleTrackHtml(scoreResults, maxScore, { muted: true, interactive: false, hideMidpoint })}
       </div>
       ${buildScaleAxisHtml(maxScore, { centered: true, showLabels: true })}
+      ${buildScaleEdgeLabelsHtml(scoreResults)}
       ${buildScaleMeanHtml(mean, maxScore, meanTipData, { centered: true })}
     </div>
   `;
@@ -4240,7 +4253,7 @@ function buildScaleCompareOverallDotHtml(question, maxScore, compact = false) {
   }));
   return `
     <div class="scale-compare-dot is-overall ${compact ? 'is-compact' : ''}" style="left:${left}%;" data-tip="${tip}">
-      ${compact ? '' : `<span>${formatScaleCompareMean(question.mean)}</span>`}
+      ${compact ? '' : `<span class="scale-compare-dot-label">평균</span><span class="scale-compare-dot-value">${formatScaleCompareMean(question.mean)}</span>`}
     </div>
   `;
 }
@@ -4260,7 +4273,7 @@ function buildScaleCompareGroupDotHtml(group, point, maxScore, withOverall, comp
     <div class="scale-compare-dot is-group ${withOverall ? 'has-overall' : ''} ${compact ? 'is-compact' : ''}"
          style="left:${left}%; background:${group.color};"
          data-tip="${tip}">
-      ${compact ? '' : `<span>${formatScaleCompareMean(point.mean)}</span>`}
+      ${compact ? '' : `<span class="scale-compare-dot-label">평균</span><span class="scale-compare-dot-value">${formatScaleCompareMean(point.mean)}</span>`}
     </div>
   `;
 }
@@ -4403,7 +4416,7 @@ function buildScaleCompareScoreHeaders(scoreRange) {
 
 function buildScaleCompareScoreSubHeaders(scoreRange) {
   return (scoreRange || []).map(() => `
-    <th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th>
+    <th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th>
   `).join("");
 }
 
@@ -5072,7 +5085,7 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
         <thead>
           <tr>
             <th>점수</th>
-            <th class="num">비율(%)</th>
+            <th class="num">응답 비율(%)</th>
             <th class="num">응답 수(명)</th>
             <th class="num">평균</th>
           </tr>
@@ -5098,8 +5111,8 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
     ...displayGroups.map(group => buildGroupedCountHeader(group.label, group.n, 3))
   ].join("");
   const subRow = [
-    `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`,
-    ...displayGroups.map(() => `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`)
+    `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`,
+    ...displayGroups.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`)
   ].join("");
   const bodyRows = data.scoreResults.map(result => {
     const groupCells = displayGroups.map(group => {
@@ -5509,7 +5522,7 @@ function buildRankControlsHtml(targetLabel, options = {}) {
   const sortHtml = `
     <label class="choice-controls-sort">
       <input type="checkbox" data-rank-sort-by-score data-target="${safeTarget}" ${sortByScore ? 'checked' : ''}>
-      <span class="choice-controls-sort-label">가중 평균 점수가 높은 순서로 정렬</span>
+      <span class="choice-controls-sort-label">가중 평균 높은 순서로 정렬</span>
     </label>
   `;
   return `<div class="choice-controls">${chartTypeHtml}${sortHtml}</div>`;
@@ -5543,7 +5556,7 @@ function buildRankFormulaNoteHtml(data) {
 }
 
 function buildRankLollipopChartHtml(data) {
-  const rows = data.totalResults || [];
+  const rows = [...(data.totalResults || [])];
   const axisMin = 0;
   const axisMax = Math.max(axisMin, ...((data.rankWeights || []).map(Number)));
   const axisTicks = [];
@@ -5556,6 +5569,7 @@ function buildRankLollipopChartHtml(data) {
   const rowHtml = rows.map((r, index) => {
     const rankObj = data.ranking.find(item => item.option === r.option);
     const posText = rankObj ? `${rankObj.position}위` : '-';
+    const color = RANK_LOLLIPOP_COLOR;
     const valueText = formatRankAverage(r.weightedAverage);
     const leftPct = pctFor(r.weightedAverage);
     const tip = encodeURIComponent(JSON.stringify({
@@ -5564,12 +5578,17 @@ function buildRankLollipopChartHtml(data) {
       weightedAverage: r.weightedAverage,
       rankPosition: posText
     }));
+    const guideHtml = axisTicks.map(tick => {
+      const tickPct = pctFor(tick);
+      return `<span class="rank-point-guide ${tick === axisMin ? 'is-zero' : ''}" style="left:${tickPct}%;"></span>`;
+    }).join('');
     return `
       <div class="rank-point-row">
         <div class="rank-point-label" title="${escapeHtml(r.option)}" data-tip="${tip}">${escapeHtml(r.option)}</div>
         <div class="rank-point-track" data-tip="${tip}">
-          <div class="rank-point-line" style="width:${leftPct}%;"></div>
-          <div class="rank-point-dot" style="left:${leftPct}%;"></div>
+          <div class="rank-point-track-guides" aria-hidden="true">${guideHtml}</div>
+          <div class="rank-point-line" style="width:${leftPct}%;background:${color};"></div>
+          <div class="rank-point-dot" style="left:${leftPct}%;background:${color};"></div>
         </div>
         <div class="rank-point-value">${valueText}</div>
         <div class="rank-point-rank">${escapeHtml(posText)}</div>
@@ -5578,21 +5597,25 @@ function buildRankLollipopChartHtml(data) {
   }).join('');
   return `
     <div class="rank-point-chart">
-      <div class="rank-point-guides" aria-hidden="true">
-        ${axisTicks.map(tick => {
-          const leftPct = pctFor(tick);
-          return `<span class="rank-point-guide" style="left:${leftPct}%;"></span>`;
-        }).join('')}
-      </div>
       ${rowHtml}
-      <div class="rank-point-axis" aria-hidden="true">
-        ${axisTicks.map(tick => {
-          const leftPct = pctFor(tick);
-          const cls = tick === axisMin ? 'is-start' : (tick === axisMax ? 'is-end' : 'is-mid');
-          return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
-        }).join('')}
+      <div class="rank-point-axis-row" aria-hidden="true">
+        <div class="rank-point-axis-spacer"></div>
+        <div class="rank-point-axis">
+          ${axisTicks.map(tick => {
+            const leftPct = pctFor(tick);
+            const cls = tick === axisMin ? 'is-start' : (tick === axisMax ? 'is-end' : 'is-mid');
+            return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
+          }).join('')}
+        </div>
+        <div class="rank-point-axis-spacer"></div>
+        <div class="rank-point-axis-spacer"></div>
       </div>
-      <div class="rank-point-axis-title">가중 평균 점수</div>
+      <div class="rank-point-axis-title-row">
+        <div class="rank-point-axis-spacer"></div>
+        <div class="rank-point-axis-title">가중 평균 점수</div>
+        <div class="rank-point-axis-spacer"></div>
+        <div class="rank-point-axis-spacer"></div>
+      </div>
     </div>
   `;
 }
@@ -5612,7 +5635,7 @@ function buildRankStackChartHtml(data, hiddenRanks) {
       if (hiddenRanks.has(ri)) return "";
       const w = Math.max(0, pr.pct);
       if (w <= 0) return "";
-      const color = rankColor(ri);
+      const color = rankStackColor(ri);
       const tip = encodeURIComponent(JSON.stringify({
         kind: 'rank-seg',
         option: r.option,
@@ -5643,6 +5666,7 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="rank-stack-track">${trackHtml}</div>
         <div class="hbar-value rank-stack-value">${formatPercent(displayedPct)}</div>
+        <div class="rank-stack-rank-placeholder" aria-hidden="true"></div>
       </div>
     `;
   }).join('');
@@ -5652,7 +5676,7 @@ function buildRankStackChartHtml(data, hiddenRanks) {
 function buildRankLegendHtml(data, hiddenRanks) {
   const items = data.rankLabels.map((lab, ri) => {
     const isHidden = hiddenRanks.has(ri);
-    const color = rankColor(ri);
+    const color = rankStackColor(ri);
     return `
       <label class="legend-item ${isHidden ? 'disabled' : ''}" data-rank="${ri}">
         <input type="checkbox" ${isHidden ? '' : 'checked'}>
@@ -5757,7 +5781,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
       `<th rowspan="2" class="num">종합 순위</th>`
     ].join('');
     const subRow = [
-      ...rankLabels.map(() => `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th>`)
+      ...rankLabels.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th>`)
     ].join('');
     const bodyRows = totalResults.map(r => {
       const rankObj = data.ranking.find(rk => rk.option === r.option);
@@ -5816,7 +5840,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   ].join('');
   const subRow = [
     ...[null, ...displayGroups].map(() =>
-      rankLabels.map(() => `<th class="num group-col">비율(%)</th><th class="num">응답 수(명)</th>`).join('')
+      rankLabels.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th>`).join('')
     )
   ].join('');
 
@@ -5925,11 +5949,11 @@ function buildRankSection(data, rows) {
         ${fullText}
       </div>
       ${controlsHtml}
+      ${formulaNoteHtml}
       <div class="result-visual has-legend">
         <div class="result-chart-col">${chartHtml}</div>
         ${legendHtml}
       </div>
-      ${formulaNoteHtml}
       ${tableHtml}
     </section>
   `;
@@ -6288,7 +6312,9 @@ function buildStacked100ChartHtml(data) {
   }).join('');
   const labelHtml = rows.map((r, i) => {
     const width = Math.max(0, Math.min(100, r.pct));
-    const posClass = i === 0 ? 'is-start' : (i === rows.length - 1 ? 'is-end' : 'is-center');
+    const posClass = i === 0
+      ? 'is-start'
+      : (i === rows.length - 1 ? (width >= 18 ? 'is-center' : 'is-end') : 'is-center');
     return `
       <div class="stack100-label-slot ${posClass}" style="flex:0 0 ${width}%;">
         <span class="stack100-label-text">${escapeHtml(r.option)}</span>
@@ -6326,9 +6352,9 @@ function buildPieChartHtml(data) {
       count: row.count
     }));
     const midAngle = startAngle + ((endAngle - startAngle) / 2);
-    const placeOutside = fraction < 0.12 || cleanCell(row.option).length > 10;
-    const insideX = cx + (r * 0.58) * Math.cos(midAngle);
-    const insideY = cy + (r * 0.58) * Math.sin(midAngle);
+    const placeOutside = fraction < 0.08;
+    const insideX = cx + (r * 0.64) * Math.cos(midAngle);
+    const insideY = cy + (r * 0.64) * Math.sin(midAngle);
     const lineStartX = cx + (r * 0.9) * Math.cos(midAngle);
     const lineStartY = cy + (r * 0.9) * Math.sin(midAngle);
     const lineMidX = cx + (r + 12) * Math.cos(midAngle);
