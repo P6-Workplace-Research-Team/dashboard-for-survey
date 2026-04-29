@@ -5,9 +5,11 @@
 
 ---
 
-## Typography
+## Design Tokens
 
-### Base Font
+### Typography
+
+#### Base Font
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
@@ -17,7 +19,7 @@
 font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 ```
 
-### Typeface Scale
+#### Typeface Scale
 
 | Token | Korean | Size | Weight |
 |-------|--------|-----:|--------|
@@ -42,7 +44,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 - Line-height: Heading `120%` / 나머지 `160%`
 
-### Usage
+#### Usage
 
 | Token | 용도 |
 |-------|------|
@@ -65,10 +67,83 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 | `Button-2-strong` | 강조 소형 버튼 텍스트 |
 | `Caption-1` | 주석, 설명, 보조 안내, 오류 메시지 |
 
+### Color
+
+> Figma Variables 기준. 이 목록에 없는 색상 사용 금지.
+
+#### Neutral
+
+| 변수명 | 값 | 주요 용도 |
+|--------|----|-----------|
+| `Black` | `#000000` | 버튼 배경, 체크 아이콘, 포커스 보더, 배지 bg |
+| `neutral-900` | `#151515` | 주요 텍스트, 제목, 레이블 |
+| `neutral-800` | `#363636` | 보조 텍스트, hover 텍스트 |
+| `neutral-700` | `#525252` | — |
+| `neutral-600` | `#777777` | hint, placeholder, 메타 텍스트, 파일명 |
+| `neutral-500` | `#919191` | — |
+| `neutral-400` | `#AFAFAF` | disabled 텍스트 |
+| `neutral-300` | `#CCCCCC` | disabled 버튼 배경, dashed 보더 |
+| `neutral-200` | `#E3E3E3` | 기본 보더 (solid) |
+| `neutral-100` | `#F1F1F1` | hover 강조 bg |
+| `neutral-50` | `#F8F8F8` | soft bg, 가이드 배너, hover bg |
+| `White` | `#FFFFFF` | 카드 배경, 인풋 배경, 버튼 텍스트 |
+
+#### Error
+
+| 변수명 | 값 | 용도 |
+|--------|----|------|
+| `error-bg` | `#FFEBEE` | 오류 상태 카드 배경 |
+| `error-text` | `#D32F2F` | 오류 메시지 텍스트 |
+| `low-4` | `#CF9D9D` | 에러 보더, 삭제 hover |
+| `low-3` | `#D4AEAE` | — |
+| `low-2` | `#DAC3C3` | 보조 에러 배경 |
+
+#### Data Visualization (대시보드 전용)
+
+| 변수명 | 값 | 변수명 | 값 |
+|--------|----|--------|----|
+| `color-1` | `#577A9A` | `color-11` | `#5E88A8` |
+| `color-2` | `#C67B7B` | `color-12` | `#A87CB0` |
+| `color-3` | `#6E9A78` | `color-13` | `#82986A` |
+| `color-4` | `#9A82BC` | `color-14` | `#7A7AB8` |
+| `color-5` | `#B89A62` | `color-15` | `#B88868` |
+| `color-6` | `#5E9898` | `color-16` | `#5A9488` |
+| `color-7` | `#BC8098` | `color-17` | `#B07A9A` |
+| `color-8` | `#62906E` | `color-18` | `#C08878` |
+| `color-9` | `#8284BC` | `color-19` | `#6A9880` |
+| `color-10` | `#A8924E` | `color-20` | `#7A9870` |
+| `high-4` | `#859DB2` | `low-4` | `#CF9D9D` |
+| `high-3` | `#9EAFBF` | `low-3` | `#D4AEAE` |
+| `high-2` | `#B1BEC9` | `low-2` | `#DAC3C3` |
+
+### Radius
+
+| 토큰 | 값 |
+|------|----|
+| `--radius-2` | `2px` |
+| `--radius-4` | `4px` |
+| `--radius-6` | `6px` |
+| `--radius-8` | `8px` |
+| `--radius-12` | `12px` |
+| `--radius-16` | `16px` |
+| `--radius-20` | `20px` |
+| `--radius-pill` | `999px` |
+
+### Shadow
+
+모달, 드롭다운처럼 레이어 위에 올라오는 작은 창에 사용한다.
+
+| 토큰 | 값 | 용도 |
+|------|----|------|
+| `--shadow` | `4px 4px 16px 0 rgba(0,0,0,0.05)` | 드롭다운 메뉴, 모달, 팝오버 등 오버레이 요소 |
+
+- X: 4px / Y: 4px / Blur: 16px / Spread: 0 / Color: `#000000` 5%
+
 ### CSS Tokens
 
 ```css
 :root {
+  /* typography */
   --heading-1-size: 28px;
   --heading-2-size: 24px;
   --heading-3-size: 20px;
@@ -95,141 +170,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --font-weight-semibold: 600;
   --font-weight-medium: 500;
   --font-weight-regular: 400;
-}
-```
 
----
-
-## Common Components
-
-### Logo
-
-| 항목 | 기준 |
-|------|------|
-| 자산 | `assets/purple6studio_한줄_black.png` |
-| 사용 위치 | 홈 상단, 대시보드 헤더 |
-| 표시 규칙 | 로고 이미지는 왜곡 없이 표시하고, 링크 또는 브랜드 영역 자체의 텍스트 장식은 제거한다. |
-
-### Button-1
-
-주요 화면 액션과 헤더 유틸리티에 쓰는 기본 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
-
-| Variant | 용도 | 배경 | 텍스트 | 보더 |
-|---------|------|------|--------|------|
-| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
-| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
-| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
-| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
-| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
-
-- 타입 토큰: 기본은 `Button-1`을 사용하고, `Focus`와 `Black` variant만 `Button-1-strong`을 사용한다.
-- 패딩: 상하 7px, 좌우 14px / border-radius: `--radius-8`
-- 아이콘이 있을 때는 텍스트 앞에 둔다.
-- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
-- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
-
-### Button-2
-
-목록, 모달, 반복 항목 안의 작은 액션 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
-
-| Variant | 용도 | 배경 | 텍스트 | 보더 |
-|---------|------|------|--------|------|
-| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
-| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
-| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
-| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
-| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
-
-- 타입 토큰: 기본은 `Button-2`를 사용하고, `Focus`와 `Black` variant만 `Button-2-strong`을 사용한다.
-- 패딩: 상하 6px, 좌우 12px / border-radius: `--radius-8`
-- 아이콘이 있을 때는 텍스트 앞에 둔다.
-- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
-- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
-
-### Checkbox
-
-필터, 범례, 표시/숨김 설정처럼 다중 선택 또는 토글성 선택에 사용한다.
-
-| 항목 | 기준 |
-|------|------|
-| 크기 | 14px × 14px |
-| 모양 | 정사각형, border-radius `--radius-4` |
-| Default 보더 | 1px solid `neutral-700` |
-| Checked 배경 | `neutral-900` |
-| Checked 아이콘 | `assets/icons/check_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg`, 12px × 12px, 중앙 정렬, `White`로 필터 적용 |
-
-- 체크박스 자체보다 라벨 전체를 클릭 영역으로 사용하는 것을 기본으로 한다.
-- 범례와 연결된 체크박스는 색상 swatch와 함께 표시한다.
-
-### Number Tag
-
-개수, 선택 수, 필터 선택 수처럼 짧은 숫자를 보여주는 pill 태그다.
-
-| 항목 | 기준 |
-|------|------|
-| 배경 | `neutral-900` |
-| 텍스트 | `White`, `Label-2-strong` |
-| 크기 | 가로·세로 hug, 좌우 padding 6px |
-| 형태 | `--radius-pill` |
-| 사용 예 | 저장된 대시보드 개수, 필터 선택 개수 |
-
-- 값이 0이어도 맥락상 필요한 경우에는 표시한다.
-
----
-
-## Color
-
-> Figma Variables 기준. 이 목록에 없는 색상 사용 금지.
-
-### Neutral
-
-| 변수명 | 값 | 주요 용도 |
-|--------|----|-----------|
-| `Black` | `#000000` | 버튼 배경, 체크 아이콘, 포커스 보더, 배지 bg |
-| `neutral-900` | `#151515` | 주요 텍스트, 제목, 레이블 |
-| `neutral-800` | `#363636` | 보조 텍스트, hover 텍스트 |
-| `neutral-700` | `#525252` | — |
-| `neutral-600` | `#777777` | hint, placeholder, 메타 텍스트, 파일명 |
-| `neutral-500` | `#919191` | — |
-| `neutral-400` | `#AFAFAF` | disabled 텍스트 |
-| `neutral-300` | `#CCCCCC` | disabled 버튼 배경, dashed 보더 |
-| `neutral-200` | `#E3E3E3` | 기본 보더 (solid) |
-| `neutral-100` | `#F1F1F1` | hover 강조 bg |
-| `neutral-50` | `#F8F8F8` | soft bg, 가이드 배너, hover bg |
-| `White` | `#FFFFFF` | 카드 배경, 인풋 배경, 버튼 텍스트 |
-
-### Error
-
-| 변수명 | 값 | 용도 |
-|--------|----|------|
-| `error-bg` | `#FFEBEE` | 오류 상태 카드 배경 |
-| `error-text` | `#D32F2F` | 오류 메시지 텍스트 |
-| `low-4` | `#CF9D9D` | 에러 보더, 삭제 hover |
-| `low-3` | `#D4AEAE` | — |
-| `low-2` | `#DAC3C3` | 보조 에러 배경 |
-
-### Data Visualization (대시보드 전용)
-
-| 변수명 | 값 | 변수명 | 값 |
-|--------|----|--------|----|
-| `color-1` | `#577A9A` | `color-11` | `#5E88A8` |
-| `color-2` | `#C67B7B` | `color-12` | `#A87CB0` |
-| `color-3` | `#6E9A78` | `color-13` | `#82986A` |
-| `color-4` | `#9A82BC` | `color-14` | `#7A7AB8` |
-| `color-5` | `#B89A62` | `color-15` | `#B88868` |
-| `color-6` | `#5E9898` | `color-16` | `#5A9488` |
-| `color-7` | `#BC8098` | `color-17` | `#B07A9A` |
-| `color-8` | `#62906E` | `color-18` | `#C08878` |
-| `color-9` | `#8284BC` | `color-19` | `#6A9880` |
-| `color-10` | `#A8924E` | `color-20` | `#7A9870` |
-| `high-4` | `#859DB2` | `low-4` | `#CF9D9D` |
-| `high-3` | `#9EAFBF` | `low-3` | `#D4AEAE` |
-| `high-2` | `#B1BEC9` | `low-2` | `#DAC3C3` |
-
-### CSS Tokens
-
-```css
-:root {
   /* neutral */
   --Black: #000000;
   --White: #ffffff;
@@ -275,5 +216,137 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --radius-16: 16px;
   --radius-20: 20px;
   --radius-pill: 999px;
+
+  /* shadow */
+  --shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.05);
 }
 ```
+
+---
+
+## Common Components
+
+### Logo
+
+| 항목 | 기준 |
+|------|------|
+| 자산 | `assets/purple6studio_한줄_black.png` |
+| 사용 위치 | 홈 상단, 대시보드 헤더 |
+| 표시 규칙 | 로고 이미지는 왜곡 없이 표시하고, 링크 또는 브랜드 영역 자체의 텍스트 장식은 제거한다. |
+
+### Button-1
+
+주요 화면 액션과 헤더 유틸리티에 쓰는 기본 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
+
+| Variant | 용도 | 배경 | 텍스트 | 보더 | 굵기 |
+|---------|------|------|--------|------|
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
+
+- 타입 토큰: 기본은 `Button-1`을 사용하고, `Focus`와 `Black` variant만 `Button-1-strong`을 사용한다.
+- 패딩: 상하 7px, 좌우 14px / min-height: 36px
+- 보더: 1px solid / border-radius: `--radius-8`
+- 아이콘이 있을 때는 텍스트 앞에 둔다. 아이콘의 크기는 16px x 16px이다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
+- 아이콘/텍스트/Number tag 등의 간격은 8px이다.
+- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
+
+### Button-2
+
+목록, 모달, 반복 항목 안의 작은 액션 버튼이다. 아이콘을 함께 쓸 수 있고, 필요하면 숫자 태그를 오른쪽에 붙인다.
+
+| Variant | 용도 | 배경 | 텍스트 | 보더 |
+|---------|------|------|--------|------|
+| Default | 보조 액션, 리스트 버튼 | `White` | `neutral-900` | `neutral-300` |
+| Focus | 선택 또는 강조된 보조 액션 | `White` | `neutral-900` | `neutral-900` |
+| Black | 주요 소형 액션 | `neutral-900` | `White` | 없음 |
+| Gray | 약한 배경 강조 액션 | `neutral-100` | `neutral-900` | `neutral-300` |
+| Inactive | 비활성 상태 | `White` | `neutral-200` | `neutral-200` |
+
+- 타입 토큰: 기본은 `Button-2`를 사용하고, `Focus`와 `Black` variant만 `Button-2-strong`을 사용한다.
+- 패딩: 상하 6px, 좌우 12px / min-height: 31px
+- 보더: 1px solid / border-radius: `--radius-8`
+- 아이콘이 있을 때는 텍스트 앞에 둔다. 아이콘 크기는 14px x 14px이다.
+- 필요시 텍스트 오른쪽에 Number Tag를 붙인다.
+- 아이콘/텍스트/Number tag 등의 간격은 8px이다.
+- 호버는 variant의 의미를 유지하면서 보더 또는 배경 대비만 높인다.
+
+### Checkbox
+
+필터, 범례, 표시/숨김 설정처럼 다중 선택 또는 토글성 선택에 사용한다.
+
+| 항목 | 기준 |
+|------|------|
+| 크기 | 14px × 14px |
+| 모양 | 정사각형, border-radius `--radius-4` |
+| Default 보더 | 1px solid `neutral-700` |
+| Default 배경 | `White` |
+| Checked 배경 | `neutral-900` |
+| Checked 아이콘 | `assets/icons/check_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg`, 12px × 12px, 중앙 정렬, `White`로 필터 적용 |
+
+- 체크박스 자체보다 라벨 전체를 클릭 영역으로 사용하는 것을 기본으로 한다.
+- 범례와 연결된 체크박스는 색상 swatch와 함께 표시한다.
+
+### Number Tag
+
+개수, 선택 수, 필터 선택 수처럼 짧은 숫자를 보여주는 pill 태그다.
+
+| 항목 | 기준 |
+|------|------|
+| 크기 | 1자리: 20×20px / 2자리: 28×20px / 3자리: 36×20px |
+| padding | 0 |
+| border-radius | `--radius-pill` |
+| 배경 | `neutral-900` |
+| 텍스트 | `White`, `Label-2-strong` |
+| 사용 예 | 저장된 대시보드 개수, 필터 선택 개수 |
+
+- 값이 0이어도 맥락상 필요한 경우에는 표시한다.
+
+
+### Dropdown
+
+값을 선택하거나 액션을 고르는 오버레이 메뉴를 여는 컴포넌트다. 트리거·메뉴·아이템 너비는 콘텐츠에 따라 유동적이다.
+
+#### Trigger
+
+| 항목 | 기준 |
+|------|------|
+| padding | 8px 10px 8px 16px |
+| border-radius | `radius-12` |
+| 배경 | `White` |
+| 기본 텍스트 | Label-2 Regular, `neutral-600` |
+| 우측 아이콘 | `keyboard_arrow_down` (Material Symbols), 16px |
+
+| 상태 | 보더 | 텍스트 | 아이콘 |
+|------|------|--------|--------|
+| Default | `neutral-300` | `neutral-600` | `neutral-600` |
+| Open (hover 동일) | `neutral-900` | `neutral-900` | `neutral-900` |
+| Selected | `neutral-300` | `neutral-900` | `neutral-600` |
+
+#### Menu Box
+
+| 항목 | 기준 |
+|------|------|
+| 위치 | 트리거 하단 8px, absolute |
+| padding | 8px |
+| border-radius | `radius-12` |
+| 보더 | 1px solid `neutral-300` |
+| 배경 | `White` |
+| 그림자 | `--shadow` |
+| 최대 높이 | 226px (초과 시 스크롤) |
+| z-index | 8 |
+
+#### Item
+
+| 항목 | 기준 |
+|------|------|
+| padding | 8px 10px |
+| border-radius | `radius-8` |
+| 텍스트 | Label-2 Regular, `neutral-700` |
+| Default 배경 | 투명 |
+| Hover 배경 | `neutral-50` |
+
+- 중복 선택형일 경우 텍스트 좌측에 체크박스를 두며, gap은 8px. accent-color는 `neutral-900`.
