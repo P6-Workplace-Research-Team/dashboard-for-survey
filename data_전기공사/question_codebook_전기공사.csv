@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 "question_no","category_1","category_2","question_label","question_full","response_options","response_type","value_count","value_code_map","number_unit","other_input_expected","data_column_role","dashboard_value_type","formula"
+=======
+﻿"question_no","category_1","category_2","question_label","question_full","response_options","response_type","value_count","value_code_map","number_unit","other_input_expected","data_column_role","dashboard_value_type","formula"
+>>>>>>> origin/main
 "Q1","일하는 방식","업무 특성","개인 업무 특성","다음 중 개인의 성격/ 성향이 아닌, 내가 속한 조직에 요구되는 업무특성의 비율(%)을 기입해주세요.","독립|협업","주관식 비율 배분","2","1=독립|2=협업","","N","raw","number",""
 "Q1_A1","일하는 방식","업무 특성","개인 업무 특성__독립","다음 중 개인의 성격/ 성향이 아닌, 내가 속한 조직에 요구되는 업무특성의 비율(%)을 기입해주세요.","","주관식 비율 배분","","","","N","expanded","number",""
 "Q1_A2","일하는 방식","업무 특성","개인 업무 특성__협업","다음 중 개인의 성격/ 성향이 아닌, 내가 속한 조직에 요구되는 업무특성의 비율(%)을 기입해주세요.","","주관식 비율 배분","","","","N","expanded","number",""
