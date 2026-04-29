@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--figma-api-token", "figd_RNKj6dNxScCdjpU9Rwsrh230OSKObsNb_d7eEct2", "--port", "3845"]
+    }
+  }
+}

@@ -818,8 +818,23 @@ function validateBundleConsistency(rowsByKey) {
   const savedList = document.getElementById('saved-list');
   const savedCountBadge = document.getElementById('saved-count');
 
+  function getNumberTagDigitClass(value) {
+    const digits = String(Math.abs(Number(value) || 0)).length;
+    if (digits >= 3) return 'digits-3';
+    if (digits === 2) return 'digits-2';
+    return '';
+  }
+
+  function setNumberTagValue(el, value) {
+    if (!el) return;
+    el.textContent = String(value);
+    el.classList.remove('digits-2', 'digits-3');
+    const digitClass = getNumberTagDigitClass(value);
+    if (digitClass) el.classList.add(digitClass);
+  }
+
   function refreshCount() {
-    savedCountBadge.textContent = loadSurveys().length;
+    setNumberTagValue(savedCountBadge, loadSurveys().length);
   }
 
   function escapeHtml(s) {

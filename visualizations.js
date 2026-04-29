@@ -209,6 +209,21 @@ function escapeHtml(s) {
   }[c]));
 }
 
+function getNumberTagDigitClass(value) {
+  const digits = String(Math.abs(Number(value) || 0)).length;
+  if (digits >= 3) return 'digits-3';
+  if (digits === 2) return 'digits-2';
+  return '';
+}
+
+function setNumberTagValue(el, value) {
+  if (!el) return;
+  el.textContent = String(value);
+  el.classList.remove('digits-2', 'digits-3');
+  const digitClass = getNumberTagDigitClass(value);
+  if (digitClass) el.classList.add(digitClass);
+}
+
 function parseCSV(text) {
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
   const rows = [];
@@ -1022,8 +1037,8 @@ function updateFilterCount() {
 function renderFilterSummary(item) {
   const selected = getSelectedValues(item.key);
   if (!selected || selected.size === 0) return '전체';
-  if (selected.size === 1) return Array.from(selected)[0];
-  return `${selected.size}개 선택`;
+  const labels = Array.from(selected).slice(0, 2);
+  return `${labels.join(', ')}${selected.size > 2 ? ' 외' : ''}`;
 }
 
 function renderFilters() {
@@ -1043,12 +1058,15 @@ function renderFilters() {
       <button type="button" class="filter-control-btn">
         <span class="filter-control-title">${escapeHtml(item.label)}</span>
         <span class="filter-control-summary">${escapeHtml(renderFilterSummary(item))}</span>
-        ${selected.size > 0 ? `<span class="filter-control-count">${selected.size}</span>` : ''}
+        ${selected.size > 0 ? `<span class="filter-control-count${selected.size >= 100 ? ' digits-3' : selected.size >= 10 ? ' digits-2' : ''}">${selected.size}</span>` : ''}
         ${item.fixed ? '' : '<span class="filter-remove-mark">×</span>'}
       </button>
       <div class="filter-menu"></div>
     `;
     const menu = wrap.querySelector('.filter-menu');
+    const menuScroll = document.createElement('div');
+    menuScroll.className = 'filter-menu-scroll';
+    menu.appendChild(menuScroll);
     item.options.forEach(option => {
       const checked = selected.has(option) ? 'checked' : '';
       const row = document.createElement('label');
@@ -1057,23 +1075,8 @@ function renderFilters() {
         <input type="checkbox" value="${escapeHtml(option)}" ${checked}>
         <span class="filter-option-label">${escapeHtml(option)}</span>
       `;
-      menu.appendChild(row);
+      menuScroll.appendChild(row);
     });
-
-    if (!item.fixed) {
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'filter-add-item';
-      removeBtn.textContent = '필터 제거';
-      removeBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        filterState.activeKeys = filterState.activeKeys.filter(key => key !== item.key);
-        filterState.selectedMap.delete(item.key);
-        renderFilters();
-        updateFilterCount();
-      });
-      menu.appendChild(removeBtn);
-    }
 
     const btn = wrap.querySelector('.filter-control-btn');
     btn.addEventListener('click', e => {
@@ -1156,8 +1159,11 @@ function renderFilters() {
 
   const remaining = filterState.candidates.filter(item => !filterState.activeKeys.includes(item.key));
   addMenu.innerHTML = '';
+  const addMenuScroll = document.createElement('div');
+  addMenuScroll.className = 'filter-add-menu-scroll';
+  addMenu.appendChild(addMenuScroll);
   if (remaining.length === 0) {
-    addMenu.innerHTML = '<div class="filter-add-empty">추가할 수 있는 필터가 없습니다.</div>';
+    addMenuScroll.innerHTML = '<div class="filter-add-empty">추가할 수 있는 필터가 없습니다.</div>';
   } else {
     remaining.forEach(item => {
       const btn = document.createElement('button');
@@ -1171,7 +1177,7 @@ function renderFilters() {
         renderFilters();
         updateFilterCount();
       });
-      addMenu.appendChild(btn);
+      addMenuScroll.appendChild(btn);
     });
   }
 
@@ -1239,17 +1245,26 @@ function positionPopupWithinMainArea(anchorEl, menuEl) {
   const mainArea = document.querySelector('.main-area');
   if (!mainArea) return;
 
-  menuEl.style.left = '0';
-  menuEl.style.right = 'auto';
-
   const anchorRect = anchorEl.getBoundingClientRect();
   const menuRect = menuEl.getBoundingClientRect();
   const mainRect = mainArea.getBoundingClientRect();
-  const desiredLeft = Math.min(
-    Math.max(anchorRect.left, mainRect.left + 8),
-    Math.max(mainRect.left + 8, mainRect.right - menuRect.width - 8)
-  );
-  menuEl.style.left = `${desiredLeft - anchorRect.left}px`;
+
+  if (menuEl.id === 'filter-add-menu') {
+    // 오른쪽 정렬: 메뉴 오른쪽 끝을 anchor 오른쪽 끝에 맞춤
+    menuEl.style.right = '0';
+    menuEl.style.left = 'auto';
+    const desiredRight = anchorRect.right;
+    const clampedRight = Math.min(desiredRight, mainRect.right - 8);
+    menuEl.style.right = `${anchorRect.right - clampedRight}px`;
+  } else {
+    menuEl.style.left = '0';
+    menuEl.style.right = 'auto';
+    const desiredLeft = Math.min(
+      Math.max(anchorRect.left, mainRect.left + 8),
+      Math.max(mainRect.left + 8, mainRect.right - menuRect.width - 8)
+    );
+    menuEl.style.left = `${desiredLeft - anchorRect.left}px`;
+  }
 }
 
 function updateCriterionYearButtonVisibility() {
@@ -1397,7 +1412,7 @@ function setupSavedModal() {
   let pendingDataUpdates = {};
 
   function refreshCount() {
-    if (savedCountBadge) savedCountBadge.textContent = loadSurveys().length;
+    setNumberTagValue(savedCountBadge, loadSurveys().length);
   }
 
   function getCurrentSurvey() {
