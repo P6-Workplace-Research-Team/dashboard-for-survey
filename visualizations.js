@@ -1968,6 +1968,8 @@ const resultState = {
   rankChartTypes: new Map(),
   rankSortByScore: new Map(),
   openRankMenus: new Set(),
+  groupCompareViewModes: new Map(),
+  groupCompareSortModes: new Map(),
   tooltipEl: null,
   initialized: false,
   customGroupDefs: new Map(),        // Map<criterionLabel, Array<{id, name}>>
@@ -3392,24 +3394,14 @@ function getRankChartViewMode(targetLabel) {
 }
 
 function isResultTableVisible(targetLabel) {
-  return !resultState.hiddenTableKeys.has(targetLabel);
-}
-
-function buildResultTableToggleHtml(targetLabel) {
-  return `
-    <label class="result-table-toggle">
-      <input type="checkbox" data-result-table-toggle="true" data-target="${escapeHtml(targetLabel)}" ${isResultTableVisible(targetLabel) ? 'checked' : ''}>
-      <span>데이터 표 보기</span>
-    </label>
-  `;
+  return true;
 }
 
 function buildResultSidePanelHtml(legendHtml, targetLabel) {
-  const footerHtml = `<div class="legend-footer">${buildResultTableToggleHtml(targetLabel)}</div>`;
   if (legendHtml && legendHtml.includes('</aside>')) {
-    return legendHtml.replace(/<\/aside>\s*$/, `${footerHtml}</aside>`);
+    return legendHtml;
   }
-  return `<aside class="legend-panel result-table-toggle-panel">${footerHtml}</aside>`;
+  return '<aside class="legend-panel is-placeholder" aria-hidden="true"></aside>';
 }
 
 function getChoiceChartSortMode(targetLabel) {
@@ -3598,25 +3590,168 @@ function buildBasicChartHtml(data) {
       pct: r.pct,
       count: r.count
     }));
-    const innerValueHtml = pct >= 6 ? `<span class="hbar-fill-value">${formatPercent(r.pct)}</span>` : '';
+    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${SINGLE_BAR_COLOR};"
-               data-tip="${tip}">${innerValueHtml}</div>
+               data-tip="${tip}"></div>
+          ${valueHtml}
         </div>
-        <div class="hbar-value">${formatPercent(r.pct)}</div>
       </div>
     `;
   }).join('');
   return `<div class="hbar-chart">${rowHtml}</div>`;
 }
 
+function getGroupCompareViewMode(targetLabel) {
+  return resultState.groupCompareViewModes.get(targetLabel) || 'composition';
+}
+
+function getGroupCompareSortMode(targetLabel) {
+  return resultState.groupCompareSortModes.get(targetLabel) || '__overall__';
+}
+
+function buildGroupCompareViewToggleHtml(data) {
+  if (!data || !data.groupResults || data.groupResults.length === 0) return '';
+  const targetLabel = data.targetLabel || '';
+  const mode = getGroupCompareViewMode(targetLabel);
+  const sortMode = getGroupCompareSortMode(targetLabel);
+  const displayGroups = getDisplayGroupResults(data.groupResults);
+  const sortOptions = [
+    `<option value="__overall__" ${sortMode === '__overall__' ? 'selected' : ''}>전체 기준</option>`,
+    ...displayGroups.map(group => `<option value="${escapeHtml(group.value)}" ${sortMode === group.value ? 'selected' : ''}>${escapeHtml(group.label)} 기준</option>`)
+  ].join('');
+  return `
+    <div class="group-compare-controls">
+      <div class="result-view-toggle" role="tablist" aria-label="그룹 비교 보기 방식">
+        <button type="button" class="result-view-btn ${mode === 'composition' ? 'active' : ''}" data-group-compare-view="composition" data-target="${escapeHtml(targetLabel)}">구성비 보기</button>
+        <button type="button" class="result-view-btn ${mode === 'item' ? 'active' : ''}" data-group-compare-view="item" data-target="${escapeHtml(targetLabel)}">항목 비교 보기</button>
+      </div>
+      <label class="group-compare-sort-wrap">
+        <span>정렬</span>
+        <select data-group-compare-sort data-target="${escapeHtml(targetLabel)}">${sortOptions}</select>
+      </label>
+    </div>
+  `;
+}
+
+function buildGroupCompareItems(data) {
+  if (!data || !data.groupResults) return [];
+  if (data.visualType === 'rank') {
+    const rows = getRankFirstChoiceRows(data);
+    return rows.map(row => ({
+      key: row.option,
+      label: row.option,
+      overallPct: row.pct || 0,
+      groups: (data.groupResults || []).map(group => {
+        const first = getRankFirstChoiceForGroup(group, row.option);
+        return { key: group.value, label: group.label, pct: first.pct || 0, count: first.count || 0, n: group.n || 0 };
+      })
+    }));
+  }
+  if (data.visualType === 'scale') {
+    const scoreRows = Array.isArray(data.scoreResults) ? data.scoreResults : [];
+    return scoreRows.map(row => ({
+      key: String(row.score),
+      label: `${row.score}점`,
+      overallPct: row.pct || 0,
+      groups: (data.groupResults || []).map(group => {
+        const found = (group.scoreResults || []).find(item => item.score === row.score) || { pct: 0, count: 0 };
+        return { key: group.value, label: group.label, pct: found.pct || 0, count: found.count || 0, n: group.n || 0 };
+      })
+    }));
+  }
+  if (data.visualType === 'numeric-open') {
+    const bins = Array.isArray(data.bins) ? data.bins : [];
+    return bins.map((bin, index) => {
+      const label = `${formatNumericValue(bin.start)}~${formatNumericValue(bin.end)}`;
+      const totalCount = Number(bin.count || 0);
+      const overallPct = data.totalN > 0 ? (totalCount / data.totalN) * 100 : 0;
+      return {
+        key: `${bin.start}-${bin.end}-${index}`,
+        label,
+        overallPct,
+        groups: (data.groupResults || []).map(group => {
+          const gBin = (group.bins || [])[index] || { count: 0 };
+          const count = Number(gBin.count || 0);
+          const pct = group.n > 0 ? (count / group.n) * 100 : 0;
+          return { key: group.value, label: group.label, pct, count, n: group.n || 0 };
+        })
+      };
+    });
+  }
+  const rows = Array.isArray(data.totalResults) ? data.totalResults : [];
+  return rows.map(row => ({
+    key: row.option,
+    label: row.option,
+    overallPct: row.pct || 0,
+    groups: (data.groupResults || []).map(group => {
+      const found = (group.results || []).find(item => item.option === row.option) || { pct: 0, count: 0 };
+      return { key: group.value, label: group.label, pct: found.pct || 0, count: found.count || 0, n: group.n || 0 };
+    })
+  }));
+}
+
+function buildGroupedHorizontalCompareChartHtml(data, hiddenGroups = new Set()) {
+  const displayGroups = getDisplayGroupResults(data.groupResults, hiddenGroups);
+  if (!displayGroups.length) return '<div class="result-empty">표시할 그룹이 없습니다.</div>';
+  const groupByKey = new Map(displayGroups.map(group => [group.value, group]));
+  const sortKey = getGroupCompareSortMode(data.targetLabel || '');
+  const rows = buildGroupCompareItems(data).map(item => {
+    let sortMetric = item.overallPct || 0;
+    if (sortKey && sortKey !== '__overall__') {
+      const found = (item.groups || []).find(group => group.key === sortKey);
+      sortMetric = found ? (found.pct || 0) : 0;
+    }
+    return { ...item, sortMetric };
+  }).sort((a, b) => b.sortMetric - a.sortMetric);
+  const groupsLegend = displayGroups.map(group => {
+    const color = getGroupColor(data.groupResults, group.value);
+    return `<span class="grouped-legend-item"><span class="grouped-legend-dot" style="background:${color};"></span>${escapeHtml(group.label)}</span>`;
+  }).join('');
+  const rowHtml = rows.map(item => {
+    const barsHtml = (item.groups || [])
+      .filter(group => groupByKey.has(group.key))
+      .map(group => {
+        const color = getGroupColor(data.groupResults, group.key);
+        const pct = Math.max(0, Math.min(100, Number(group.pct || 0)));
+        const tip = encodeURIComponent(JSON.stringify({
+          kind: 'compare-bar',
+          groupLabel: group.label,
+          option: item.label,
+          pct: group.pct || 0,
+          count: group.count || 0
+        }));
+        return `
+          <div class="grouped-hbar-item">
+            <div class="grouped-hbar-meta">${escapeHtml(group.label)}</div>
+            <div class="grouped-hbar-track">
+              <div class="grouped-hbar-fill" style="width:${pct}%; background:${color};" data-tip="${tip}"></div>
+              <span class="grouped-hbar-value">${formatPercent(group.pct || 0)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    return `
+      <div class="grouped-hbar-row">
+        <div class="grouped-hbar-label">${escapeHtml(item.label)}</div>
+        <div class="grouped-hbar-bars">${barsHtml}</div>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="grouped-hbar-chart">
+      <div class="grouped-hbar-legend">${groupsLegend}</div>
+      ${rowHtml}
+    </div>
+  `;
+}
+
 function buildGroupCompareChartHtml(data, hidden) {
   const rows = getChoiceChartRows(data);
-  const displayGroups = getDisplayGroupResults(data.groupResults, hidden);
   const rowHtml = rows.map(r => {
     const pct = Math.max(0, Math.min(100, r.pct));
     const widthStr = `${pct}%`;
@@ -3630,47 +3765,20 @@ function buildGroupCompareChartHtml(data, hidden) {
       pct: r.pct,
       count: r.count
     }));
-    const innerValueHtml = pct >= 6 ? `<span class="hbar-fill-value">${formatPercent(r.pct)}</span>` : '';
+    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
         <div class="hbar-track">
           <div class="hbar-fill"
                style="width:${widthStr}; background:${COMPARE_BAR_COLOR};"
-               data-tip="${tip}">${innerValueHtml}</div>
+               data-tip="${tip}"></div>
+          ${valueHtml}
         </div>
-        <div class="hbar-value">${formatPercent(r.pct)}</div>
       </div>
     `;
   }).join('');
-
-  const dotsHtml = displayGroups.map((g) => {
-    const color = getGroupColor(data.groupResults, g.value);
-    return rows.map((r, i) => {
-      const gr = g.results.find(x => x.option === r.option) || { pct: 0, count: 0 };
-      const left = Math.max(0, Math.min(100, gr.pct));
-      const tip = encodeURIComponent(JSON.stringify({
-        kind: 'group-dot',
-        groupLabel: g.label,
-        option: r.option,
-        pct: gr.pct,
-        count: gr.count
-      }));
-      return `<div class="group-dot"
-                   style="left:${left}%; background:${color};"
-                   data-row-index="${i}"
-                   data-tip="${tip}"></div>`;
-    }).join('');
-  }).join('');
-
-  return `
-    <div class="hbar-chart group-compare">
-      ${rowHtml}
-      <div class="hbar-group-overlay">
-        ${dotsHtml}
-      </div>
-    </div>
-  `;
+  return `<div class="hbar-chart group-compare">${rowHtml}</div>`;
 }
 
 function buildVerticalBarChartHtml(data) {
@@ -3865,14 +3973,20 @@ function buildGroupedCountHeader(label, count, colspan) {
   return `<th colspan="${colspan}" class="group-head">${escapeHtml(label)}<br><span style="font-weight:500;color:var(--text-3);">N=${Number(count || 0).toLocaleString()}</span></th>`;
 }
 
+function buildDataTableToggleButtonHtml() {
+  return `
+    <button type="button" class="data-table-toggle" data-data-table-toggle aria-expanded="true">
+      <img class="data-table-toggle-icon data-table-toggle-icon-up" src="assets/icons/keyboard_arrow_up_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
+      <img class="data-table-toggle-icon data-table-toggle-icon-down" src="assets/icons/keyboard_arrow_down_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
+      <span class="data-table-toggle-label" data-label-expanded="데이터 테이블 숨기기" data-label-collapsed="데이터 테이블 펼치기">데이터 테이블 숨기기</span>
+    </button>
+  `;
+}
+
 function wrapResultTable(tableHtml, noteHtml = '') {
   return `
     <div class="data-table-section" data-data-table-section>
-      <button type="button" class="data-table-toggle" data-data-table-toggle aria-expanded="true">
-        <img class="data-table-toggle-icon data-table-toggle-icon-up" src="assets/icons/keyboard_arrow_up_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
-        <img class="data-table-toggle-icon data-table-toggle-icon-down" src="assets/icons/keyboard_arrow_down_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
-        <span class="data-table-toggle-label" data-label-expanded="데이터 테이블 숨기기" data-label-collapsed="데이터 테이블 펼치기">데이터 테이블 숨기기</span>
-      </button>
+      ${buildDataTableToggleButtonHtml()}
       <div class="data-table-body" data-data-table-body>
         <div class="result-table-wrap">
           ${tableHtml}
@@ -3883,36 +3997,56 @@ function wrapResultTable(tableHtml, noteHtml = '') {
   `;
 }
 
+function buildSimpleChoiceTableHtml(data) {
+  const { totalResults, totalN } = data;
+  const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
+  return `
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>응답 보기</th>
+          <th class="num">응답 비율(%)</th>
+          <th class="num">응답 수(명)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${totalResults.map(r => `
+          <tr>
+            <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
+            <td class="num">${formatPercent(r.pct)}</td>
+            <td class="num">${r.count.toLocaleString()}</td>
+          </tr>
+        `).join('')}
+        <tr class="total-row">
+          <td>합계</td>
+          <td class="num">${formatPercent(sumPct)}</td>
+          <td class="num">${totalN.toLocaleString()}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
+function buildPieChartTableLayoutHtml(chartHtml, tableHtml) {
+  return `
+    <div class="pie-table-layout data-table-section" data-data-table-section>
+      <div class="pie-table-main">
+        <div class="pie-table-chart">${chartHtml}</div>
+        <div class="pie-table-panel data-table-body" data-data-table-body>
+          <div class="result-table-wrap">
+            ${tableHtml}
+          </div>
+        </div>
+      </div>
+      ${buildDataTableToggleButtonHtml()}
+    </div>
+  `;
+}
+
 function buildChoiceDataTableHtml(data) {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
-    const sumPct = totalResults.reduce((s, r) => s + r.pct, 0);
-    const tableHtml = `
-      <table class="result-table">
-        <thead>
-          <tr>
-            <th>응답 보기</th>
-            <th class="num">응답 비율(%)</th>
-            <th class="num">응답 수(명)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${totalResults.map(r => `
-            <tr>
-              <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
-              <td class="num">${formatPercent(r.pct)}</td>
-              <td class="num">${r.count.toLocaleString()}</td>
-            </tr>
-          `).join('')}
-          <tr class="total-row">
-            <td>합계</td>
-            <td class="num">${formatPercent(sumPct)}</td>
-            <td class="num">${totalN.toLocaleString()}</td>
-          </tr>
-        </tbody>
-      </table>
-    `;
-    return wrapResultTable(tableHtml);
+    return wrapResultTable(buildSimpleChoiceTableHtml(data));
   }
 
   const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
@@ -4126,6 +4260,10 @@ function buildRatioAllocationSection(data) {
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
   const chartHtml = buildRatioAllocationChartHtml(data, hiddenGroups);
+  const compareMode = groupResults ? getGroupCompareViewMode(targetLabel) : 'composition';
+  const compareChartHtml = groupResults && compareMode === 'item'
+    ? buildGroupedHorizontalCompareChartHtml(data, hiddenGroups)
+    : chartHtml;
   const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
   const tableHtml = buildRatioAllocationDataTableHtml(data, hiddenGroups);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -4141,8 +4279,9 @@ function buildRatioAllocationSection(data) {
         <div class="result-title">${escapeHtml(targetLabel)}</div>
         ${fullText}
       </div>
+      ${groupResults ? buildGroupCompareViewToggleHtml(data) : ''}
       <div class="${visualClass}">
-        <div class="result-chart-col">${chartHtml}${noteHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}${noteHtml}</div>
         ${legendHtml}
       </div>
       ${tableHtml}
@@ -4258,13 +4397,20 @@ function buildScaleTrackHtml(scoreResults, maxScore, options = {}) {
     return `
       <div class="scale-segment"
            style="width:${width}%; background:${getScaleColor(result.score, maxScore)};"
-           ${interactive ? `data-tip="${tip}"` : ''}>
-        ${!muted ? `<span class="scale-segment-value">${formatPercent(result.pct)}</span>` : ''}
-      </div>
+           ${interactive ? `data-tip="${tip}"` : ''}></div>
     `;
   }).join('');
+  const valueLabels = !muted ? displayResults.map(result => {
+    const width = Math.max(0, Math.min(100, result.displayPct || 0));
+    return `
+      <div class="scale-segment-value-slot" style="flex:0 0 ${width}%;">
+        <span class="scale-segment-value">${formatPercent(result.pct)}</span>
+      </div>
+    `;
+  }).join('') : '';
   return `
     <div class="scale-bar ${muted ? 'is-muted' : ''}">
+      ${valueLabels ? `<div class="scale-segment-value-row">${valueLabels}</div>` : ''}
       <div class="scale-track ${muted ? 'is-muted' : ''}">${segments}</div>
     </div>
   `;
@@ -5212,6 +5358,10 @@ function buildNumericOpenSection(data) {
           maxBinCount: data.maxBinCount,
           numberUnit: codebookEntry && codebookEntry.numberUnit
         });
+  const compareMode = groupResults ? getGroupCompareViewMode(targetLabel) : 'composition';
+  const compareChartHtml = groupResults && compareMode === 'item'
+    ? buildGroupedHorizontalCompareChartHtml(data, hiddenGroups)
+    : chartHtml;
   const tableHtml = showTable ? buildDataTableHtml(data, hiddenGroups) : '';
   const fullText = buildQuestionFullHtml(codebookEntry);
   const controlsHtml = buildNumericOpenControlsHtml(targetLabel, data.interval, data.start, !!groupResults, viewMode);
@@ -5224,8 +5374,9 @@ function buildNumericOpenSection(data) {
         ${fullText}
         ${controlsHtml}
       </div>
+      ${groupResults ? buildGroupCompareViewToggleHtml(data) : ''}
       <div class="result-visual has-legend numeric-open-visual">
-        <div class="result-chart-col">${chartHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -5976,10 +6127,9 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
-      const innerValueHtml = w >= 4 ? `<span class="rank-seg-value">${formatPercent(pr.pct)}</span>` : '';
       return `<div class="rank-stack-seg"
                    style="width:${w}%; background:${color};"
-                   data-tip="${tip}">${innerValueHtml}</div>`;
+                   data-tip="${tip}"></div>`;
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
     const fallbackWidth = Math.max(0, Math.min(100, nonRankedPct));
@@ -5990,17 +6140,17 @@ function buildRankStackChartHtml(data, hiddenRanks) {
       pct: nonRankedPct,
       count: nonRankedCount
     }));
-    const fallbackLabelHtml = fallbackWidth >= 4 ? `<span class="rank-seg-value">${formatPercent(nonRankedPct)}</span>` : '';
     const fallbackHtml = fallbackWidth > 0
-      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}">${fallbackLabelHtml}</div>`
+      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}"></div>`
       : "";
     const trackHtml = `${segments}${fallbackHtml}`;
     const displayedPct = visiblePct + nonRankedPct;
+    const safeDisplayedPct = Math.max(0, Math.min(100, displayedPct));
+    const totalValueHtml = `<span class="rank-stack-total-value is-outside" style="left:${safeDisplayedPct}%;">${formatPercent(displayedPct)}</span>`;
     return `
       <div class="rank-stack-row">
         <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
-        <div class="rank-stack-track">${trackHtml}</div>
-        <div class="hbar-value rank-stack-value">${formatPercent(displayedPct)}</div>
+        <div class="rank-stack-track">${trackHtml}${totalValueHtml}</div>
         <div class="rank-stack-rank-placeholder" aria-hidden="true"></div>
       </div>
     `;
@@ -6158,6 +6308,74 @@ function buildRankGroupTextHtml(data, hiddenGroups) {
   `;
 }
 
+function getRankFirstChoiceRows(data) {
+  if (!data || !Array.isArray(data.totalResults)) return [];
+  const order = Array.isArray(data.optionOrder) ? data.optionOrder : [];
+  return data.totalResults
+    .map((r) => {
+      const firstRank = Array.isArray(r.perRank) && r.perRank[0]
+        ? r.perRank[0]
+        : { pct: 0, count: 0 };
+      return {
+        option: r.option,
+        pct: firstRank.pct || 0,
+        count: firstRank.count || 0
+      };
+    })
+    .sort((a, b) => {
+      if (b.pct !== a.pct) return b.pct - a.pct;
+      if (b.count !== a.count) return b.count - a.count;
+      return order.indexOf(a.option) - order.indexOf(b.option);
+    });
+}
+
+function getRankFirstChoiceForGroup(group, option) {
+  const perOpt = group && Array.isArray(group.perOption)
+    ? group.perOption.find(x => x.option === option)
+    : null;
+  const firstRank = perOpt && Array.isArray(perOpt.perRank) && perOpt.perRank[0]
+    ? perOpt.perRank[0]
+    : { pct: 0, count: 0 };
+  return {
+    pct: firstRank.pct || 0,
+    count: firstRank.count || 0
+  };
+}
+
+function buildRankFirstChoiceGroupCompareChartHtml(data, hiddenGroups) {
+  const rows = getRankFirstChoiceRows(data);
+  if (rows.length === 0) return '';
+
+  const rowHtml = rows.map(r => {
+    const pct = Math.max(0, Math.min(100, r.pct));
+    const widthStr = `${pct}%`;
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'compare-bar',
+      option: r.option,
+      pct: r.pct,
+      count: r.count
+    }));
+    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
+    return `
+      <div class="hbar-row">
+        <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+        <div class="hbar-track">
+          <div class="hbar-fill"
+               style="width:${widthStr}; background:${COMPARE_BAR_COLOR};"
+               data-tip="${tip}"></div>
+          ${valueHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="hbar-chart group-compare rank-first-compare">${rowHtml}</div>`;
+}
+
 function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   const { totalResults, rankLabels, groupResults, respondentN } = data;
   if (!groupResults) {
@@ -6313,7 +6531,7 @@ function buildRankSection(data, rows) {
   let chartHtml = '';
   let legendHtml = '';
   if (groupResults) {
-    chartHtml = buildRankGroupTextHtml(displayData, hiddenGroups);
+    chartHtml = buildRankFirstChoiceGroupCompareChartHtml(displayData, hiddenGroups);
     legendHtml = buildRankGroupLegendHtml(displayData, hiddenGroups);
   } else {
     if (chartType === 'stacked') {
@@ -6327,6 +6545,10 @@ function buildRankSection(data, rows) {
     }
   }
   const tableHtml = buildRankDataTableHtml(displayData, hiddenGroups);
+  const compareMode = groupResults ? getGroupCompareViewMode(targetLabel) : 'composition';
+  const compareChartHtml = groupResults && compareMode === 'item'
+    ? buildGroupedHorizontalCompareChartHtml(displayData, hiddenGroups)
+    : chartHtml;
   const formulaNoteHtml = buildRankFormulaNoteHtml(displayData);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
@@ -6342,9 +6564,10 @@ function buildRankSection(data, rows) {
         ${fullText}
       </div>
       ${controlsHtml}
+      ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
       ${formulaNoteHtml}
       <div class="result-visual has-legend">
-        <div class="result-chart-col">${chartHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -6695,15 +6918,13 @@ function buildStacked100ChartHtml(data) {
     return `
       <div class="stack100-segment ${width < 8 ? 'is-narrow' : ''}"
            style="flex:0 0 ${width}%; background:${color};"
-           data-tip="${tip}">
-        <span class="stack100-segment-value">${formatPercent(r.pct)}</span>
-      </div>
+           data-tip="${tip}"></div>
     `;
   }).join('');
   const topValuesHtml = rows.map(r => {
     const width = Math.max(0, Math.min(100, r.pct));
     return `
-      <div class="stack100-topvalue-slot ${width < 8 ? 'is-visible' : ''}" style="flex:0 0 ${width}%;">
+      <div class="stack100-topvalue-slot is-visible" style="flex:0 0 ${width}%;">
         <span class="stack100-topvalue">${formatPercent(r.pct)}</span>
       </div>
     `;
@@ -7101,9 +7322,16 @@ function buildChoiceSectionHtml(data, rows) {
         ? buildGroupCompareVerticalChartHtml(displayData, displayHidden)
         : buildGroupCompareChartHtml(displayData, displayHidden))
     : buildSingleChoiceChartByType(displayData, chartType);
+  const compareMode = groupResults ? getGroupCompareViewMode(targetLabel) : 'composition';
+  const compareChartHtml = groupResults && compareMode === 'item'
+    ? buildGroupedHorizontalCompareChartHtml(displayData, displayHidden)
+    : chartHtml;
+  const isPieTableLayout = isSingleWithoutGroup && chartType === 'pie';
   // legend는 항상 원본 data 기준으로 (그룹 설정 버튼/체크 유지)
   const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
-  const tableHtml = buildDataTableHtml(displayData, displayHidden);
+  const tableHtml = isPieTableLayout
+    ? buildPieChartTableLayoutHtml(chartHtml, buildSimpleChoiceTableHtml(displayData))
+    : buildDataTableHtml(displayData, displayHidden);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -7119,10 +7347,13 @@ function buildChoiceSectionHtml(data, rows) {
         ${fullText}
       </div>
       ${controlsHtml}
-      <div class="${visualClass}">
-        <div class="result-chart-col">${chartHtml}</div>
-        ${legendHtml}
-      </div>
+      ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
+      ${isPieTableLayout ? '' : `
+        <div class="${visualClass}">
+          <div class="result-chart-col">${compareChartHtml}</div>
+          ${legendHtml}
+        </div>
+      `}
       ${tableHtml}
       ${tableNoteHtml}
     </section>
@@ -7137,6 +7368,10 @@ function buildScaleSection(data, rows) {
   const viewMode = getScaleViewMode(targetLabel);
   const hideMidpoint = isScaleMidpointHidden(targetLabel);
   const chartHtml = buildScaleChartHtml(data, hiddenGroups, viewMode);
+  const compareMode = groupResults ? getGroupCompareViewMode(targetLabel) : 'composition';
+  const compareChartHtml = groupResults && compareMode === 'item'
+    ? buildGroupedHorizontalCompareChartHtml(data, hiddenGroups)
+    : chartHtml;
   const legendHtml = (!data.isDerivedScale && viewMode === 'distribution') ? buildScaleLegendHtml(data) : '';
   const tableHtml = showTable ? buildDataTableHtml(data, hiddenGroups) : '';
   const compareTriggerHtml = '';
@@ -7158,8 +7393,9 @@ function buildScaleSection(data, rows) {
         ${toggleHtml}
         ${groupControlsHtml}
       </div>
+      ${groupResults ? buildGroupCompareViewToggleHtml(data) : ''}
       <div class="${visualClass}">
-        <div class="result-chart-col">${chartHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -7190,7 +7426,6 @@ function buildTargetScaleCompareSection(compareData) {
     ? buildScaleCompareDistributionSectionHtml(compareData)
     : buildScaleCompareSectionHtml(compareData, hiddenGroups, { showHeader: false, flush: true });
   const tableHtml = showTable ? buildScaleCompareDataTableHtml(compareData, hiddenGroups) : '';
-  const tableToggleHtml = `<div class="result-side-toggle-row">${buildResultTableToggleHtml(tableKey)}</div>`;
   return `
     <section class="result-section" data-target="${escapeHtml(compareData.targetLabel)}" data-type="scale-compare">
       <div class="result-header">
@@ -7198,7 +7433,6 @@ function buildTargetScaleCompareSection(compareData) {
         ${toggleHtml}
       </div>
       ${compareSectionHtml}
-      ${tableToggleHtml}
       ${tableHtml}
     </section>
   `;
@@ -7292,6 +7526,7 @@ async function renderResults() {
   alignGroupCompareCharts(container);
   alignScaleCompareCharts(container);
   attachResultEventListeners(container);
+  addExportButtons(container);
 }
 
 function alignGroupCompareCharts(container) {
@@ -7572,6 +7807,27 @@ function attachResultEventListeners(container) {
       const targetLabel = input.dataset.target;
       if (!targetLabel) return;
       resultState.singleChoiceSortByRate.set(targetLabel, !!input.checked);
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-group-compare-view]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      const mode = btn.dataset.groupCompareView;
+      if (!targetLabel || !mode) return;
+      resultState.groupCompareViewModes.set(targetLabel, mode === 'item' ? 'item' : 'composition');
+      renderResults();
+    });
+  });
+  container.querySelectorAll('[data-group-compare-sort]').forEach(select => {
+    select.addEventListener('change', e => {
+      e.stopPropagation();
+      const targetLabel = select.dataset.target;
+      if (!targetLabel) return;
+      const value = select.value || '__overall__';
+      resultState.groupCompareSortModes.set(targetLabel, value);
       renderResults();
     });
   });
@@ -7890,7 +8146,259 @@ if (document.readyState === 'loading') {
 }
 
 
+const EXPORT_LOGO_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA14AAAB/CAYAAAD/wBP8AAAACXBIWXMAAAsTAAALEwEAmpwYAAAFxmlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgOS4xLWMwMDIgNzkuYjdjNjRjY2Y5LCAyMDI0LzA3LzE2LTEyOjM5OjA0ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpwaG90b3Nob3A9Imh0dHA6Ly9ucy5hZG9iZS5jb20vcGhvdG9zaG9wLzEuMC8iIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI2LjEgKE1hY2ludG9zaCkiIHhtcDpDcmVhdGVEYXRlPSIyMDI0LTEyLTAzVDE0OjA3OjUxKzA5OjAwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyNC0xMi0xMlQxMzo1MTozNyswOTowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyNC0xMi0xMlQxMzo1MTozNyswOTowMCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo1MTY2MjBmMy1jMjExLTQ0MTItYWMwMy03Mjg5Mjg5MDVmNTMiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6M0Y3MjgzNEJBOTU4MTFFRkI2QTdDNDc4QTZEOEJGNzMiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDozRjcyODM0QkE5NTgxMUVGQjZBN0M0NzhBNkQ4QkY3MyIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDozRjcyODM0OEE5NTgxMUVGQjZBN0M0NzhBNkQ4QkY3MyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDozRjcyODM0OUE5NTgxMUVGQjZBN0M0NzhBNkQ4QkY3MyIvPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDo1MTY2MjBmMy1jMjExLTQ0MTItYWMwMy03Mjg5Mjg5MDVmNTMiIHN0RXZ0OndoZW49IjIwMjQtMTItMTJUMTM6NTE6MzcrMDk6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCAyNi4xIChNYWNpbnRvc2gpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PuGs6fwAADN5SURBVHic7Z13uFxV1Yff9AqZQAKYBLiEANITaYIiF1AEKV7AQrEhRbFxLZ/ipwiCBfwsF1CwoMYGIiBRQJrgpYgUpSbUECchoYWQkEISUub7Y82QYTJ3yllrn33m3vU+z34IkLP2b07da++11wLHcRzHcRzHcRwnKP1iC3Acp08zANhRcfxrwONGWhzHcRwnKZsDoxXHLwVmKTVsCLQpjn8JeFapwXEcx8koOaCgaPm0BTuZYSRy/2wQWYfjOA7AVHTfs24DDR1KDV0GGpwaDIwtwHEcx3F6YCNgf2BPYDtgW2A8MqtbyfPAbGAGcB9wR/HPjuM4jpMJ3PFy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';
+const EXPORT_PAGE_W = 1920;
+const EXPORT_PAGE_H = 1080;
+const EXPORT_FOOTER_H = 64;           // 하단 로고/저작권 영역
+const EXPORT_CONTENT_H = EXPORT_PAGE_H - EXPORT_FOOTER_H; // 1016
+const EXPORT_FOOTER_PAD = 28;         // 푸터 좌우 패딩
 
+const EXPORT_HIDE_SELECTORS = [
+  '.chart-view-controls',
+  '.choice-controls',
+  '[data-data-table-toggle]',
+  '.export-img-btn',
+];
 
+const EXPORT_CUT_SELECTORS = [
+  '.result-header',
+  '.result-visual',
+  '.result-chart-col',
+  '.hbar-chart',
+  '.vbar-chart',
+  '.pie-chart-wrap',
+  '.stacked-chart-wrap',
+  '.lollipop-chart-wrap',
+  '.scale-body',
+  '.result-note',
+  '.result-side-panel',
+  '[data-data-table-section]',
+];
 
+function addExportButtons(container) {
+  container.querySelectorAll('.result-section').forEach(function(section) {
+    var header = section.querySelector('.result-header');
+    if (!header) return;
+    if (header.querySelector('.export-img-btn')) return;
+    var titleEl = header.querySelector('.result-title');
+    if (!titleEl) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'export-img-btn';
+    btn.innerHTML = '<img class="result-export-icon" src="assets/icons/arrow_downward_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true"> 이미지로 저장';
+    btn.addEventListener('click', function() { exportSectionAsImage(section, btn); });
+    var row = document.createElement('div');
+    row.className = 'result-header-top';
+    titleEl.replaceWith(row);
+    row.appendChild(titleEl);
+    row.appendChild(btn);
+  });
+}
 
+async function exportSectionAsImage(section, btn) {
+  // 라이브러리 로드 확인
+  if (typeof html2canvas === 'undefined') {
+    alert('[오류] 이미지 추출 라이브러리(html2canvas)가 로드되지 않았습니다.\nassets/libs/html2canvas.min.js 파일이 있는지 확인해 주세요.');
+    return;
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<img class="result-export-icon" src="assets/icons/autorenew_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true"> 저장 중...';
+  }
+  var svgImgEls = [];
+  var svgOrigSrcs = [];
+  try {
+    var hiddenEls = [];
+    EXPORT_HIDE_SELECTORS.forEach(function(sel) {
+      section.querySelectorAll(sel).forEach(function(el) {
+        el.style.visibility = 'hidden';
+        hiddenEls.push(el);
+      });
+    });
+    section.querySelectorAll('[data-data-table-section]').forEach(function(tableEl) {
+      if (tableEl.classList.contains('is-collapsed')) {
+        tableEl.style.visibility = 'hidden';
+        hiddenEls.push(tableEl);
+      }
+    });
+    await document.fonts.ready;
+    var naturalWidth = section.offsetWidth;
+    var scale = EXPORT_PAGE_W / naturalWidth;
+    var cutPoints = getExportCutPoints(section, scale);
+
+    // file:// CORS 우회: SVG 아이콘 src 임시 교체 (tainted canvas 방지)
+    var BLANK_IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    svgImgEls = Array.from(section.querySelectorAll('img[src$=".svg"]'));
+    svgOrigSrcs = svgImgEls.map(function(el) { return el.getAttribute('src'); });
+    svgImgEls.forEach(function(el) { el.setAttribute('src', BLANK_IMG); });
+
+    console.log('[이미지 추출] 캡처 시작 — 너비:', naturalWidth, '/ scale:', scale.toFixed(3));
+    var canvas = await html2canvas(section, {
+      scale: scale,
+      backgroundColor: '#ffffff',
+      allowTaint: false,
+      useCORS: false,
+      logging: false,
+      width: naturalWidth,
+      height: section.offsetHeight
+    });
+    console.log('[이미지 추출] 캡처 완료 — canvas:', canvas.width, 'x', canvas.height);
+    // 오염 진단: html2canvas 캔버스 자체가 clean한지 확인
+    try { canvas.toDataURL(); console.log('[이미지 추출] html2canvas 캔버스 clean ✓'); }
+    catch(e) { console.error('[이미지 추출] html2canvas 캔버스 자체가 오염됨:', e.message); }
+
+    // SVG src 복원
+    svgImgEls.forEach(function(el, i) { el.setAttribute('src', svgOrigSrcs[i]); });
+    hiddenEls.forEach(function(el) { el.style.visibility = ''; });
+
+    var titleEl = section.querySelector('.result-title');
+    var rawTitle = titleEl
+      ? (titleEl.firstChild && titleEl.firstChild.nodeType === Node.TEXT_NODE
+          ? titleEl.firstChild.textContent : titleEl.textContent)
+      : '차트';
+    var title = rawTitle.trim().replace(/[\/:*?"<>|]/g, '_') || '차트';
+
+    // 로고 로드 — base64 내장 (file:// CORS 우회)
+    var logoImg = null;
+    try { logoImg = await loadImage(EXPORT_LOGO_DATA_URI); } catch(_) {}
+
+    if (canvas.height <= EXPORT_CONTENT_H) {
+      var page = composePage(canvas, 0, canvas.height, true);
+      addFooterToCanvas(page, logoImg);
+      downloadCanvas(page, title + '.png');
+    } else {
+      var pages = sliceCanvasIntoPages(canvas, cutPoints);
+      pages.forEach(function(pageCanvas, i) {
+        addFooterToCanvas(pageCanvas, logoImg);
+        downloadCanvas(pageCanvas, title + '_' + (i + 1) + '.png');
+      });
+    }
+  } catch (err) {
+    // 숨긴 요소 복원 (에러 시에도)
+    try { svgImgEls.forEach(function(el, i) { el.setAttribute('src', svgOrigSrcs[i]); }); } catch(_) {}
+    try {
+      section.querySelectorAll('[style*="visibility"]').forEach(function(el) {
+        el.style.visibility = '';
+      });
+    } catch(_) {}
+    console.error('[이미지 추출] 오류:', err);
+    alert('[이미지 추출 오류]\n' + (err && err.message ? err.message : String(err)) + '\n\n브라우저 콘솔(F12)에서 상세 내용을 확인해 주세요.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<img class="result-export-icon" src="assets/icons/arrow_downward_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true"> 이미지로 저장';
+    }
+  }
+}
+
+function getExportCutPoints(section, scale) {
+  var sectionRect = section.getBoundingClientRect();
+  var points = new Set([0]);
+  EXPORT_CUT_SELECTORS.forEach(function(sel) {
+    section.querySelectorAll(sel).forEach(function(el) {
+      var rect = el.getBoundingClientRect();
+      var yRelative = rect.top - sectionRect.top;
+      if (yRelative > 1) points.add(Math.round(yRelative * scale));
+    });
+  });
+  return Array.from(points).sort(function(a, b) { return a - b; });
+}
+
+function sliceCanvasIntoPages(canvas, cutPoints) {
+  var pages = [];
+  var start = 0;
+  while (start < canvas.height) {
+    var targetEnd = start + EXPORT_CONTENT_H;
+    var end;
+    if (targetEnd >= canvas.height) {
+      end = canvas.height;
+    } else {
+      var valid = cutPoints.filter(function(p) { return p > start && p <= targetEnd; });
+      end = valid.length > 0 ? Math.max.apply(null, valid) : targetEnd;
+    }
+    pages.push(composePage(canvas, start, end, false));
+    if (end <= start) break;
+    start = end;
+  }
+  return pages;
+}
+
+function composePage(srcCanvas, yStart, yEnd, center) {
+  var sliceH = yEnd - yStart;
+  var out = document.createElement('canvas');
+  out.width = EXPORT_PAGE_W;
+  out.height = EXPORT_PAGE_H;
+  var ctx = out.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, EXPORT_PAGE_W, EXPORT_PAGE_H);
+  // 차트는 콘텐츠 영역(1920 × EXPORT_CONTENT_H)에만 배치
+  var yDest = center ? Math.floor((EXPORT_CONTENT_H - sliceH) / 2) : 0;
+  ctx.drawImage(srcCanvas, 0, yStart, EXPORT_PAGE_W, sliceH, 0, yDest, EXPORT_PAGE_W, sliceH);
+  return out;
+}
+
+// 로고 이미지 로더
+function loadImage(src) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() { resolve(img); };
+    img.onerror = function() { reject(new Error('이미지 로드 실패: ' + src)); };
+    img.src = src;
+  });
+}
+
+// 캔버스 하단 푸터 영역에 로고 + 저작권 문구 합성
+function addFooterToCanvas(canvas, logoImg) {
+  var ctx = canvas.getContext('2d');
+  var footerY = EXPORT_CONTENT_H;       // 푸터 시작 Y
+  var centerY = footerY + EXPORT_FOOTER_H / 2;
+
+  // 구분선
+  ctx.fillStyle = '#e3e3e3';
+  ctx.fillRect(EXPORT_FOOTER_PAD, footerY, EXPORT_PAGE_W - EXPORT_FOOTER_PAD * 2, 1);
+
+  // 로고 (좌하단, 높이 24px 고정, 비율 유지)
+  if (logoImg) {
+    var logoW = 100;
+    var logoH = 14;
+    ctx.drawImage(logoImg, EXPORT_FOOTER_PAD, centerY - logoH / 2, logoW, logoH);
+  }
+
+  // 저작권 문구 (우하단) — Others/Label-2: Regular 12px, neutral-600 #777777
+  ctx.font = '400 12px "Pretendard Variable", Pretendard, sans-serif';
+  ctx.fillStyle = '#777777';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('© 2026 purple6studio', EXPORT_PAGE_W - EXPORT_FOOTER_PAD, centerY);
+}
+
+function downloadCanvas(canvas, filename) {
+  function triggerDownload(href) {
+    var a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  try {
+    canvas.toBlob(function(blob) {
+      if (blob) {
+        var url = URL.createObjectURL(blob);
+        triggerDownload(url);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 15000);
+      } else {
+        console.warn('[downloadCanvas] toBlob null, toDataURL fallback');
+        triggerDownload(canvas.toDataURL('image/png'));
+      }
+    }, 'image/png');
+  } catch (e) {
+    console.warn('[downloadCanvas] toBlob threw, toDataURL fallback:', e);
+    try {
+      triggerDownload(canvas.toDataURL('image/png'));
+    } catch (e2) {
+      console.error('[downloadCanvas] both failed:', e2);
+      alert('다운로드 실패. 브라우저 콘솔(F12)을 확인해 주세요.');
+    }
+  }
+}
