@@ -1,193 +1,4 @@
-﻿// 저장된 설문 대시보드 목록을 브라우저 저장소에서 읽고 쓰는 유틸리티입니다.
-const STORAGE_KEY = 'p6s.surveys';
-const FILE_DB_NAME = 'p6s.surveyFiles';
-const FILE_DB_VERSION = 1;
-const FILE_STORE_NAME = 'files';
-
-function loadSurveys() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-function saveSurveys(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    return true;
-  } catch (_) {
-    alert('저장 공간이 부족해 대시보드를 브라우저에 저장할 수 없습니다.');
-    return false;
-  }
-}
-
-function openFileDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
-        db.createObjectStore(FILE_STORE_NAME, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbGet(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readonly');
-    const req = tx.objectStore(FILE_STORE_NAME).get(id);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbPut(record) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).put(record);
-    tx.oncomplete = () => {
-      db.close();
-      resolve(record);
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbDelete(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).delete(id);
-    tx.oncomplete = () => {
-      db.close();
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function toHex(buffer) {
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return toHex(digest);
-}
-
-async function makeFileStorageKey(fileRec) {
-  const signature = [
-    fileRec.name || '',
-    fileRec.size || 0,
-    fileRec.contentType || '',
-    fileRec.content || ''
-  ].join('::');
-  return `file:${await sha256(signature)}`;
-}
-
-function isFileReferencedElsewhere(fileId, surveys, excludeSurveyId) {
-  return surveys.some(survey => {
-    if (!survey || survey.id === excludeSurveyId || !survey.files) return false;
-    return ['codebook', 'value', 'label'].some(key => {
-      const fileRec = survey.files[key];
-      return fileRec && fileRec.idbKey === fileId;
-    });
-  });
-}
-
-async function deleteSurveyFiles(surveyId, files, surveys) {
-  const tasks = [];
-  ['codebook', 'value', 'label'].forEach(key => {
-    const fileRec = files && files[key];
-    const id = fileRec && fileRec.idbKey ? fileRec.idbKey : `${surveyId}:${key}`;
-    if (id && !isFileReferencedElsewhere(id, surveys || [], surveyId)) {
-      tasks.push(idbDelete(id).catch(() => {}));
-    }
-  });
-  await Promise.all(tasks);
-}
-
-async function persistStoredFile(surveyId, key, fileRec) {
-  if (!fileRec) return null;
-  const idbKey = await makeFileStorageKey(fileRec);
-  await idbPut({
-    id: idbKey,
-    surveyId,
-    key,
-    name: fileRec.name,
-    size: fileRec.size || 0,
-    contentType: fileRec.contentType,
-    content: fileRec.content
-  });
-  return {
-    name: fileRec.name,
-    size: fileRec.size || 0,
-    contentType: fileRec.contentType,
-    idbKey
-  };
-}
-
-async function getStoredFilePayload(fileRec) {
-  if (!fileRec) return null;
-  if (fileRec.content) return fileRec;
-  if (!fileRec.idbKey) return fileRec;
-  const stored = await idbGet(fileRec.idbKey).catch(() => null);
-  if (!stored) return null;
-  return {
-    name: stored.name,
-    size: stored.size,
-    contentType: stored.contentType,
-    content: stored.content
-  };
-}
-
-async function migrateLegacySurveyStorage() {
-  const surveys = loadSurveys();
-  let changed = false;
-  for (const survey of surveys) {
-    if (!survey || !survey.files) continue;
-    for (const key of ['codebook', 'value', 'label']) {
-      const fileRec = survey.files[key];
-      if (!fileRec || !fileRec.content || fileRec.idbKey) continue;
-      const idbKey = await makeFileStorageKey(fileRec);
-      const existing = await idbGet(idbKey).catch(() => null);
-      if (!existing) {
-        await idbPut({
-          id: idbKey,
-          surveyId: survey.id,
-          key,
-          name: fileRec.name,
-          size: fileRec.size || 0,
-          contentType: fileRec.contentType,
-          content: fileRec.content
-        });
-      }
-      delete fileRec.content;
-      fileRec.idbKey = idbKey;
-      changed = true;
-    }
-  }
-  if (changed) saveSurveys(surveys);
-}
-
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch (_) {
-    return iso;
-  }
-}
+﻿// 스토리지 레이어: supabase-client.js 참고
 
 function readAsText(file) {
   return new Promise((resolve, reject) => {
@@ -1556,7 +1367,7 @@ function setupSavedModal() {
     if (idx >= 0) {
       surveys[idx].title = title || surveys[idx].title;
       surveys[idx].updatedAt = now;
-      if (saveSurveys(surveys)) {
+      if (await saveSurveys(surveys)) {
         refreshCount();
         alert('현재 대시보드를 저장했습니다.');
       }
@@ -1574,9 +1385,10 @@ function setupSavedModal() {
       title: title || '새 대시보드',
       createdAt: now,
       updatedAt: now,
+      shareToken: crypto.randomUUID(),
       files: current.files
     });
-    if (saveSurveys(surveys)) {
+    if (await saveSurveys(surveys)) {
       try {
         sessionStorage.setItem('survey.currentId', id);
         sessionStorage.setItem('survey.title', title || '새 대시보드');
@@ -1690,7 +1502,7 @@ function setupSavedModal() {
 
     surveys[idx].files = nextFiles;
     surveys[idx].updatedAt = new Date().toISOString();
-    if (!saveSurveys(surveys)) return;
+    if (!(await saveSurveys(surveys))) return;
 
     resultState.codebookByLabel = new Map();
     try { await setupFilters(); } catch (_) {}
@@ -8011,7 +7823,10 @@ async function initResultFeature() {
   if (resultState.initialized) return;
   resultState.initialized = true;
 
-  try { await migrateLegacySurveyStorage(); } catch (_) {}
+  try { await requireAuth(); } catch (_) {}
+
+  const shareToken = new URLSearchParams(location.search).get('share');
+  try { await loadSurveysFromServer(shareToken || undefined); } catch (_) {}
 
   const currentId = sessionStorage.getItem('survey.currentId');
   if (currentId) {

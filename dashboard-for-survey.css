@@ -5371,7 +5371,7 @@ body.home-page {
   color: var(--error-text);
   font-size: var(--body-3-size);
   line-height: var(--body-line-height);
-  margin-top: 8px;
+  margin-top: 16px;
   display: none;
   text-align: center;
 }

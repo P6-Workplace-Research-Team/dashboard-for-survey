@@ -6,6 +6,8 @@
 <title>설문조사 분석 대시보드 만들기 | purple6studio</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
 <link rel="stylesheet" href="dashboard-for-survey.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
 </head>
 <body class="home-page">
 
@@ -28,8 +30,8 @@
   <main class="container">
     <section class="section" aria-labelledby="sec-1-title">
       <h2 id="sec-1-title" class="section-title">1. 설문조사 제목을 입력해 주세요</h2>
-      <input id="survey-title" type="text" class="text-input" placeholder="예: 2025 직장인 사무환경 조사" autocomplete="off" maxlength="30">
-      <div class="field-hint">최대 30자까지 입력할 수 있습니다.</div>
+      <input id="survey-title" type="text" class="text-input" placeholder="예: 2026 직장인 사무환경 조사" autocomplete="off" maxlength="50">
+      <div class="field-hint">최대 50자까지 입력할 수 있습니다.</div>
       <div id="title-error" class="error-text" role="alert">설문조사 제목을 입력해 주세요.</div>
     </section>
 
@@ -153,187 +155,7 @@
 </div>
 
 <script>
-// 저장된 설문 대시보드 목록을 브라우저 저장소에서 읽고 쓰는 유틸리티입니다.
-const STORAGE_KEY = 'p6s.surveys';
-const FILE_DB_NAME = 'p6s.surveyFiles';
-const FILE_DB_VERSION = 1;
-const FILE_STORE_NAME = 'files';
-
-function loadSurveys() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-function saveSurveys(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    return true;
-  } catch (_) {
-    alert('저장 공간이 부족해 설문조사를 브라우저에 저장할 수 없습니다. 이번 세션만 대시보드가 유지됩니다.');
-    return false;
-  }
-}
-
-function openFileDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
-        db.createObjectStore(FILE_STORE_NAME, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbGet(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readonly');
-    const req = tx.objectStore(FILE_STORE_NAME).get(id);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbPut(record) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).put(record);
-    tx.oncomplete = () => {
-      db.close();
-      resolve(record);
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbDelete(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).delete(id);
-    tx.oncomplete = () => {
-      db.close();
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function toHex(buffer) {
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return toHex(digest);
-}
-
-async function makeFileStorageKey(fileRec) {
-  const signature = [
-    fileRec.name || '',
-    fileRec.size || 0,
-    fileRec.contentType || '',
-    fileRec.content || ''
-  ].join('::');
-  return `file:${await sha256(signature)}`;
-}
-
-function isFileReferencedElsewhere(fileId, surveys, excludeSurveyId) {
-  return surveys.some(survey => {
-    if (!survey || survey.id === excludeSurveyId || !survey.files) return false;
-    return ['codebook', 'value', 'label'].some(key => {
-      const fileRec = survey.files[key];
-      return fileRec && fileRec.idbKey === fileId;
-    });
-  });
-}
-
-async function deleteSurveyFiles(surveyId, files, surveys) {
-  const tasks = [];
-  ['codebook', 'value', 'label'].forEach(key => {
-    const fileRec = files && files[key];
-    const id = fileRec && fileRec.idbKey ? fileRec.idbKey : `${surveyId}:${key}`;
-    if (id && !isFileReferencedElsewhere(id, surveys || [], surveyId)) {
-      tasks.push(idbDelete(id).catch(() => {}));
-    }
-  });
-  await Promise.all(tasks);
-}
-
-async function persistSurveyFiles(surveyId, files) {
-  const stored = {};
-  for (const key of ['codebook', 'value', 'label']) {
-    const fileRec = files && files[key];
-    if (!fileRec) continue;
-    const idbKey = await makeFileStorageKey(fileRec);
-    await idbPut({
-      id: idbKey,
-      surveyId,
-      key,
-      name: fileRec.name,
-      size: fileRec.size || 0,
-      contentType: fileRec.contentType,
-      content: fileRec.content
-    });
-    stored[key] = {
-      name: fileRec.name,
-      size: fileRec.size || 0,
-      contentType: fileRec.contentType,
-      idbKey
-    };
-  }
-  return stored;
-}
-
-async function migrateLegacySurveyStorage() {
-  const surveys = loadSurveys();
-  let changed = false;
-  for (const survey of surveys) {
-    if (!survey || !survey.files) continue;
-    for (const key of ['codebook', 'value', 'label']) {
-      const fileRec = survey.files[key];
-      if (!fileRec || !fileRec.content || fileRec.idbKey) continue;
-      const idbKey = await makeFileStorageKey(fileRec);
-      const existing = await idbGet(idbKey).catch(() => null);
-      if (!existing) {
-        await idbPut({
-          id: idbKey,
-          surveyId: survey.id,
-          key,
-          name: fileRec.name,
-          size: fileRec.size || 0,
-          contentType: fileRec.contentType,
-          content: fileRec.content
-        });
-      }
-      delete fileRec.content;
-      fileRec.idbKey = idbKey;
-      changed = true;
-    }
-  }
-  if (changed) saveSurveys(surveys);
-}
-
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch (_) {
-    return iso;
-  }
-}
+// 스토리지 레이어: supabase-client.js 참고
 
 // 업로드한 CSV 파일을 읽기 위한 파일 처리 유틸리티입니다.
 function readAsText(file) {
@@ -407,7 +229,7 @@ function readRowsFromStoredFile(fileRec) {
   return [];
 }
 
-const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role'];
+const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role', 'value_code_map'];
 const REQUIRED_RESPONSE = ['survey_year', 'respondent_no'];
 
 function normalizeHeader(s) {
@@ -432,7 +254,8 @@ function checkColumns(headerRow, required) {
 function detectResponseType(rows) {
   if (rows.length < 2) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
   const header = rows[0] || [];
-  const skipCols = Math.min(4, header.length);
+  // survey_year, respondent_no 2개만 건너뛰고 3번째 열부터 문항 데이터 샘플링
+  const skipCols = REQUIRED_RESPONSE.length;
   let numeric = 0;
   let textLike = 0;
   let samples = 0;
@@ -453,8 +276,8 @@ function detectResponseType(rows) {
   if (samples === 0) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
   const textRatio = textLike / samples;
   let type = 'ambiguous';
-  if (textRatio < 0.02) type = 'numeric';
-  else if (textRatio >= 0.05) type = 'label';
+  if (textRatio < 0.3) type = 'numeric';
+  else if (textRatio >= 0.7) type = 'label';
   return { type, numericRatio: numeric / samples, textRatio, sampleSize: samples };
 }
 
@@ -474,9 +297,21 @@ function validateFileForKey(key, rows) {
   }
 
   if (key === 'value' || key === 'label') {
-    const chk = checkColumns(header, REQUIRED_RESPONSE);
-    if (!chk.ok) {
-      return { ok: false, error: `응답 데이터셋 형식이 올바르지 않습니다. 누락된 컬럼: ${chk.missing.join(', ')}` };
+    // 컬럼명 위치 검증: survey_year는 1번째, respondent_no는 2번째 열이어야 함
+    if (normalizeHeader(header[0]) !== 'survey_year') {
+      return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\n첫 번째 열이 survey_year이어야 합니다.' };
+    }
+    if (normalizeHeader(header[1]) !== 'respondent_no') {
+      return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\n두 번째 열이 respondent_no이어야 합니다.' };
+    }
+
+    // survey_year 값이 4자리 연도인지 확인
+    if (rows.length >= 2) {
+      const firstDataRow = rows[1] || [];
+      const yearVal = cleanCell(firstDataRow[0]);
+      if (!/^\d{4}$/.test(yearVal)) {
+        return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\nsurvey_year 값이 올바른 연도 형식(예: 2024)이 아닙니다.' };
+      }
     }
 
     const det = detectResponseType(rows);
@@ -717,7 +552,7 @@ function validateBundleConsistency(rowsByKey) {
 
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
-      uploadErr.classList.add('show');
+      setZoneError(zone, '지원하지 않는 파일 형식입니다. .csv 파일만 업로드할 수 있습니다.');
       state[key] = null;
       updateStart();
       return;
@@ -775,7 +610,9 @@ function validateBundleConsistency(rowsByKey) {
       return;
     }
 
-    const surveys = loadSurveys();
+    startBtn.disabled = true;
+    startBtn.textContent = '업로드 중...';
+
     const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     let files;
     try {
@@ -784,19 +621,24 @@ function validateBundleConsistency(rowsByKey) {
         value: state.value,
         label: state.label
       });
-    } catch (_) {
-      alert('업로드 파일을 브라우저 저장소에 저장하지 못했습니다. 브라우저 저장공간을 확인해 주세요.');
+    } catch (e) {
+      alert('파일 업로드에 실패했습니다. 네트워크 상태를 확인해 주세요.\n' + (e && e.message || ''));
+      startBtn.disabled = false;
+      startBtn.textContent = '대시보드 만들기';
       return;
     }
+
+    const surveys = loadSurveys();
     const entry = {
       id,
       title,
       createdAt: new Date().toISOString(),
+      shareToken: crypto.randomUUID(),
       files
     };
 
     surveys.unshift(entry);
-    const saved = saveSurveys(surveys);
+    const saved = await saveSurveys(surveys);
 
     try {
       sessionStorage.setItem('survey.currentId', saved ? id : '');
@@ -856,7 +698,7 @@ function validateBundleConsistency(rowsByKey) {
     savedList.innerHTML = '';
 
     if (items.length === 0) {
-      savedList.innerHTML = '<div class="saved-empty">아직 저장된 대시보드가 없습니다.<br>설문조사를 업로드하고 분석을 시작하면 여기에 쌓입니다.</div>';
+      savedList.innerHTML = '<div class="saved-empty">아직 저장된 대시보드가 없습니다.<br>설문조사 파일을 업로드하고 대시보드를 만들면 여기에 쌓입니다.</div>';
       return;
     }
 
@@ -947,11 +789,10 @@ function validateBundleConsistency(rowsByKey) {
     });
   }
 
-  migrateLegacySurveyStorage()
-    .catch(() => {})
-    .finally(() => {
-      refreshCount();
-    });
+  requireAuth()
+    .then(() => loadSurveysFromServer())
+    .then(() => refreshCount())
+    .catch(() => {});
 
   openListBtn.addEventListener('click', () => {
     renderList();
