@@ -7823,8 +7823,6 @@ async function initResultFeature() {
   if (resultState.initialized) return;
   resultState.initialized = true;
 
-  try { await requireAuth(); } catch (_) {}
-
   const shareToken = new URLSearchParams(location.search).get('share');
   try { await loadSurveysFromServer(shareToken || undefined); } catch (_) {}
 

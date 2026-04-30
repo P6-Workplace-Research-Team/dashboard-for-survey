@@ -1,12 +1,16 @@
 -- ============================================================
--- 설문 대시보드 Supabase 스키마
+-- 설문 대시보드 Supabase 스키마 (인증 없는 공개 접근 버전)
 -- Supabase 대시보드 > SQL Editor 에서 실행하세요.
+-- 이미 이전 버전을 실행했다면 이 파일로 다시 실행하세요.
 -- ============================================================
 
--- surveys 테이블
+-- 기존 테이블 제거 (재실행 안전)
+drop table if exists public.survey_files;
+drop table if exists public.surveys;
+
+-- surveys 테이블 (user_id 없음)
 create table public.surveys (
   id           text primary key,
-  user_id      uuid references auth.users not null,
   title        text not null,
   created_at   timestamptz default now() not null,
   updated_at   timestamptz default now() not null,
@@ -24,64 +28,23 @@ create table public.survey_files (
   unique (survey_id, file_role)
 );
 
--- RLS 활성화
+-- 누구나 읽기/쓰기 가능 (인증 불필요)
 alter table public.surveys enable row level security;
 alter table public.survey_files enable row level security;
 
--- surveys RLS
-create policy "surveys_insert" on public.surveys
-  for insert with check (auth.uid() = user_id);
+create policy "public_all" on public.surveys for all using (true) with check (true);
+create policy "public_all" on public.survey_files for all using (true) with check (true);
 
-create policy "surveys_select" on public.surveys
-  for select using (auth.role() = 'authenticated');
+-- Storage 버킷 공개로 설정
+insert into storage.buckets (id, name, public)
+  values ('survey-files', 'survey-files', true)
+  on conflict (id) do update set public = true;
 
-create policy "surveys_update" on public.surveys
-  for update using (auth.uid() = user_id);
+-- 기존 Storage 정책 제거
+drop policy if exists "storage_insert" on storage.objects;
+drop policy if exists "storage_select" on storage.objects;
+drop policy if exists "storage_delete" on storage.objects;
 
-create policy "surveys_delete" on public.surveys
-  for delete using (auth.uid() = user_id);
-
--- survey_files RLS
-create policy "files_insert" on public.survey_files
-  for insert with check (
-    exists (select 1 from public.surveys where id = survey_id and user_id = auth.uid())
-  );
-
-create policy "files_select" on public.survey_files
-  for select using (auth.role() = 'authenticated');
-
-create policy "files_update" on public.survey_files
-  for update using (
-    exists (select 1 from public.surveys where id = survey_id and user_id = auth.uid())
-  );
-
-create policy "files_delete" on public.survey_files
-  for delete using (
-    exists (select 1 from public.surveys where id = survey_id and user_id = auth.uid())
-  );
-
--- Storage 버킷 생성 (비공개)
-insert into storage.buckets (id, name, public) values ('survey-files', 'survey-files', false)
-  on conflict (id) do nothing;
-
--- Storage RLS: 업로드는 자기 폴더(userId/...)에만
-create policy "storage_insert" on storage.objects
-  for insert with check (
-    bucket_id = 'survey-files'
-    and auth.role() = 'authenticated'
-    and (string_to_array(name, '/'))[1] = auth.uid()::text
-  );
-
--- Storage RLS: 읽기는 로그인한 사용자 모두 가능 (공유 링크 지원)
-create policy "storage_select" on storage.objects
-  for select using (
-    bucket_id = 'survey-files'
-    and auth.role() = 'authenticated'
-  );
-
--- Storage RLS: 삭제는 자기 파일만
-create policy "storage_delete" on storage.objects
-  for delete using (
-    bucket_id = 'survey-files'
-    and (string_to_array(name, '/'))[1] = auth.uid()::text
-  );
+-- 누구나 접근 가능
+create policy "public_all" on storage.objects
+  for all using (bucket_id = 'survey-files') with check (bucket_id = 'survey-files');

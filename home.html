@@ -789,8 +789,7 @@ function validateBundleConsistency(rowsByKey) {
     });
   }
 
-  requireAuth()
-    .then(() => loadSurveysFromServer())
+  loadSurveysFromServer()
     .then(() => refreshCount())
     .catch(() => {});
 

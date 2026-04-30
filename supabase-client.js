@@ -1,30 +1,14 @@
-// Supabase 클라이언트 및 공용 스토리지 레이어
+// Supabase 클라이언트 및 공용 스토리지 레이어 (인증 없는 공개 접근 버전)
 // 의존성: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 const _SUPABASE_URL = 'https://anryotqsnrhsonpsrdbw.supabase.co';
 const _SUPABASE_KEY = 'sb_publishable_1hDV_KyYG9qYVR2J-_3iSA_7VTUf9wY';
 const _BUCKET = 'survey-files';
-const _TEAM_EMAIL = 'p6s.subs@gmail.com';
 
 const _supabase = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_KEY);
 
-// ── 인증 ────────────────────────────────────────────────────
-
-async function requireAuth(redirectTo) {
-  redirectTo = redirectTo || 'login.html';
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (!session) {
-    const next = encodeURIComponent(location.href);
-    window.location.replace(redirectTo + '?next=' + next);
-    await new Promise(function() {}); // 실행 중단
-  }
-  return session;
-}
-
-async function _getUser() {
-  const { data: { user } } = await _supabase.auth.getUser();
-  return user;
-}
+// 인증 없음 — no-op
+async function requireAuth() {}
 
 // ── 인메모리 캐시 ─────────────────────────────────────────────
 
@@ -50,19 +34,14 @@ function _toLocalSurveyFormat(row) {
   };
 }
 
-// 서버에서 설문 목록을 불러와 캐시에 저장합니다.
-// shareToken 이 있으면 해당 공유 설문도 포함합니다.
+// 서버에서 전체 설문 목록을 불러와 캐시에 저장합니다.
 async function loadSurveysFromServer(shareToken) {
-  var user = await _getUser();
-  if (!user) { _surveysCache = []; return; }
-
-  var owned = await _supabase
+  var res = await _supabase
     .from('surveys')
     .select('*, survey_files(*)')
-    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  _surveysCache = (owned.data || []).map(_toLocalSurveyFormat);
+  _surveysCache = (res.data || []).map(_toLocalSurveyFormat);
 
   if (shareToken) {
     var shared = await _supabase
@@ -94,19 +73,15 @@ async function saveSurveys(newList) {
   _surveysCache = Array.isArray(newList) ? newList : [];
 
   try {
-    var user = await _getUser();
-    if (!user) return false;
-
     var oldMap = new Map(oldCache.map(function(s) { return [s.id, s]; }));
-    var newMap = new Map(_surveysCache.map(function(s) { return [s.id, s]; }));
 
     // 삭제된 설문
     for (var i = 0; i < oldCache.length; i++) {
       var old = oldCache[i];
-      if (!newMap.has(old.id)) {
-        await _supabase.from('surveys').delete().eq('id', old.id).eq('user_id', user.id);
+      if (!_surveysCache.find(function(s) { return s.id === old.id; })) {
+        await _supabase.from('surveys').delete().eq('id', old.id);
         var delPaths = ['codebook', 'value', 'label'].map(function(k) {
-          return user.id + '/' + old.id + '/' + k + '.csv';
+          return 'shared/' + old.id + '/' + k + '.csv';
         });
         await _supabase.storage.from(_BUCKET).remove(delPaths).catch(function() {});
       }
@@ -118,14 +93,12 @@ async function saveSurveys(newList) {
       if (oldMap.has(s.id)) continue;
       var insRes = await _supabase.from('surveys').insert({
         id: s.id,
-        user_id: user.id,
         title: s.title,
         created_at: s.createdAt || new Date().toISOString(),
         updated_at: s.updatedAt || s.createdAt || new Date().toISOString(),
         share_token: s.shareToken || crypto.randomUUID()
       });
       if (insRes.error) throw insRes.error;
-      // survey_files 삽입
       var fileKeys = ['codebook', 'value', 'label'];
       for (var k = 0; k < fileKeys.length; k++) {
         var role = fileKeys[k];
@@ -150,7 +123,7 @@ async function saveSurveys(newList) {
         await _supabase.from('surveys').update({
           title: cur.title,
           updated_at: cur.updatedAt || new Date().toISOString()
-        }).eq('id', cur.id).eq('user_id', user.id);
+        }).eq('id', cur.id);
       }
     }
 
@@ -163,8 +136,8 @@ async function saveSurveys(newList) {
 
 // ── 파일 스토리지 ─────────────────────────────────────────────
 
-async function _uploadToStorage(userId, surveyId, key, content) {
-  var path = userId + '/' + surveyId + '/' + key + '.csv';
+async function _uploadToStorage(surveyId, key, content) {
+  var path = 'shared/' + surveyId + '/' + key + '.csv';
   var blob = new Blob([content], { type: 'text/csv' });
   var res = await _supabase.storage.from(_BUCKET).upload(path, blob, {
     upsert: true,
@@ -192,10 +165,7 @@ async function getStoredFilePayload(fileRec) {
 // 파일 1개를 Storage 에 업로드하고 survey_files 를 upsert 합니다 (업데이트 용).
 async function persistStoredFile(surveyId, key, fileRec) {
   if (!fileRec) return null;
-  var user = await _getUser();
-  if (!user) return null;
-  var content = fileRec.content || '';
-  var path = await _uploadToStorage(user.id, surveyId, key, content);
+  var path = await _uploadToStorage(surveyId, key, fileRec.content || '');
   await _supabase.from('survey_files').upsert({
     survey_id: surveyId,
     file_role: key,
@@ -206,26 +176,21 @@ async function persistStoredFile(surveyId, key, fileRec) {
   return { name: fileRec.name, size: fileRec.size || 0, contentType: 'csv-text', storagePath: path };
 }
 
-// 파일 3개를 Storage 에 업로드합니다 (새 설문 생성 용, DB 는 saveSurveys 에서 처리).
+// 파일 3개를 Storage 에 업로드합니다 (새 설문 생성 용).
 async function persistSurveyFiles(surveyId, files) {
-  var user = await _getUser();
-  if (!user) throw new Error('로그인이 필요합니다.');
   var stored = {};
   var keys = ['codebook', 'value', 'label'];
   for (var i = 0; i < keys.length; i++) {
     var key = keys[i];
     var f = files && files[key];
     if (!f) continue;
-    var path = await _uploadToStorage(user.id, surveyId, key, f.content || '');
+    var path = await _uploadToStorage(surveyId, key, f.content || '');
     stored[key] = { name: f.name, size: f.size || 0, contentType: 'csv-text', storagePath: path };
   }
   return stored;
 }
 
-// saveSurveys 에서 Storage 삭제를 처리하므로 여기서는 no-op
 async function deleteSurveyFiles(surveyId, files, surveys) {}
-
-// 레거시 마이그레이션 불필요 (Supabase 신규)
 async function migrateLegacySurveyStorage() {}
 
 // ── 날짜 포맷 유틸 ────────────────────────────────────────────
