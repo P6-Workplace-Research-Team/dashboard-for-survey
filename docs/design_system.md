@@ -296,7 +296,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 | 항목 | 기준 |
 |------|------|
-| 크기 | 1자리: 20×20px / 2자리: 28×20px / 3자리: 36×20px |
+| 크기 | 1자리: 18×18px / 2자리: 28×18px / 3자리: 36×18px |
 | padding | 0 |
 | border-radius | `--radius-pill` |
 | 배경 | `neutral-900` |
