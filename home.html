@@ -314,16 +314,6 @@ function validateFileForKey(key, rows) {
       }
     }
 
-    const det = detectResponseType(rows);
-    if (det.type === 'unknown') {
-      return { ok: false, error: '데이터 열을 찾을 수 없어 형식을 판별할 수 없습니다.' };
-    }
-    if (key === 'value' && det.type === 'label') {
-      return { ok: false, error: '라벨형 데이터로 보입니다. 숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
-    }
-    if (key === 'label' && det.type === 'numeric') {
-      return { ok: false, error: '숫자형 데이터로 보입니다. 라벨이 담긴 라벨형 파일을 업로드해 주세요.' };
-    }
     return { ok: true };
   }
 
@@ -427,8 +417,96 @@ function validateResponsePair(valueRows, labelRows) {
   return { ok: true };
 }
 
+// 코드북을 기준으로 숫자형/라벨형 파일이 뒤바뀌었는지 판별합니다.
+// 코드북에서 value_code_map이 있는 객관식 단일/중복/순위 raw 문항을 찾아
+// 응답 데이터의 해당 컬럼 샘플값이 코드인지 라벨인지 확인합니다.
+function detectValueLabelSwap(codebookRows, valueRows, labelRows) {
+  if (!codebookRows || codebookRows.length < 2) return { ok: true };
+
+  const header = (codebookRows[0] || []).map(normalizeHeader);
+  const iLabel = header.indexOf('question_label');
+  const iType = header.indexOf('response_type');
+  const iRole = header.indexOf('data_column_role');
+  const iMap = header.indexOf('value_code_map');
+  if (iLabel < 0 || iType < 0 || iRole < 0 || iMap < 0) return { ok: true };
+
+  const targetTypes = new Set(['객관식 단일', '객관식 중복', '객관식 순위']);
+
+  // 판별에 쓸 문항 후보 수집 (value_code_map이 있고 코드가 순수 숫자인 것)
+  const candidates = [];
+  for (let r = 1; r < codebookRows.length; r++) {
+    const row = codebookRows[r] || [];
+    const rType = cleanCell(row[iType]);
+    const rRole = cleanCell(row[iRole]);
+    const rMap = cleanCell(row[iMap]);
+    const rLabel = cleanCell(row[iLabel]);
+    if (!targetTypes.has(rType) || rRole !== 'raw' || !rMap || !rLabel) continue;
+
+    // value_code_map 파싱: "1=남성|2=여성" 형태
+    const pairs = rMap.split('|').map(p => p.trim()).filter(Boolean);
+    const codes = [];
+    const labels = [];
+    for (const pair of pairs) {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx < 0) continue;
+      const code = pair.slice(0, eqIdx).trim();
+      const lbl = pair.slice(eqIdx + 1).trim();
+      if (/^-?\d+(\.\d+)?$/.test(code)) {
+        codes.push(code);
+        if (lbl) labels.push(lbl);
+      }
+    }
+    if (codes.length > 0 && labels.length > 0) {
+      candidates.push({ questionLabel: rLabel, codes, labels });
+    }
+    if (candidates.length >= 3) break; // 최대 3개 후보면 충분
+  }
+
+  if (candidates.length === 0) return { ok: true };
+
+  // 응답 데이터에서 후보 컬럼의 샘플값을 읽어 코드/라벨 여부 판정
+  function scoreRows(rows) {
+    if (!rows || rows.length < 2) return null;
+    const respHeader = (rows[0] || []).map(cleanCell);
+    let codeHits = 0, labelHits = 0;
+
+    for (const { questionLabel, codes, labels } of candidates) {
+      const colIdx = respHeader.indexOf(questionLabel);
+      if (colIdx < 0) continue;
+
+      for (let r = 1; r < Math.min(rows.length, 11); r++) {
+        const v = cleanCell((rows[r] || [])[colIdx]);
+        if (!v) continue;
+        if (codes.includes(v)) codeHits++;
+        else if (labels.includes(v)) labelHits++;
+      }
+    }
+    return { codeHits, labelHits };
+  }
+
+  const valueScore = valueRows ? scoreRows(valueRows) : null;
+  const labelScore = labelRows ? scoreRows(labelRows) : null;
+
+  // 판별: 코드 히트가 없고 라벨 히트가 있으면 뒤바뀐 것
+  if (valueScore && valueScore.labelHits > 0 && valueScore.codeHits === 0) {
+    return { ok: false, error: '응답 데이터셋_숫자형 카드에 라벨형 파일이 업로드된 것 같습니다.\n숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
+  }
+  if (labelScore && labelScore.codeHits > 0 && labelScore.labelHits === 0) {
+    return { ok: false, error: '응답 데이터셋_라벨형 카드에 숫자형 파일이 업로드된 것 같습니다.\n텍스트 라벨이 담긴 라벨형 파일을 업로드해 주세요.' };
+  }
+
+  return { ok: true };
+}
+
 function validateBundleConsistency(rowsByKey) {
   const { codebook, value, label } = rowsByKey;
+
+  // 0차: 코드북 기반 숫자형/라벨형 파일 위치 판별
+  if (codebook && (value || label)) {
+    const swapResult = detectValueLabelSwap(codebook, value, label);
+    if (!swapResult.ok) return swapResult;
+  }
+
   if (codebook && value) {
     const result = validateCodebookAgainstResponse(codebook, value, '응답 데이터셋_숫자형');
     if (!result.ok) return result;
