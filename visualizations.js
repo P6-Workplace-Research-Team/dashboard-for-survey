@@ -1,193 +1,4 @@
-﻿// 저장된 설문 대시보드 목록을 브라우저 저장소에서 읽고 쓰는 유틸리티입니다.
-const STORAGE_KEY = 'p6s.surveys';
-const FILE_DB_NAME = 'p6s.surveyFiles';
-const FILE_DB_VERSION = 1;
-const FILE_STORE_NAME = 'files';
-
-function loadSurveys() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-function saveSurveys(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    return true;
-  } catch (_) {
-    alert('저장 공간이 부족해 대시보드를 브라우저에 저장할 수 없습니다.');
-    return false;
-  }
-}
-
-function openFileDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(FILE_DB_NAME, FILE_DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(FILE_STORE_NAME)) {
-        db.createObjectStore(FILE_STORE_NAME, { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function idbGet(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readonly');
-    const req = tx.objectStore(FILE_STORE_NAME).get(id);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-    tx.oncomplete = () => db.close();
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbPut(record) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).put(record);
-    tx.oncomplete = () => {
-      db.close();
-      resolve(record);
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbDelete(id) {
-  return openFileDb().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(FILE_STORE_NAME, 'readwrite');
-    tx.objectStore(FILE_STORE_NAME).delete(id);
-    tx.oncomplete = () => {
-      db.close();
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function toHex(buffer) {
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return toHex(digest);
-}
-
-async function makeFileStorageKey(fileRec) {
-  const signature = [
-    fileRec.name || '',
-    fileRec.size || 0,
-    fileRec.contentType || '',
-    fileRec.content || ''
-  ].join('::');
-  return `file:${await sha256(signature)}`;
-}
-
-function isFileReferencedElsewhere(fileId, surveys, excludeSurveyId) {
-  return surveys.some(survey => {
-    if (!survey || survey.id === excludeSurveyId || !survey.files) return false;
-    return ['codebook', 'value', 'label'].some(key => {
-      const fileRec = survey.files[key];
-      return fileRec && fileRec.idbKey === fileId;
-    });
-  });
-}
-
-async function deleteSurveyFiles(surveyId, files, surveys) {
-  const tasks = [];
-  ['codebook', 'value', 'label'].forEach(key => {
-    const fileRec = files && files[key];
-    const id = fileRec && fileRec.idbKey ? fileRec.idbKey : `${surveyId}:${key}`;
-    if (id && !isFileReferencedElsewhere(id, surveys || [], surveyId)) {
-      tasks.push(idbDelete(id).catch(() => {}));
-    }
-  });
-  await Promise.all(tasks);
-}
-
-async function persistStoredFile(surveyId, key, fileRec) {
-  if (!fileRec) return null;
-  const idbKey = await makeFileStorageKey(fileRec);
-  await idbPut({
-    id: idbKey,
-    surveyId,
-    key,
-    name: fileRec.name,
-    size: fileRec.size || 0,
-    contentType: fileRec.contentType,
-    content: fileRec.content
-  });
-  return {
-    name: fileRec.name,
-    size: fileRec.size || 0,
-    contentType: fileRec.contentType,
-    idbKey
-  };
-}
-
-async function getStoredFilePayload(fileRec) {
-  if (!fileRec) return null;
-  if (fileRec.content) return fileRec;
-  if (!fileRec.idbKey) return fileRec;
-  const stored = await idbGet(fileRec.idbKey).catch(() => null);
-  if (!stored) return null;
-  return {
-    name: stored.name,
-    size: stored.size,
-    contentType: stored.contentType,
-    content: stored.content
-  };
-}
-
-async function migrateLegacySurveyStorage() {
-  const surveys = loadSurveys();
-  let changed = false;
-  for (const survey of surveys) {
-    if (!survey || !survey.files) continue;
-    for (const key of ['codebook', 'value', 'label']) {
-      const fileRec = survey.files[key];
-      if (!fileRec || !fileRec.content || fileRec.idbKey) continue;
-      const idbKey = await makeFileStorageKey(fileRec);
-      const existing = await idbGet(idbKey).catch(() => null);
-      if (!existing) {
-        await idbPut({
-          id: idbKey,
-          surveyId: survey.id,
-          key,
-          name: fileRec.name,
-          size: fileRec.size || 0,
-          contentType: fileRec.contentType,
-          content: fileRec.content
-        });
-      }
-      delete fileRec.content;
-      fileRec.idbKey = idbKey;
-      changed = true;
-    }
-  }
-  if (changed) saveSurveys(surveys);
-}
-
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch (_) {
-    return iso;
-  }
-}
+﻿// 스토리지 레이어: supabase-client.js 참고
 
 function readAsText(file) {
   return new Promise((resolve, reject) => {
@@ -539,6 +350,7 @@ function renderTree(tree) {
     card.dataset.cat1 = cat1Name;
     card.dataset.cat2 = cat2Name || '';
     card.dataset.full = item.full;
+    card.title = item.label;
     card.innerHTML = `
       <span class="question-item-label">${escapeHtml(item.label)}</span>
       ${hasFull ? `<span class="question-item-full">Q. ${escapeHtml(item.full)}</span>` : ''}
@@ -998,7 +810,7 @@ function getSelectedValues(key) {
 }
 
 function getCandidateByKey(key) {
-  return (filterState.candidates || []).find(item => item.key === key) || null;
+  return filterState.candidates.find(item => item.key === key) || null;
 }
 
 function getFilteredRowIndexes() {
@@ -1008,7 +820,7 @@ function getFilteredRowIndexes() {
   rows.slice(1).forEach((row, offset) => {
     const matched = getActiveFilterItems().every(item => {
       const selected = getSelectedValues(item.key);
-      if (!selected || selected.size === 0) return true;
+      if (selected.size === 0) return true;
       const idx = filterState.headerMap.get(item.key);
       const value = cleanCell((row || [])[idx]);
       return selected.has(value);
@@ -1036,7 +848,7 @@ function updateFilterCount() {
 
 function renderFilterSummary(item) {
   const selected = getSelectedValues(item.key);
-  if (!selected || selected.size === 0) return '전체';
+  if (selected.size === 0) return '전체';
   const labels = Array.from(selected).slice(0, 2);
   return `${labels.join(', ')}${selected.size > 2 ? ' 외' : ''}`;
 }
@@ -1181,30 +993,6 @@ function renderFilters() {
     });
   }
 
-  const addBtn = document.getElementById('filter-add-btn');
-  if (addBtn && !addBtn.dataset.bound) {
-    addBtn.dataset.bound = '1';
-    addBtn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-control.open').forEach(el => el.classList.remove('open'));
-      filterState.openKey = null;
-      addWrap.classList.toggle('open');
-      requestAnimationFrame(() => positionPopupWithinMainArea(addWrap, addMenu));
-    });
-  }
-
-  if (!document.body.dataset.filterCloseBound) {
-    document.body.dataset.filterCloseBound = '1';
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.filter-control')) {
-        document.querySelectorAll('.filter-control.open').forEach(el => el.classList.remove('open'));
-        filterState.openKey = null;
-      }
-      if (!e.target.closest('.filter-add')) {
-        const add = document.getElementById('filter-add');
-        if (add) add.classList.remove('open');
-      }
-    });
-  }
 }
 
 function moveActiveFilter(sourceKey, targetKey, beforeTarget = true) {
@@ -1232,8 +1020,7 @@ function moveActiveFilter(sourceKey, targetKey, beforeTarget = true) {
 
   const [moved] = movableKeys.splice(from, 1);
   let insertIndex = to;
-  if (!beforeTarget && from < to) insertIndex = to;
-  else if (!beforeTarget && from > to) insertIndex = to + 1;
+  if (!beforeTarget && from > to) insertIndex = to + 1;
   else if (beforeTarget && from < to) insertIndex = Math.max(0, to - 1);
   movableKeys.splice(insertIndex, 0, moved);
   filterState.activeKeys = [...fixedKeys, ...movableKeys];
@@ -1328,6 +1115,35 @@ async function setupFilters() {
   renderFilters();
   updateCriterionYearButtonVisibility();
   updateFilterCount();
+  setupFilterListeners();
+}
+
+function setupFilterListeners() {
+  const addWrap = document.getElementById('filter-add');
+  const addMenu = document.getElementById('filter-add-menu');
+  const addBtn = document.getElementById('filter-add-btn');
+  if (addBtn && !addBtn.dataset.bound) {
+    addBtn.dataset.bound = '1';
+    addBtn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-control.open').forEach(el => el.classList.remove('open'));
+      filterState.openKey = null;
+      addWrap.classList.toggle('open');
+      requestAnimationFrame(() => positionPopupWithinMainArea(addWrap, addMenu));
+    });
+  }
+  if (!document.body.dataset.filterCloseBound) {
+    document.body.dataset.filterCloseBound = '1';
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.filter-control')) {
+        document.querySelectorAll('.filter-control.open').forEach(el => el.classList.remove('open'));
+        filterState.openKey = null;
+      }
+      if (!e.target.closest('.filter-add')) {
+        const add = document.getElementById('filter-add');
+        if (add) add.classList.remove('open');
+      }
+    });
+  }
 }
 
 function renameSurvey(id, newTitle) {
@@ -1551,7 +1367,7 @@ function setupSavedModal() {
     if (idx >= 0) {
       surveys[idx].title = title || surveys[idx].title;
       surveys[idx].updatedAt = now;
-      if (saveSurveys(surveys)) {
+      if (await saveSurveys(surveys)) {
         refreshCount();
         alert('현재 대시보드를 저장했습니다.');
       }
@@ -1569,9 +1385,10 @@ function setupSavedModal() {
       title: title || '새 대시보드',
       createdAt: now,
       updatedAt: now,
+      shareToken: crypto.randomUUID(),
       files: current.files
     });
-    if (saveSurveys(surveys)) {
+    if (await saveSurveys(surveys)) {
       try {
         sessionStorage.setItem('survey.currentId', id);
         sessionStorage.setItem('survey.title', title || '새 대시보드');
@@ -1579,109 +1396,6 @@ function setupSavedModal() {
       refreshCount();
       alert('현재 대시보드를 저장했습니다.');
     }
-  }
-
-  function renderDataUpdateList() {
-    if (!dataUpdateList) return;
-    const { current } = getCurrentSurvey();
-    if (!current || !current.files) {
-      dataUpdateList.innerHTML = '<div class="saved-empty">현재 연결된 데이터가 없습니다.</div>';
-      return;
-    }
-    const items = [
-      { key: 'codebook', label: '문항 코드북', file: current.files.codebook },
-      { key: 'value', label: '응답 데이터셋_숫자형', file: current.files.value },
-      { key: 'label', label: '응답 데이터셋_라벨형', file: current.files.label }
-    ];
-    dataUpdateList.innerHTML = items.map(item => `
-      <div class="saved-item">
-        <div class="saved-main">
-          <div class="saved-title">${escapeHtml(item.label)}</div>
-          <div class="saved-meta">${escapeHtml((item.file && item.file.name) || '파일 없음')}</div>
-          ${lastReplacedDataKey === item.key ? '<div class="saved-meta">교체하였습니다.</div>' : ''}
-        </div>
-        <div class="saved-actions">
-          <button type="button" class="saved-rename" data-file-update="${item.key}">교체하기</button>
-        </div>
-      </div>
-    `).join('');
-
-    dataUpdateList.querySelectorAll('[data-file-update]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (!dataUpdateFileInput) return;
-        dataUpdateFileInput.dataset.targetKey = btn.dataset.fileUpdate;
-        dataUpdateFileInput.click();
-      });
-    });
-  }
-
-  async function convertFileToStoredRec(file) {
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
-    if (ext === 'csv') {
-      return {
-        name: file.name,
-        size: file.size,
-        contentType: 'csv-text',
-        content: await readAsText(file)
-      };
-    }
-    throw new Error('unsupported');
-  }
-
-  async function handleDataFileReplace(file, key) {
-    if (!file || !key) return;
-    const { currentId, surveys, current } = getCurrentSurvey();
-    if (!currentId || !current) {
-      alert('현재 대시보드를 찾을 수 없습니다.');
-      return;
-    }
-    const idx = surveys.findIndex(s => s.id === currentId);
-    if (idx < 0) return;
-
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
-    if (ext !== 'csv') {
-      throw new Error('지원하지 않는 파일 형식입니다. .csv 파일만 업로드할 수 있습니다.');
-    }
-    const parsedUpload = await readTabularFile(file);
-    const fileResult = validateFileForKey(key, parsedUpload.rows);
-    if (!fileResult.ok) throw new Error(fileResult.error);
-
-    const currentFiles = surveys[idx].files || {};
-    const rowsByKey = {
-      codebook: key === 'codebook' ? parsedUpload.rows : await loadCodebookRows(currentFiles.codebook),
-      value: key === 'value' ? parsedUpload.rows : await loadCodebookRows(currentFiles.value),
-      label: key === 'label' ? parsedUpload.rows : await loadCodebookRows(currentFiles.label)
-    };
-    const bundleResult = validateBundleConsistency(rowsByKey);
-    if (!bundleResult.ok) throw new Error(bundleResult.error);
-
-    const rawFile = {
-      name: file.name,
-      size: file.size,
-      contentType: parsedUpload.contentType,
-      content: parsedUpload.content
-    };
-    let storedRef = rawFile;
-    try {
-      const persisted = await persistStoredFile(currentId, key, rawFile);
-      if (persisted) storedRef = persisted;
-    } catch (_) {}
-    surveys[idx].files = { ...(surveys[idx].files || {}), [key]: storedRef };
-    surveys[idx].updatedAt = new Date().toISOString();
-    if (!saveSurveys(surveys)) return;
-
-    if (key === 'codebook') resultState.codebookByLabel = new Map();
-    try { await setupFilters(); } catch (_) {}
-    try {
-      const rows = await loadCodebookRows(surveys[idx].files.codebook);
-      if (rows) {
-        resultState.codebookByLabel = buildCodebookIndex(rows);
-        renderTree(buildQuestionTree(rows));
-      }
-    } catch (_) {}
-    lastReplacedDataKey = key;
-    renderDataUpdateList();
-    renderResults();
   }
 
   function renderDataUpdateList() {
@@ -1788,7 +1502,7 @@ function setupSavedModal() {
 
     surveys[idx].files = nextFiles;
     surveys[idx].updatedAt = new Date().toISOString();
-    if (!saveSurveys(surveys)) return;
+    if (!(await saveSurveys(surveys))) return;
 
     resultState.codebookByLabel = new Map();
     try { await setupFilters(); } catch (_) {}
@@ -3408,9 +3122,6 @@ function getRankChartViewMode(targetLabel) {
   return resultState.rankViewModes.get(targetLabel) || 'horizontal';
 }
 
-function isResultTableVisible(targetLabel) {
-  return true;
-}
 
 function buildResultSidePanelHtml(legendHtml, targetLabel) {
   if (legendHtml && legendHtml.includes('</aside>')) {
@@ -5363,7 +5074,7 @@ function buildNumericOpenSection(data) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
-  const showTable = isResultTableVisible(targetLabel);
+  const showTable = true;
   const viewMode = groupResults ? 'box' : (resultState.numericOpenViewModes.get(targetLabel) || 'histogram');
   const chartHtml = groupResults
     ? buildNumericOpenGroupChartHtml(data, hiddenGroups)
@@ -7379,7 +7090,7 @@ function buildScaleSection(data, rows) {
   if (!data) return '';
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
-  const showTable = isResultTableVisible(targetLabel);
+  const showTable = true;
   const viewMode = getScaleViewMode(targetLabel);
   const hideMidpoint = isScaleMidpointHidden(targetLabel);
   const chartHtml = buildScaleChartHtml(data, hiddenGroups, viewMode);
@@ -7424,7 +7135,7 @@ function buildTargetScaleCompareSection(compareData) {
   if (!compareData || !compareData.baseData) return '';
   const hiddenGroups = resultState.hiddenGroupKeys.get(compareData.targetLabel) || new Set();
   const tableKey = TARGET_SCALE_COMPARE_VIEW_KEY;
-  const showTable = isResultTableVisible(tableKey);
+  const showTable = true;
   const hasGroups = Array.isArray(compareData.groups) && compareData.groups.length > 0;
   let viewMode = resultState.scaleViewModes.get(TARGET_SCALE_COMPARE_VIEW_KEY) || 'mean';
   if (hasGroups && viewMode === 'distribution') {
@@ -8112,7 +7823,10 @@ async function initResultFeature() {
   if (resultState.initialized) return;
   resultState.initialized = true;
 
-  try { await migrateLegacySurveyStorage(); } catch (_) {}
+  try { await requireAuth(); } catch (_) {}
+
+  const shareToken = new URLSearchParams(location.search).get('share');
+  try { await loadSurveysFromServer(shareToken || undefined); } catch (_) {}
 
   const currentId = sessionStorage.getItem('survey.currentId');
   if (currentId) {

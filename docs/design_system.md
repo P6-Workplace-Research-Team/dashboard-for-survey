@@ -92,11 +92,8 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 | 변수명 | 값 | 용도 |
 |--------|----|------|
-| `error-bg` | `#FFEBEE` | 오류 상태 카드 배경 |
-| `error-text` | `#D32F2F` | 오류 메시지 텍스트 |
-| `low-4` | `#CF9D9D` | 에러 보더, 삭제 hover |
-| `low-3` | `#D4AEAE` | — |
-| `low-2` | `#DAC3C3` | 보조 에러 배경 |
+| `error-bg` | `#F9E2E6` | 오류 상태 카드 배경 |
+| `error-text` | `#C25959` | 오류 메시지 텍스트 |
 
 #### Data Visualization (대시보드 전용)
 
@@ -186,11 +183,8 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --neutral-50:  #f8f8f8;
 
   /* error */
-  --error-bg: #ffebee;
-  --error-text: #d32f2f;
-  --low-4: #cf9d9d;
-  --low-3: #d4aeae;
-  --low-2: #dac3c3;
+  --error-bg: #F9E2E6;
+  --error-text: #C25959;
 
   /* data visualization */
   --color-1: #577a9a;  --color-11: #5e88a8;
@@ -296,7 +290,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 
 | 항목 | 기준 |
 |------|------|
-| 크기 | 1자리: 20×20px / 2자리: 28×20px / 3자리: 36×20px |
+| 크기 | 1자리: 18×18px / 2자리: 28×18px / 3자리: 36×18px |
 | padding | 0 |
 | border-radius | `--radius-pill` |
 | 배경 | `neutral-900` |

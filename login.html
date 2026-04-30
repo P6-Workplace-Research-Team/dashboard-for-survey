@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인 | purple6studio</title>
+<link rel="stylesheet" href="dashboard-for-survey.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .login-page { background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .login-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    padding: 48px 40px 40px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .login-logo { display: block; height: 28px; margin: 0 auto 32px; }
+  .login-title { font-size: 20px; font-weight: 700; color: #151515; text-align: center; margin-bottom: 28px; }
+  .login-field { margin-bottom: 16px; }
+  .login-field label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+  .login-field input {
+    width: 100%; box-sizing: border-box;
+    border: 1.5px solid #d0d0d0; border-radius: 8px;
+    padding: 10px 14px; font-size: 15px; color: #151515;
+    outline: none; transition: border-color .15s;
+  }
+  .login-field input:focus { border-color: #6b21a8; }
+  .login-submit {
+    width: 100%; margin-top: 8px;
+    background: #151515; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: background .15s;
+  }
+  .login-submit:hover { background: #333; }
+  .login-submit:disabled { background: #aaa; cursor: not-allowed; }
+  .login-error {
+    display: none; margin-top: 12px;
+    background: #fef2f2; border: 1px solid #fca5a5;
+    color: #b91c1c; border-radius: 8px;
+    padding: 10px 14px; font-size: 13px;
+  }
+  .login-error.show { display: block; }
+</style>
+</head>
+<body class="login-page">
+<div class="login-card">
+  <img class="login-logo" src="assets/purple6studio_한줄_black.png" alt="purple6studio">
+  <div class="login-title">설문 대시보드</div>
+
+  <div class="login-field">
+    <label for="login-password">비밀번호</label>
+    <input id="login-password" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password">
+  </div>
+
+  <button class="login-submit" id="login-btn" type="button">입장하기</button>
+  <div class="login-error" id="login-error"></div>
+</div>
+
+<script>
+(function() {
+  var _SUPABASE_URL = 'https://anryotqsnrhsonpsrdbw.supabase.co';
+  var _SUPABASE_KEY = 'sb_publishable_1hDV_KyYG9qYVR2J-_3iSA_7VTUf9wY';
+  var _TEAM_EMAIL = 'p6s.subs@gmail.com';
+  var client = window.supabase.createClient(_SUPABASE_URL, _SUPABASE_KEY);
+
+  var passwordEl = document.getElementById('login-password');
+  var btnEl = document.getElementById('login-btn');
+  var errorEl = document.getElementById('login-error');
+
+  client.auth.getSession().then(function(res) {
+    if (res.data.session) redirectAfterLogin();
+  });
+
+  function redirectAfterLogin() {
+    var params = new URLSearchParams(location.search);
+    var next = params.get('next');
+    if (next && next.startsWith(location.origin)) {
+      window.location.replace(next);
+    } else {
+      window.location.replace('home.html');
+    }
+  }
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.classList.add('show');
+  }
+
+  passwordEl.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') btnEl.click();
+  });
+
+  btnEl.addEventListener('click', async function() {
+    errorEl.classList.remove('show');
+    var password = passwordEl.value;
+    if (!password) {
+      showError('비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    btnEl.disabled = true;
+    btnEl.textContent = '확인 중...';
+
+    try {
+      var res = await client.auth.signInWithPassword({ email: _TEAM_EMAIL, password: password });
+      if (res.error) throw res.error;
+      redirectAfterLogin();
+    } catch (err) {
+      var msg = err.message || '오류가 발생했습니다.';
+      if (msg.includes('Invalid login credentials')) msg = '비밀번호가 올바르지 않습니다.';
+      showError(msg);
+      btnEl.disabled = false;
+      btnEl.textContent = '입장하기';
+    }
+  });
+})();
+</script>
+</body>
+</html>
