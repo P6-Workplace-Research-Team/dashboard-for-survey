@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>설문조사 분석 대시보드 만들기 | purple6studio</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block">
 <link rel="stylesheet" href="dashboard-for-survey.css">
 </head>
@@ -132,7 +131,7 @@
 
     <button id="start-btn" class="primary-btn" type="button" disabled>대시보드 만들기</button>
 
-    <a class="guide-banner" href="#" id="guide-link">
+    <a class="guide-banner" href="https://fursys.atlassian.net/wiki/external/NjI0NWQ2YWZkYWI3NGQ2NmEzYWNlYWVhODdhNGQ1NjA" id="guide-link" target="_blank" rel="noopener noreferrer">
       <span class="guide-desc">문항 코드북과 응답 데이터셋을 만드는 방법은 아래 가이드를 참고해주세요.</span>
       <span class="guide-link">가이드 보러 가기 →</span>
     </a>
@@ -805,11 +804,6 @@ function validateBundleConsistency(rowsByKey) {
     } catch (_) {}
 
     window.location.href = 'dashboard.html';
-  });
-
-  document.getElementById('guide-link').addEventListener('click', e => {
-    e.preventDefault();
-    alert('가이드 문서로 이동 (링크 연결 예정)');
   });
 
   const listModal = document.getElementById('list-modal');
