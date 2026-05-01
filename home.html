@@ -42,6 +42,7 @@
         <div class="upload-grid">
           <div class="upload-col">
             <div class="upload-label">문항 코드북</div>
+            <div class="upload-guide">question_codebook.csv</div>
             <div class="drop-zone" data-key="codebook">
               <input type="file" accept=".csv" id="file-codebook">
               <div class="dz-default">
@@ -70,6 +71,7 @@
 
           <div class="upload-col">
             <div class="upload-label">응답 데이터셋_숫자형</div>
+            <div class="upload-guide">responsedata_value.csv</div>
             <div class="drop-zone" data-key="value">
               <input type="file" accept=".csv" id="file-value">
               <div class="dz-default">
@@ -97,7 +99,8 @@
           </div>
 
           <div class="upload-col">
-            <div class="upload-label">응답 데이터셋_라벨형</div>
+            <div class="upload-label">응답 데이터셋_텍스트형</div>
+            <div class="upload-guide">responsedata_label.csv</div>
             <div class="drop-zone" data-key="label">
               <input type="file" accept=".csv" id="file-label">
               <div class="dz-default">
@@ -390,18 +393,18 @@ function validateResponsePair(valueRows, labelRows) {
   const labelHeader = (labelRows[0] || []).map(cleanCell);
 
   if (!arraysEqualNormalized(valueHeader, labelHeader)) {
-    return { ok: false, error: '응답 데이터셋 숫자형과 라벨형의 가로 첫행 구조가 서로 다릅니다.' };
+    return { ok: false, error: '응답 데이터셋 숫자형과 텍스트형의 가로 첫행 구조가 서로 다릅니다.' };
   }
 
   if (valueRows.length !== labelRows.length) {
-    return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 행 수가 다릅니다. 숫자형 ${valueRows.length - 1}행, 라벨형 ${labelRows.length - 1}행입니다.` };
+    return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 행 수가 다릅니다. 숫자형 ${valueRows.length - 1}행, 텍스트형 ${labelRows.length - 1}행입니다.` };
   }
 
   for (let r = 1; r < valueRows.length; r++) {
     const vRow = valueRows[r] || [];
     const lRow = labelRows[r] || [];
     if (cleanCell(vRow[0]) !== cleanCell(lRow[0]) || cleanCell(vRow[1]) !== cleanCell(lRow[1])) {
-      return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 세로 첫행 기준값이 ${r + 1}번째 행에서 다릅니다.` };
+      return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 세로 첫행 기준값이 ${r + 1}번째 행에서 다릅니다.` };
     }
     const maxCols = Math.max(vRow.length, lRow.length);
     for (let c = 2; c < maxCols; c++) {
@@ -409,7 +412,7 @@ function validateResponsePair(valueRows, labelRows) {
       const lFilled = cleanCell(lRow[c]) !== '';
       if (vFilled !== lFilled) {
         const headerName = valueHeader[c] || `${c + 1}번째 컬럼`;
-        return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 값 위치 구조가 다릅니다. ${r + 1}번째 행 / ${headerName} 컬럼을 확인해 주세요.` };
+        return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 값 위치 구조가 다릅니다. ${r + 1}번째 행 / ${headerName} 컬럼을 확인해 주세요.` };
       }
     }
   }
@@ -417,7 +420,7 @@ function validateResponsePair(valueRows, labelRows) {
   return { ok: true };
 }
 
-// 코드북을 기준으로 숫자형/라벨형 파일이 뒤바뀌었는지 판별합니다.
+// 코드북을 기준으로 숫자형/텍스트형 파일이 뒤바뀌었는지 판별합니다.
 // 코드북에서 value_code_map이 있는 객관식 단일/중복/순위 raw 문항을 찾아
 // 응답 데이터의 해당 컬럼 샘플값이 코드인지 라벨인지 확인합니다.
 function detectValueLabelSwap(codebookRows, valueRows, labelRows) {
@@ -489,10 +492,10 @@ function detectValueLabelSwap(codebookRows, valueRows, labelRows) {
 
   // 판별: 코드 히트가 없고 라벨 히트가 있으면 뒤바뀐 것
   if (valueScore && valueScore.labelHits > 0 && valueScore.codeHits === 0) {
-    return { ok: false, error: '응답 데이터셋_숫자형 카드에 라벨형 파일이 업로드된 것 같습니다.\n숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
+    return { ok: false, error: '응답 데이터셋_숫자형 카드에 텍스트형 파일이 업로드된 것 같습니다.\n숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
   }
   if (labelScore && labelScore.codeHits > 0 && labelScore.labelHits === 0) {
-    return { ok: false, error: '응답 데이터셋_라벨형 카드에 숫자형 파일이 업로드된 것 같습니다.\n텍스트 라벨이 담긴 라벨형 파일을 업로드해 주세요.' };
+    return { ok: false, error: '응답 데이터셋_텍스트형 카드에 숫자형 파일이 업로드된 것 같습니다.\n텍스트 응답이 담긴 텍스트형 파일을 업로드해 주세요.' };
   }
 
   return { ok: true };
@@ -501,7 +504,7 @@ function detectValueLabelSwap(codebookRows, valueRows, labelRows) {
 function validateBundleConsistency(rowsByKey) {
   const { codebook, value, label } = rowsByKey;
 
-  // 0차: 코드북 기반 숫자형/라벨형 파일 위치 판별
+  // 0차: 코드북 기반 숫자형/텍스트형 파일 위치 판별
   if (codebook && (value || label)) {
     const swapResult = detectValueLabelSwap(codebook, value, label);
     if (!swapResult.ok) return swapResult;
@@ -512,7 +515,7 @@ function validateBundleConsistency(rowsByKey) {
     if (!result.ok) return result;
   }
   if (codebook && label) {
-    const result = validateCodebookAgainstResponse(codebook, label, '응답 데이터셋_라벨형');
+    const result = validateCodebookAgainstResponse(codebook, label, '응답 데이터셋_텍스트형');
     if (!result.ok) return result;
   }
   if (value && label) {
@@ -683,7 +686,7 @@ function validateBundleConsistency(rowsByKey) {
       label: readRowsFromStoredFile(state.label)
     });
     if (!bundleResult.ok) {
-      uploadErr.textContent = `${bundleResult.error} 파일을 다시 확인하고 다시 업로드해 주세요.`;
+      uploadErr.textContent = bundleResult.error.replace(/\. /g, '.\n');
       uploadErr.classList.add('show');
       return;
     }
