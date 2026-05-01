@@ -2175,10 +2175,6 @@ body {
     color: var(--neutral-700);
     line-height: var(--body-line-height);
   }
-  .result-section[data-type="single"] .choice-controls {
-    margin-left: 16px;
-    margin-bottom: 20px;
-  }
 
   /* ===== ���� ���� ��Ʈ ===== */
   .vbar-chart {
