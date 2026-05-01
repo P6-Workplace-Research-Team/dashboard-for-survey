@@ -3,6 +3,8 @@
 > 폰트: Pretendard / 모든 색상은 아래 Figma Variables만 사용. 임의 hex 값 사용 금지.
 > 이 문서는 공통 토큰과 재사용 컴포넌트만 정의한다. 화면별 레이아웃, 간격, 상태별 세부 CSS는 각 화면 구현 파일과 화면 스펙 문서에서 관리한다.
 
+> **AI 작업 규칙**: 이 문서에 정의된 토큰과 컴포넌트만 사용한다. 이 문서에 없는 색상, 타이포그래피, 반경, 그림자 값을 임의로 만들거나 언급하지 않는다. `dashboard-for-survey.css`에 이미 정의된 간격(padding, margin, gap 등) 값도 임의로 변경하지 않는다. 새로운 간격 값을 지정해야 할 때는 반드시 4px의 배수를 사용한다. 새로운 디자인 토큰이나 간격 값이 필요하다고 판단되면 직접 추가하지 말고 사용자에게 확인을 요청한다.
+
 ---
 
 ## Design Tokens
@@ -41,6 +43,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 | `Button-2` | 버튼 2 | 13px | Regular (400) |
 | `Button-2-strong` | 버튼 2 강조 | 13px | Semibold (600) |
 | `Caption-1` | 캡션 1 | 12px | Regular (400) |
+| `Caption-2` | 캡션 2 | 10px | Regular (400) |
 
 - Line-height: Heading `120%` / 나머지 `160%`
 
@@ -66,6 +69,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
 | `Button-2` | 소형 버튼 텍스트 |
 | `Button-2-strong` | 강조 소형 버튼 텍스트 |
 | `Caption-1` | 주석, 설명, 보조 안내, 오류 메시지 |
+| `Caption-2` | 차트 눈금 레이블 (주로 `neutral-600`) |
 
 ### Color
 
@@ -159,6 +163,7 @@ font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto San
   --button-2-size: 13px;     /* Regular */
   --button-2-strong: 600;    /* Semibold */
   --caption-1-size: 12px;
+  --caption-2-size: 10px;
 
   --heading-line-height: 1.2;
   --body-line-height: 1.6;

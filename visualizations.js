@@ -89,13 +89,7 @@ function isFreeTextHeaderName(headerName) {
     || normalized.endsWith('__other');
 }
 
-function isNumericLikeResponseValue(value) {
-  const normalized = cleanCell(value);
-  if (!normalized) return false;
-  return /^-?\d+(\.\d+)?(\|-?\d+(\.\d+)?)*$/.test(normalized);
-}
-
-const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role'];
+const REQUIRED_CODEBOOK = ['question_no', 'question_label', 'response_type', 'data_column_role', 'value_code_map'];
 const REQUIRED_RESPONSE = ['survey_year', 'respondent_no'];
 
 function checkColumns(headerRow, required) {
@@ -105,9 +99,9 @@ function checkColumns(headerRow, required) {
 }
 
 function detectResponseType(rows) {
-  if (!rows || rows.length < 2) return { type: 'unknown', sampleSize: 0 };
+  if (!rows || rows.length < 2) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
   const header = rows[0] || [];
-  const skipCols = Math.min(4, header.length);
+  const skipCols = REQUIRED_RESPONSE.length;
   let numeric = 0;
   let textLike = 0;
   let samples = 0;
@@ -117,17 +111,18 @@ function detectResponseType(rows) {
       if (isFreeTextHeaderName(header[c])) continue;
       const v = String(r[c] == null ? '' : r[c]).trim();
       if (!v) continue;
-      samples += 1;
-      if (isNumericLikeResponseValue(v)) numeric += 1;
-      else textLike += 1;
+      samples++;
+      if (/^-?\d+(\.\d+)?$/.test(v)) numeric++;
+      else if (/^-?\d+(\.\d+)?(\s*\|\s*-?\d+(\.\d+)?)+$/.test(v)) numeric++;
+      else textLike++;
     }
   });
-  if (samples === 0) return { type: 'unknown', sampleSize: 0 };
+  if (samples === 0) return { type: 'unknown', numericRatio: 0, sampleSize: 0 };
   const textRatio = textLike / samples;
   let type = 'ambiguous';
-  if (textRatio < 0.02) type = 'numeric';
-  else if (textRatio >= 0.05) type = 'label';
-  return { type, sampleSize: samples };
+  if (textRatio < 0.3) type = 'numeric';
+  else if (textRatio >= 0.7) type = 'label';
+  return { type, numericRatio: numeric / samples, textRatio, sampleSize: samples };
 }
 
 function validateFileForKey(key, rows) {
@@ -143,20 +138,22 @@ function validateFileForKey(key, rows) {
     return { ok: true };
   }
   if (key === 'value' || key === 'label') {
-    const chk = checkColumns(header, REQUIRED_RESPONSE);
-    if (!chk.ok) {
-      return { ok: false, error: `응답 데이터셋 형식이 올바르지 않습니다. 누락된 컬럼: ${chk.missing.join(', ')}` };
+    if (normalizeHeader(header[0]) !== 'survey_year') {
+      return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\n첫 번째 열이 survey_year이어야 합니다.' };
     }
-    const det = detectResponseType(rows);
-    if (det.type === 'unknown') {
-      return { ok: false, error: '데이터 열을 찾을 수 없어 형식을 판별할 수 없습니다.' };
+    if (normalizeHeader(header[1]) !== 'respondent_no') {
+      return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\n두 번째 열이 respondent_no이어야 합니다.' };
     }
-    if (key === 'value' && det.type === 'label') {
-      return { ok: false, error: '라벨형 데이터로 보입니다. 숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
+
+    if (rows.length >= 2) {
+      const firstDataRow = rows[1] || [];
+      const yearVal = cleanCell(firstDataRow[0]);
+      if (!/^\d{4}$/.test(yearVal)) {
+        return { ok: false, error: '응답 데이터셋 형식이 올바르지 않습니다.\nsurvey_year 값이 올바른 연도 형식(예: 2024)이 아닙니다.' };
+      }
     }
-    if (key === 'label' && det.type === 'numeric') {
-      return { ok: false, error: '숫자형 데이터로 보입니다. 라벨이 담긴 라벨형 파일을 업로드해 주세요.' };
-    }
+
+    return { ok: true };
   }
   return { ok: true };
 }
@@ -223,16 +220,16 @@ function validateResponsePair(valueRows, labelRows) {
   const valueHeader = (valueRows[0] || []).map(cleanCell);
   const labelHeader = (labelRows[0] || []).map(cleanCell);
   if (!arraysEqualNormalized(valueHeader, labelHeader)) {
-    return { ok: false, error: '응답 데이터셋 숫자형과 라벨형의 가로 첫행 구조가 서로 다릅니다.' };
+    return { ok: false, error: '응답 데이터셋 숫자형과 텍스트형의 가로 첫행 구조가 서로 다릅니다.' };
   }
   if (valueRows.length !== labelRows.length) {
-    return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 행 수가 다릅니다. 숫자형 ${valueRows.length - 1}행, 라벨형 ${labelRows.length - 1}행입니다.` };
+    return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 행 수가 다릅니다. 숫자형 ${valueRows.length - 1}행, 텍스트형 ${labelRows.length - 1}행입니다.` };
   }
   for (let r = 1; r < valueRows.length; r++) {
     const vRow = valueRows[r] || [];
     const lRow = labelRows[r] || [];
     if (cleanCell(vRow[0]) !== cleanCell(lRow[0]) || cleanCell(vRow[1]) !== cleanCell(lRow[1])) {
-      return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 세로 첫행 기준값이 ${r + 1}번째 행에서 다릅니다.` };
+      return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 세로 첫행 기준값이 ${r + 1}번째 행에서 다릅니다.` };
     }
     const maxCols = Math.max(vRow.length, lRow.length);
     for (let c = 2; c < maxCols; c++) {
@@ -240,21 +237,100 @@ function validateResponsePair(valueRows, labelRows) {
       const lFilled = cleanCell(lRow[c]) !== '';
       if (vFilled !== lFilled) {
         const headerName = valueHeader[c] || `${c + 1}번째 컬럼`;
-        return { ok: false, error: `응답 데이터셋 숫자형과 라벨형의 값 위치 구조가 다릅니다. ${r + 1}번째 행 / ${headerName} 컬럼을 확인해 주세요.` };
+        return { ok: false, error: `응답 데이터셋 숫자형과 텍스트형의 값 위치 구조가 다릅니다. ${r + 1}번째 행 / ${headerName} 컬럼을 확인해 주세요.` };
       }
     }
   }
   return { ok: true };
 }
 
+function detectValueLabelSwap(codebookRows, valueRows, labelRows) {
+  if (!codebookRows || codebookRows.length < 2) return { ok: true };
+
+  const header = (codebookRows[0] || []).map(normalizeHeader);
+  const iLabel = header.indexOf('question_label');
+  const iType = header.indexOf('response_type');
+  const iRole = header.indexOf('data_column_role');
+  const iMap = header.indexOf('value_code_map');
+  if (iLabel < 0 || iType < 0 || iRole < 0 || iMap < 0) return { ok: true };
+
+  const targetTypes = new Set(['객관식 단일', '객관식 중복', '객관식 순위']);
+  const candidates = [];
+
+  for (let r = 1; r < codebookRows.length; r++) {
+    const row = codebookRows[r] || [];
+    const rType = cleanCell(row[iType]);
+    const rRole = cleanCell(row[iRole]);
+    const rMap = cleanCell(row[iMap]);
+    const rLabel = cleanCell(row[iLabel]);
+    if (!targetTypes.has(rType) || rRole !== 'raw' || !rMap || !rLabel) continue;
+
+    const pairs = rMap.split('|').map(p => p.trim()).filter(Boolean);
+    const codes = [];
+    const labels = [];
+    for (const pair of pairs) {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx < 0) continue;
+      const code = pair.slice(0, eqIdx).trim();
+      const lbl = pair.slice(eqIdx + 1).trim();
+      if (/^-?\d+(\.\d+)?$/.test(code)) {
+        codes.push(code);
+        if (lbl) labels.push(lbl);
+      }
+    }
+    if (codes.length > 0 && labels.length > 0) {
+      candidates.push({ questionLabel: rLabel, codes, labels });
+    }
+    if (candidates.length >= 3) break;
+  }
+
+  if (candidates.length === 0) return { ok: true };
+
+  function scoreRows(rows) {
+    if (!rows || rows.length < 2) return null;
+    const respHeader = (rows[0] || []).map(cleanCell);
+    let codeHits = 0;
+    let labelHits = 0;
+
+    for (const { questionLabel, codes, labels } of candidates) {
+      const colIdx = respHeader.indexOf(questionLabel);
+      if (colIdx < 0) continue;
+
+      for (let r = 1; r < Math.min(rows.length, 11); r++) {
+        const v = cleanCell((rows[r] || [])[colIdx]);
+        if (!v) continue;
+        if (codes.includes(v)) codeHits++;
+        else if (labels.includes(v)) labelHits++;
+      }
+    }
+    return { codeHits, labelHits };
+  }
+
+  const valueScore = valueRows ? scoreRows(valueRows) : null;
+  const labelScore = labelRows ? scoreRows(labelRows) : null;
+
+  if (valueScore && valueScore.labelHits > 0 && valueScore.codeHits === 0) {
+    return { ok: false, error: '응답 데이터셋_숫자형 카드에 텍스트형 파일이 업로드된 것 같습니다.\n숫자 코드가 담긴 숫자형 파일을 업로드해 주세요.' };
+  }
+  if (labelScore && labelScore.codeHits > 0 && labelScore.labelHits === 0) {
+    return { ok: false, error: '응답 데이터셋_텍스트형 카드에 숫자형 파일이 업로드된 것 같습니다.\n텍스트 응답이 담긴 텍스트형 파일을 업로드해 주세요.' };
+  }
+
+  return { ok: true };
+}
+
 function validateBundleConsistency(rowsByKey) {
   const { codebook, value, label } = rowsByKey;
+  if (codebook && (value || label)) {
+    const swapResult = detectValueLabelSwap(codebook, value, label);
+    if (!swapResult.ok) return swapResult;
+  }
   if (codebook && value) {
     const result = validateCodebookAgainstResponse(codebook, value, '응답 데이터셋_숫자형');
     if (!result.ok) return result;
   }
   if (codebook && label) {
-    const result = validateCodebookAgainstResponse(codebook, label, '응답 데이터셋_라벨형');
+    const result = validateCodebookAgainstResponse(codebook, label, '응답 데이터셋_텍스트형');
     if (!result.ok) return result;
   }
   if (value && label) {
@@ -1152,8 +1228,7 @@ function renameSurvey(id, newTitle) {
   const list = loadSurveys();
   const idx = list.findIndex(s => s.id === id);
   if (idx < 0) return false;
-  list[idx].title = clean;
-  list[idx].updatedAt = new Date().toISOString();
+  list[idx] = { ...list[idx], title: clean, updatedAt: new Date().toISOString() };
   saveSurveys(list);
   if (sessionStorage.getItem('survey.currentId') === id) {
     try { sessionStorage.setItem('survey.title', clean); } catch (_) {}
@@ -1217,7 +1292,6 @@ function setupSavedModal() {
   const closeListBtn = document.getElementById('close-list-btn');
   const savedList = document.getElementById('saved-list');
   const savedCountBadge = document.getElementById('saved-count');
-  const saveBtn = document.getElementById('dashboard-save-btn');
   const newBtn = document.getElementById('new-analysis-btn');
   const dataUpdateBtn = document.getElementById('dashboard-data-update-btn');
   const dataUpdateModal = document.getElementById('data-update-modal');
@@ -1357,47 +1431,6 @@ function setupSavedModal() {
     });
   }
 
-  async function saveCurrentSurvey() {
-    const currentId = sessionStorage.getItem('survey.currentId');
-    const title = (document.getElementById('project-title')?.textContent || '새 대시보드').trim();
-    const surveys = loadSurveys();
-    const now = new Date().toISOString();
-    const idx = surveys.findIndex(s => s.id === currentId);
-
-    if (idx >= 0) {
-      surveys[idx].title = title || surveys[idx].title;
-      surveys[idx].updatedAt = now;
-      if (await saveSurveys(surveys)) {
-        refreshCount();
-        alert('현재 대시보드를 저장했습니다.');
-      }
-      return;
-    }
-
-    const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const { current } = getCurrentSurvey();
-    if (!current || !current.files) {
-      alert('저장할 데이터가 아직 준비되지 않았습니다.');
-      return;
-    }
-    surveys.unshift({
-      id,
-      title: title || '새 대시보드',
-      createdAt: now,
-      updatedAt: now,
-      shareToken: crypto.randomUUID(),
-      files: current.files
-    });
-    if (await saveSurveys(surveys)) {
-      try {
-        sessionStorage.setItem('survey.currentId', id);
-        sessionStorage.setItem('survey.title', title || '새 대시보드');
-      } catch (_) {}
-      refreshCount();
-      alert('현재 대시보드를 저장했습니다.');
-    }
-  }
-
   function renderDataUpdateList() {
     if (!dataUpdateList) return;
     const { current } = getCurrentSurvey();
@@ -1409,20 +1442,25 @@ function setupSavedModal() {
     const items = [
       { key: 'codebook', label: '문항 코드북', file: current.files.codebook },
       { key: 'value', label: '응답 데이터셋_숫자형', file: current.files.value },
-      { key: 'label', label: '응답 데이터셋_라벨형', file: current.files.label }
+      { key: 'label', label: '응답 데이터셋_텍스트형', file: current.files.label }
     ];
     dataUpdateList.innerHTML = items.map(item => {
       const pending = pendingDataUpdates[item.key];
       const filename = (pending && pending.file && pending.file.name) || (item.file && item.file.name) || '파일 없음';
       return `
-        <div class="saved-item">
+        <div class="saved-item data-update-item">
           <div class="saved-main">
             <div class="saved-title">${escapeHtml(item.label)}</div>
-            <div class="saved-meta">${escapeHtml(filename)}</div>
-            ${pending ? '<div class="saved-meta">교체 대기중</div>' : ''}
+            <div class="saved-meta">
+              ${escapeHtml(filename)}
+              ${pending ? '<span class="data-update-status">(Updated)</span>' : ''}
+            </div>
           </div>
           <div class="saved-actions">
-            <button type="button" class="saved-rename" data-file-update="${item.key}">교체하기</button>
+            <button type="button" class="saved-rename data-update-trigger" data-file-update="${item.key}">
+              <img class="data-update-trigger-icon" src="assets/icons/autorenew_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="">
+              파일 교체하기
+            </button>
           </div>
         </div>
       `;
@@ -1500,8 +1538,7 @@ function setupSavedModal() {
       nextFiles[key] = storedRef;
     }
 
-    surveys[idx].files = nextFiles;
-    surveys[idx].updatedAt = new Date().toISOString();
+    surveys[idx] = { ...surveys[idx], files: nextFiles, updatedAt: new Date().toISOString() };
     if (!(await saveSurveys(surveys))) return;
 
     resultState.codebookByLabel = new Map();
@@ -1522,7 +1559,6 @@ function setupSavedModal() {
 
   refreshCount();
 
-  if (saveBtn) saveBtn.addEventListener('click', saveCurrentSurvey);
   if (newBtn) newBtn.addEventListener('click', () => { window.location.href = 'home.html'; });
   if (openListBtn && listModal) {
     openListBtn.addEventListener('click', () => {

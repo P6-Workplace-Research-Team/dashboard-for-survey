@@ -65,7 +65,7 @@ async function loadSurveysFromServer(shareToken) {
 // ── 설문 CRUD ─────────────────────────────────────────────────
 
 function loadSurveys() {
-  return _surveysCache;
+  return _surveysCache.slice();
 }
 
 async function saveSurveys(newList) {
