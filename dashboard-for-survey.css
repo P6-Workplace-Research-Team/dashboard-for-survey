@@ -2035,7 +2035,7 @@ body {
     flex-wrap: wrap;
     align-items: center;
     gap: 32px;
-    margin-bottom: 40px;
+    margin-bottom: 28px;
   }
 .choice-controls-group {
     display: inline-flex;
