@@ -52,7 +52,7 @@
           </div>
         </div>
         <div id="question-tree">
-          <div class="question-list-empty">코드북을 불러오는 중입니다...</div>
+          <div class="question-list-empty">새 대시보드를 만들거나<br>저장된 대시보드를 열어주세요</div>
         </div>
         <div id="selection-status" class="selection-status" aria-live="polite">
           <span><strong id="selection-count">0</strong>개 선택됨</span>
@@ -181,6 +181,29 @@
     <div class="modal-footer">
       <button type="button" class="modal-action-btn" id="cancel-scale-compare-btn">취소</button>
       <button type="button" class="modal-action-btn primary" id="apply-scale-compare-btn">적용</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="group-config-modal" role="dialog" aria-modal="true" aria-labelledby="group-config-modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="group-config-modal-title">그룹 설정</div>
+      <button class="modal-close" id="close-group-config-btn" aria-label="닫기">
+        <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="group-config-note">범례 항목을 원하는 그룹으로 지정한 뒤 적용하면 묶음 보기로 전환됩니다.</div>
+      <div id="group-config-list"></div>
+      <div class="group-config-divider"></div>
+      <div class="group-config-heading">그룹 이름</div>
+      <div id="group-config-defs"></div>
+      <button type="button" class="legend-action-btn" id="group-config-add-btn">+ 그룹 추가</button>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-action-btn" id="group-config-reset-btn">원래대로 보기</button>
+      <button type="button" class="modal-action-btn primary" id="group-config-apply-btn">적용</button>
     </div>
   </div>
 </div>

@@ -1632,29 +1632,30 @@ function setupSavedModal() {
    ===================================================================== */
 
 const GROUP_PALETTE = [
-  '#5b7a9a', '#c67b7b', '#7ba87a', '#c6a77b',
-  '#a77bc6', '#7bbfb8', '#c67bad', '#9ba07b'
+  'var(--color-1)',  'var(--color-2)',  'var(--color-3)',  'var(--color-4)',
+  'var(--color-5)',  'var(--color-6)',  'var(--color-7)',  'var(--color-8)',
+  'var(--color-9)',  'var(--color-10)', 'var(--color-11)', 'var(--color-12)',
+  'var(--color-13)', 'var(--color-14)', 'var(--color-15)', 'var(--color-16)',
+  'var(--color-17)', 'var(--color-18)', 'var(--color-19)', 'var(--color-20)'
 ];
 const ALLOCATION_PALETTE = [
-  '#5b7a9a', '#7ba87a', '#c6a77b', '#c67b7b',
-  '#7bbfb8', '#9a8ac5', '#8f9874', '#b98a9f'
+  'var(--color-1)', 'var(--color-3)', 'var(--color-5)', 'var(--color-2)',
+  'var(--color-6)', 'var(--color-4)', 'var(--color-8)', 'var(--color-7)'
 ];
-const SINGLE_BAR_COLOR = '#4a4a4a';
+const SINGLE_BAR_COLOR = 'var(--neutral-700)';
 const COMPARE_BAR_COLOR = '#d9d9d9';
 
-// 객관식 단일 — 100% 누적 막대 / 파이에서 사용하는 무채색 팔레트.
-// data_visualization.md §4 컬러 규칙 + design_system.md neutral 토큰 기준.
-const CHOICE_NEUTRAL_PALETTE = [
-  '#363636', // neutral-800
-  '#777777', // neutral-600
-  '#afafaf', // neutral-400
-  '#525252', // neutral-700
-  '#919191', // neutral-500
-  '#cccccc'  // neutral-300
+// 객관식 단일 — 100% 누적 막대 / 파이에서 사용하는 컬러 팔레트.
+const CHOICE_COLOR_PALETTE = [
+  'var(--color-1)',  'var(--color-2)',  'var(--color-3)',  'var(--color-4)',
+  'var(--color-5)',  'var(--color-6)',  'var(--color-7)',  'var(--color-8)',
+  'var(--color-9)',  'var(--color-10)', 'var(--color-11)', 'var(--color-12)',
+  'var(--color-13)', 'var(--color-14)', 'var(--color-15)', 'var(--color-16)',
+  'var(--color-17)', 'var(--color-18)', 'var(--color-19)', 'var(--color-20)'
 ];
 function choiceNeutralColor(index) {
   const idx = Math.max(0, Number(index) || 0);
-  return CHOICE_NEUTRAL_PALETTE[idx % CHOICE_NEUTRAL_PALETTE.length];
+  return CHOICE_COLOR_PALETTE[idx % CHOICE_COLOR_PALETTE.length];
 }
 
 const CHOICE_BAR_CHART_TYPES = ['bar_horizontal', 'bar_vertical'];
@@ -1662,25 +1663,26 @@ const CHOICE_CHART_TYPES = ['bar_horizontal', 'bar_vertical', 'bar_horizontal_10
 const CHOICE_CHART_TYPE_LABELS = {
   bar_horizontal: '가로 막대',
   bar_vertical: '세로 막대',
-  bar_horizontal_100: '가로 막대 (100% 누적)',
-  pie: '원/파이'
+  bar_horizontal_100: '100% 기준 누적 가로 막대',
+  pie: '원형(파이)'
 };
 const RANK_CHART_TYPES = ['lollipop', 'stacked'];
 const RANK_CHART_TYPE_LABELS = {
   lollipop: '가중 평균',
   stacked: '응답 비율'
 };
+const RANK_VERTICAL_TRACK_HEIGHT = 280;
 
 const RANK_LOLLIPOP_COLOR = 'var(--neutral-700)';
 const RANK_STACK_PALETTE = [
-  'var(--neutral-800)',
+  'var(--neutral-700)',
   'var(--neutral-400)',
   'var(--neutral-300)',
-  'var(--neutral-400)',
-  'var(--neutral-400)',
-  'var(--neutral-400)',
-  'var(--neutral-400)',
-  'var(--neutral-400)'
+  'var(--neutral-200)',
+  'var(--neutral-200)',
+  'var(--neutral-200)',
+  'var(--neutral-200)',
+  'var(--neutral-200)'
 ];
 function rankStackColor(idx) {
   if (idx < RANK_STACK_PALETTE.length) return RANK_STACK_PALETTE[idx];
@@ -1696,16 +1698,47 @@ function formatRankAverage(value) {
 }
 
 function buildRankWeightFormulaText(rankCount) {
-  return `가중 평균은 순위가 높을수록 더 큰 점수를 반영해 계산한 평균값입니다. 산출식 예시: 3순위까지 선택할 수 있는 경우, (1순위×5 + 2순위×3 + 3순위×1) ÷ 전체 응답자 수`;
+  const safeRankCount = Math.max(1, Number(rankCount) || 1);
+  const weights = Array.from({ length: safeRankCount }, (_, index) => getRankWeight(safeRankCount, index));
+  const formula = weights.map((weight, index) => `${index + 1}순위×${weight}`).join(' + ');
+  const maxScore = weights[0] || 1;
+  return `각 보기의 가중 평균 점수는 순위별 응답 수에 가중치를 곱해 합산한 뒤 전체 응답자 수로 나눈 값입니다. 예) ${safeRankCount}순위까지 선택하는 경우: (${formula}) ÷ 전체 응답자 수 (만점: ${maxScore}점)`;
 }
 
-const SCALE_DIVERGING_PALETTE = [
-  '#8e4c4c', '#bb7474', '#d8a5a5', '#dddddd', '#a9bfd4', '#7598b8', '#4c7398'
+const SCALE_5PT = [
+  'var(--color-2)',     // 1
+  'var(--low-3)',       // 2
+  'var(--neutral-300)', // 3
+  'var(--high-3)',      // 4
+  'var(--color-1)',     // 5
 ];
+const SCALE_7PT = [
+  'var(--color-2)',     // 1
+  'var(--low-4)',       // 2
+  'var(--low-2)',       // 3
+  'var(--neutral-300)', // 4
+  'var(--high-2)',      // 5
+  'var(--high-4)',      // 6
+  'var(--color-1)',     // 7
+];
+const SCALE_DIVERGING_PALETTE = SCALE_7PT;
+
 function getScaleColor(score, maxScore) {
-  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 1) return '#d9d9d9';
-  const idx = Math.round(((score - 1) * (SCALE_DIVERGING_PALETTE.length - 1)) / (maxScore - 1));
-  return SCALE_DIVERGING_PALETTE[Math.max(0, Math.min(SCALE_DIVERGING_PALETTE.length - 1, idx))];
+  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 1) return 'var(--neutral-300)';
+  if (maxScore === 5) return SCALE_5PT[Math.max(0, Math.min(4, score - 1))];
+  if (maxScore === 7) return SCALE_7PT[Math.max(0, Math.min(6, score - 1))];
+  const palette = SCALE_7PT;
+  const idx = Math.round(((score - 1) * (palette.length - 1)) / (maxScore - 1));
+  return palette[Math.max(0, Math.min(palette.length - 1, idx))];
+}
+
+function getScaleMutedColor(score, maxScore) {
+  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 1) return 'var(--neutral-300)';
+  if (score <= 1 || score >= maxScore) return 'var(--neutral-400)';
+  if (maxScore === 5) return 'var(--neutral-300)';
+  const center = (maxScore + 1) / 2;
+  const dist = Math.abs(score - center) / (center - 1);
+  return dist < 0.34 ? 'var(--neutral-200)' : 'var(--neutral-300)';
 }
 
 const resultState = {
@@ -3055,100 +3088,7 @@ function getExpandedBinaryOptionEntries(targetLabel, entry) {
   }).filter(Boolean);
 }
 
-function aggregateMultiple(targetLabel, criterionLabel, rows) {
-  const entry = resultState.codebookByLabel.get(targetLabel);
-  if (!entry) return null;
 
-  const optionEntries = getExpandedBinaryOptionEntries(targetLabel, entry);
-  if (optionEntries.length === 0) return null;
-
-  const totalN = rows.length;
-  const totalResults = optionEntries.map(({ option, expandedLabel }) => {
-    const idx = filterState.headerMap ? filterState.headerMap.get(expandedLabel) : undefined;
-    const count = idx === undefined
-      ? 0
-      : rows.reduce((sum, row) => sum + (isSelectedBinaryValue((row || [])[idx]) ? 1 : 0), 0);
-    return {
-      option,
-      count,
-      pct: totalN > 0 ? (count / totalN) * 100 : 0
-    };
-  });
-  const visibleTotalResults = totalResults.filter(result => result.count > 0);
-
-  let groupResults = null;
-  if (criterionLabel) {
-    const critEntry = resultState.codebookByLabel.get(criterionLabel) || (() => {
-      const candidate = getCandidateByKey(criterionLabel);
-      if (!candidate) return null;
-      return {
-        label: candidate.label,
-        type: '객관식 단일',
-        role: 'raw',
-        options: candidate.options || []
-      };
-    })();
-    const cIdx = filterState.headerMap.get(criterionLabel);
-    if (critEntry && cIdx !== undefined) {
-      const groupOrder = [...critEntry.options];
-      const groupSet = new Set(groupOrder);
-      const byGroup = new Map();
-      groupOrder.forEach(groupValue => {
-        byGroup.set(groupValue, {
-          n: 0,
-          count: Object.fromEntries(optionEntries.map(({ option }) => [option, 0]))
-        });
-      });
-
-      rows.forEach(row => {
-        const groupValue = cleanCell((row || [])[cIdx]);
-        if (groupValue === '') return;
-        if (!groupSet.has(groupValue)) {
-          groupSet.add(groupValue);
-          groupOrder.push(groupValue);
-          byGroup.set(groupValue, {
-            n: 0,
-            count: Object.fromEntries(optionEntries.map(({ option }) => [option, 0]))
-          });
-        }
-        const group = byGroup.get(groupValue);
-        group.n += 1;
-        optionEntries.forEach(({ option, expandedLabel }) => {
-          const idx = filterState.headerMap ? filterState.headerMap.get(expandedLabel) : undefined;
-          if (idx === undefined) return;
-          if (isSelectedBinaryValue((row || [])[idx])) {
-            group.count[option] = (group.count[option] || 0) + 1;
-          }
-        });
-      });
-
-      groupResults = groupOrder.map(groupValue => {
-        const group = byGroup.get(groupValue);
-        return {
-          value: groupValue,
-          label: `${critEntry.label}: ${groupValue}`,
-          n: group.n,
-          results: visibleTotalResults.map(result => ({
-            option: result.option,
-            count: group.count[result.option] || 0,
-            pct: group.n > 0 ? ((group.count[result.option] || 0) / group.n) * 100 : 0
-          }))
-        };
-      });
-    }
-  }
-
-  return {
-    targetLabel,
-    codebookEntry: entry,
-    totalN,
-    optionOrder: visibleTotalResults.map(result => result.option),
-    totalResults: visibleTotalResults,
-    visualType: 'choice',
-    criterionLabel: groupResults ? criterionLabel : null,
-    groupResults
-  };
-}
 
 function getChoiceChartViewMode(targetLabel) {
   return resultState.choiceViewModes.get(targetLabel) || 'horizontal';
@@ -3212,7 +3152,7 @@ function buildChartViewToggleHtml(targetLabel, activeMode, chartType) {
   const modeOptions = [
     { mode: 'horizontal', label: '가로 막대' },
     { mode: 'vertical', label: '세로 막대' },
-    { mode: 'pie', label: '원형 그래프' },
+      { mode: 'pie', label: '원형(파이)' },
     { mode: 'stacked', label: '누적 막대' }
   ];
   const modeSelect = `
@@ -3242,65 +3182,6 @@ function buildChartViewToggleHtml(targetLabel, activeMode, chartType) {
     <div class="chart-view-controls">
       ${modeSelect}
       <div class="result-view-toggle">${sortButtons}</div>
-    </div>
-  `;
-}
-
-function buildPieChartHtml(data) {
-  const rows = getChoiceChartRows(data).filter(r => (r.pct || 0) > 0);
-  if (rows.length === 0) return '<div class="result-empty">표시할 데이터가 없습니다.</div>';
-  const r = 72;
-  const c = 80;
-  let acc = 0;
-  const segs = rows.map((row, idx) => {
-    const pct = Math.max(0, row.pct || 0);
-    const angle = (pct / 100) * Math.PI * 2;
-    const start = acc;
-    const end = acc + angle;
-    acc = end;
-    const x1 = c + r * Math.cos(start - Math.PI / 2);
-    const y1 = c + r * Math.sin(start - Math.PI / 2);
-    const x2 = c + r * Math.cos(end - Math.PI / 2);
-    const y2 = c + r * Math.sin(end - Math.PI / 2);
-    const largeArc = angle > Math.PI ? 1 : 0;
-    const color = rankColor(idx);
-    const tip = encodeURIComponent(JSON.stringify({ kind: 'basic-bar', option: row.option, pct: row.pct, count: row.count }));
-    const d = `M ${c} ${c} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-    return `<path d="${d}" fill="${color}" data-tip="${tip}"></path>`;
-  }).join('');
-  const legend = rows.map((row, idx) => `
-    <div class="pie-legend-item">
-      <span class="legend-swatch" style="background:${rankColor(idx)}"></span>
-      <span>${escapeHtml(row.option)} (${formatPercent(row.pct)})</span>
-    </div>
-  `).join('');
-  return `
-    <div class="pie-chart-wrap">
-      <svg class="pie-chart" viewBox="0 0 160 160" aria-label="원형 그래프">${segs}</svg>
-      <div class="pie-legend">${legend}</div>
-    </div>
-  `;
-}
-
-function buildStackedBarChartHtml(data) {
-  const rows = getChoiceChartRows(data).filter(r => (r.pct || 0) > 0);
-  if (rows.length === 0) return '<div class="result-empty">표시할 데이터가 없습니다.</div>';
-  const segs = rows.map((row, idx) => {
-    const width = Math.max(0, Math.min(100, row.pct || 0));
-    const tip = encodeURIComponent(JSON.stringify({ kind: 'basic-bar', option: row.option, pct: row.pct, count: row.count }));
-    const label = width >= 8 ? `<span class="stacked-seg-label">${formatPercent(row.pct)}</span>` : '';
-    return `<div class="stacked-seg" style="width:${width}%; background:${rankColor(idx)}" data-tip="${tip}">${label}</div>`;
-  }).join('');
-  const legend = rows.map((row, idx) => `
-    <div class="pie-legend-item">
-      <span class="legend-swatch" style="background:${rankColor(idx)}"></span>
-      <span>${escapeHtml(row.option)}</span>
-    </div>
-  `).join('');
-  return `
-    <div class="stacked-chart-wrap">
-      <div class="stacked-track">${segs}</div>
-      <div class="pie-legend">${legend}</div>
     </div>
   `;
 }
@@ -3766,7 +3647,7 @@ function buildSimpleChoiceTableHtml(data) {
     <table class="result-table">
       <thead>
         <tr>
-          <th>응답 보기</th>
+          <th>보기</th>
           <th class="num">응답 비율(%)</th>
           <th class="num">응답 수(명)</th>
         </tr>
@@ -3789,32 +3670,16 @@ function buildSimpleChoiceTableHtml(data) {
   `;
 }
 
-function buildPieChartTableLayoutHtml(chartHtml, tableHtml) {
-  return `
-    <div class="pie-table-layout data-table-section" data-data-table-section>
-      <div class="pie-table-main">
-        <div class="pie-table-chart">${chartHtml}</div>
-        <div class="pie-table-panel data-table-body" data-data-table-body>
-          <div class="result-table-wrap">
-            ${tableHtml}
-          </div>
-        </div>
-      </div>
-      ${buildDataTableToggleButtonHtml()}
-    </div>
-  `;
-}
-
-function buildChoiceDataTableHtml(data) {
+function buildChoiceDataTableHtml(data, noteHtml = '') {
   const { totalResults, groupResults, totalN } = data;
   if (!groupResults) {
-    return wrapResultTable(buildSimpleChoiceTableHtml(data));
+    return wrapResultTable(buildSimpleChoiceTableHtml(data), noteHtml);
   }
 
   const hidden = resultState.hiddenGroupKeys.get(data.targetLabel) || new Set();
   const displayGroups = getDisplayGroupResults(groupResults, hidden);
   const topRow1 = [
-    `<th rowspan="2">응답 보기</th>`,
+    `<th rowspan="2">보기</th>`,
     buildGroupedCountHeader('응답자 전체', totalN, 2),
     ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, 2))
   ].join('');
@@ -3863,7 +3728,7 @@ function buildChoiceDataTableHtml(data) {
       </tbody>
     </table>
   `;
-  return wrapResultTable(tableHtml);
+  return wrapResultTable(tableHtml, noteHtml);
 }
 
 function allocationColor(index) {
@@ -4086,10 +3951,16 @@ function buildScaleToggleHtml(targetLabel, activeMode, options = {}) {
       <span>중간값 제외 보기</span>
     </label>
   ` : '';
+  const midpointGuide = showMidpointOption ? `
+    <div class="scale-view-note">중간값 제외 보기는 차트에서만 시각적으로 제외하며, 응답 비율의 계산 모수와 원본 수치는 바뀌지 않습니다.</div>
+  ` : '';
   return `
     <div class="scale-view-controls">
-      <div class="result-view-toggle">${buttons}</div>
-      ${midpointOption}
+      <div class="scale-view-controls-row">
+        <div class="result-view-toggle">${buttons}</div>
+        ${midpointOption}
+      </div>
+      ${midpointGuide}
     </div>
   `;
 }
@@ -4149,6 +4020,7 @@ function buildScaleTrackHtml(scoreResults, maxScore, options = {}) {
   const displayResults = getScaleDisplayResults(scoreResults, { hideMidpoint });
   const segments = displayResults.map(result => {
     const width = Math.max(0, Math.min(100, result.displayPct || 0));
+    const color = muted ? getScaleMutedColor(result.score, maxScore) : getScaleColor(result.score, maxScore);
     const tip = encodeURIComponent(JSON.stringify({
       kind: 'scale-segment',
       score: result.score,
@@ -4158,7 +4030,7 @@ function buildScaleTrackHtml(scoreResults, maxScore, options = {}) {
     }));
     return `
       <div class="scale-segment"
-           style="width:${width}%; background:${getScaleColor(result.score, maxScore)};"
+           style="width:${width}%; background:${color};"
            ${interactive ? `data-tip="${tip}"` : ''}></div>
     `;
   }).join('');
@@ -4508,7 +4380,7 @@ function buildScaleCompareGroupDotHtml(group, point, maxScore, withOverall, comp
   `;
 }
 
-function buildScaleCompareLegendHtml(groups, hiddenGroups = new Set(), targetLabel = '') {
+function buildScaleCompareLegendHtml(groups, hiddenGroups = new Set(), targetLabel = '', criterionLabel = '') {
   if (!Array.isArray(groups) || groups.length === 0) return '';
   const items = [
     `<div class="scale-compare-legend-item"><span class="scale-compare-legend-dot is-overall"></span><span>응답자 전체 평균</span></div>`,
@@ -4533,6 +4405,7 @@ function buildScaleCompareLegendHtml(groups, hiddenGroups = new Set(), targetLab
       <div class="legend-actions" data-target="${escapeHtml(targetLabel)}" data-mode="group">
         <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
         <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+        ${criterionLabel ? `<button type="button" class="legend-action-btn" data-open-group-config="true" data-target="${escapeHtml(targetLabel)}" data-criterion="${escapeHtml(criterionLabel)}">그룹 설정</button>` : ''}
       </div>
     </aside>
   `;
@@ -4760,7 +4633,7 @@ function buildScaleCompareSectionHtml(compareData, hiddenGroups, options = {}) {
     </div>
   `;
   const visualClass = getResultVisualClass(hasLegendGroups);
-  const legendHtml = hasLegendGroups ? buildScaleCompareLegendHtml(compareData.groups, hiddenGroups, compareData.targetLabel) : '';
+  const legendHtml = hasLegendGroups ? buildScaleCompareLegendHtml(compareData.groups, hiddenGroups, compareData.targetLabel, compareData.criterionLabel || '') : '';
   return `
     <div class="scale-compare-section ${flush ? 'is-flush' : ''}">
       ${showHeader ? `<div class="scale-compare-header">
@@ -4780,6 +4653,7 @@ function buildScaleCompareSectionHtml(compareData, hiddenGroups, options = {}) {
 function buildScaleGroupControlsHtml(data, hiddenGroups) {
   const allGroups = getDisplayGroupResults(data.groupResults);
   if (allGroups.length === 0) return '';
+  const criterionLabel = data.criterionLabel || '';
   const items = allGroups.map(group => {
     const color = getGroupColor(data.groupResults, group.value);
     const isHidden = hiddenGroups.has(group.value);
@@ -4797,8 +4671,15 @@ function buildScaleGroupControlsHtml(data, hiddenGroups) {
   }).join('');
   return `
     <div class="scale-group-controls-bar">
-      <span class="scale-group-controls-title">그룹 표시</span>
-      ${items}
+      <div class="legend scale-group-legend" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
+        <span class="scale-group-controls-title">그룹 표시</span>
+        ${items}
+      </div>
+      <div class="legend-actions scale-group-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
+        <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
+        <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+        ${criterionLabel ? `<button type="button" class="legend-action-btn" data-open-group-config="true" data-target="${escapeHtml(data.targetLabel)}" data-criterion="${escapeHtml(criterionLabel)}">그룹 설정</button>` : ''}
+      </div>
     </div>
   `;
 }
@@ -4851,7 +4732,6 @@ function buildNumericOpenControlsHtml(targetLabel, interval, start, disabled = f
 }
 
 function buildNumericWhiskerTrackHtml(item, axisMin, axisMax, numberUnit = '', groupLabel = '', options = {}) {
-  const { boxColor = '#b8b8b8' } = options;
   const minLeft = getNumericValueLeftPct(item.min, axisMin, axisMax);
   const q1Left = getNumericValueLeftPct(item.q1, axisMin, axisMax);
   const medianLeft = getNumericValueLeftPct(item.median, axisMin, axisMax);
@@ -4860,8 +4740,10 @@ function buildNumericWhiskerTrackHtml(item, axisMin, axisMax, numberUnit = '', g
   const meanLeft = getNumericValueLeftPct(item.mean, axisMin, axisMax);
   const rangeLeft = Math.min(minLeft ?? 0, maxLeft ?? 0);
   const rangeWidth = Math.max(0.8, Math.abs((maxLeft ?? 0) - (minLeft ?? 0)));
-  const boxLeft = Math.min(q1Left ?? 0, q3Left ?? 0);
-  const boxWidth = Math.max(0.8, Math.abs((q3Left ?? 0) - (q1Left ?? 0)));
+  const q1ToMedianLeft = Math.min(q1Left ?? 0, medianLeft ?? 0);
+  const q1ToMedianWidth = Math.max(0, Math.abs((medianLeft ?? 0) - (q1Left ?? 0)));
+  const medianToQ3Left = Math.min(medianLeft ?? 0, q3Left ?? 0);
+  const medianToQ3Width = Math.max(0, Math.abs((q3Left ?? 0) - (medianLeft ?? 0)));
   const rangeTip = encodeURIComponent(JSON.stringify({
     kind: 'numeric-whisker-range',
     groupLabel,
@@ -4904,7 +4786,8 @@ function buildNumericWhiskerTrackHtml(item, axisMin, axisMax, numberUnit = '', g
         <div class="numeric-whisker-range" style="left:${rangeLeft}%; width:${rangeWidth}%;" data-tip="${rangeTip}"></div>
         <div class="numeric-whisker-cap" style="left:${minLeft}%;"></div>
         <div class="numeric-whisker-cap" style="left:${maxLeft}%;"></div>
-        <div class="numeric-whisker-box" style="left:${boxLeft}%; width:${boxWidth}%; background:${boxColor};" data-tip="${boxTip}"></div>
+        <div class="numeric-whisker-box is-left" style="left:${q1ToMedianLeft}%; width:${q1ToMedianWidth}%; background:var(--color-2);" data-tip="${boxTip}"></div>
+        <div class="numeric-whisker-box is-right" style="left:${medianToQ3Left}%; width:${medianToQ3Width}%; background:var(--color-1);" data-tip="${boxTip}"></div>
         <div class="numeric-whisker-median" style="left:${medianLeft}%;" data-tip="${medianTip}"></div>
         <div class="numeric-whisker-mean" style="left:${meanLeft}%;" data-tip="${meanTip}">
           <div class="numeric-whisker-mean-label">평균</div>
@@ -5027,8 +4910,8 @@ function buildNumericHistogramChartHtml(histogram, options = {}) {
         <div class="numeric-open-mean-layer">
           ${histogram.meanLeftPct === null ? '' : `
           <div class="numeric-open-mean-marker" style="left:${histogram.meanLeftPct}%;">
-            <div class="numeric-open-mean-pill" data-tip="${meanTip}">평균 ${formatNumericMeanDisplay(histogram.mean, numberUnit)}</div>
             <div class="numeric-open-mean-line"></div>
+            <div class="numeric-open-mean-label" data-tip="${meanTip}">평균</div>
           </div>
         `}
         </div>
@@ -5079,7 +4962,7 @@ function buildNumericOpenGroupChartHtml(data, hiddenGroups) {
   const groupRowsHtml = displayGroups.map(group => {
     const groupLabel = criterionLabel ? `${criterionLabel}: ${group.value}` : group.label;
     const color = getGroupColor(data.groupResults, group.value);
-    const trackHtml = buildNumericWhiskerTrackHtml(group, data.domainMin, data.domainMax, numberUnit, groupLabel, { boxColor: color });
+    const trackHtml = buildNumericWhiskerTrackHtml(group, data.domainMin, data.domainMax, numberUnit, groupLabel);
     return `
       <div class="numeric-whisker-row">
         <div class="numeric-whisker-label">${escapeHtml(groupLabel)}</div>
@@ -5111,7 +4994,7 @@ function buildNumericOpenSection(data) {
   const { codebookEntry, targetLabel, groupResults } = data;
   const hiddenGroups = resultState.hiddenGroupKeys.get(targetLabel) || new Set();
   const showTable = true;
-  const viewMode = groupResults ? 'box' : (resultState.numericOpenViewModes.get(targetLabel) || 'histogram');
+  const viewMode = groupResults ? 'box' : (resultState.numericOpenViewModes.get(targetLabel) || 'box');
   const chartHtml = groupResults
     ? buildNumericOpenGroupChartHtml(data, hiddenGroups)
     : viewMode === 'box'
@@ -5445,12 +5328,12 @@ function buildNumericOpenDataTableHtml(data, hiddenGroups = new Set()) {
   return wrapResultTable(tableHtml);
 }
 
-function buildDataTableHtml(data, hiddenGroups = new Set()) {
+function buildDataTableHtml(data, hiddenGroups = new Set(), noteHtml = '') {
   if (data.visualType === 'rank') return buildRankDataTableHtml(data, hiddenGroups);
   if (data.visualType === 'scale') return buildScaleDataTableHtml(data, hiddenGroups);
   if (data.visualType === 'numeric-open') return buildNumericOpenDataTableHtml(data, hiddenGroups);
   if (data.visualType === 'ratio-allocation') return buildRatioAllocationDataTableHtml(data, hiddenGroups);
-  return buildChoiceDataTableHtml(data);
+  return buildChoiceDataTableHtml(data, noteHtml);
 }
 
 /* =========================================================
@@ -5729,6 +5612,39 @@ function buildRankControlsHtml(targetLabel, options = {}) {
     sortByScore = false
   } = options;
   const safeTarget = escapeHtml(targetLabel);
+  const isMenuOpen = resultState.openRankMenus.has(targetLabel);
+  const directionLabel = viewMode === 'vertical' ? '세로' : '가로';
+  const directionHtml = `
+    <div class="choice-controls-group">
+      <span class="choice-controls-label">그래프 방향 선택</span>
+      <div class="choice-chart-type-select ${isMenuOpen ? 'is-open' : ''}" data-rank-view-mode-select="true">
+        <button type="button"
+                class="choice-chart-type-trigger"
+                data-rank-view-mode-trigger="true"
+                data-target="${safeTarget}"
+                aria-haspopup="listbox"
+                aria-expanded="${isMenuOpen ? 'true' : 'false'}">
+          <span class="choice-chart-type-current">${directionLabel}</span>
+          <img class="choice-chart-type-chevron" src="assets/icons/keyboard_arrow_down_40dp_151515_FILL0_wght400_GRAD0_opsz40.svg" alt="" aria-hidden="true">
+        </button>
+        <div class="choice-chart-type-menu" role="listbox" ${isMenuOpen ? '' : 'hidden'}>
+          ${[
+            { mode: 'horizontal', label: '가로' },
+            { mode: 'vertical', label: '세로' }
+          ].map(item => `
+            <button type="button"
+                    class="choice-chart-type-option"
+                    data-rank-view-mode-option="${item.mode}"
+                    data-target="${safeTarget}"
+                    role="option"
+                    aria-selected="${item.mode === viewMode ? 'true' : 'false'}">
+              ${item.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
   const chartTypeHtml = `
     <div class="choice-controls-group">
       <div class="result-view-toggle" role="tablist" aria-label="순위 그래프 형태">
@@ -5745,33 +5661,13 @@ function buildRankControlsHtml(targetLabel, options = {}) {
       </div>
     </div>
   `;
-  const orientationHtml = chartType === 'stacked' ? `
-    <div class="choice-controls-group">
-      <span class="choice-controls-label">막대 방향</span>
-      <div class="result-view-toggle" role="tablist" aria-label="순위 막대 방향">
-        ${[
-          { mode: 'horizontal', label: '가로 막대' },
-          { mode: 'vertical', label: '세로 막대' }
-        ].map(item => `
-          <button type="button"
-                  class="result-view-btn ${item.mode === viewMode ? 'active' : ''}"
-                  data-rank-view-mode="${item.mode}"
-                  data-target="${safeTarget}"
-                  role="tab"
-                  aria-selected="${item.mode === viewMode ? 'true' : 'false'}">
-            ${escapeHtml(item.label)}
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  ` : '';
   const sortHtml = `
     <label class="choice-controls-sort">
       <input type="checkbox" data-rank-sort-by-score data-target="${safeTarget}" ${sortByScore ? 'checked' : ''}>
       <span class="choice-controls-sort-label">가중 평균 높은 순서로 정렬</span>
     </label>
   `;
-  return `<div class="choice-controls">${chartTypeHtml}${orientationHtml}${sortHtml}</div>`;
+  return `<div class="choice-controls">${directionHtml}${chartTypeHtml}${sortHtml}</div>`;
 }
 
 function buildRankSummaryHtml(data) {
@@ -5812,7 +5708,12 @@ function buildRankLollipopChartHtml(data) {
     if (axisMax === axisMin) return 0;
     return ((safeValue - axisMin) / (axisMax - axisMin)) * 100;
   };
-  const rowHtml = rows.map((r, index) => {
+  const overlayHeight = rows.length * 40 - 8; // (row-height 32 + gap 8) * n - last gap
+  const guideOverlayHtml = axisTicks.map(tick => {
+    const tickPct = pctFor(tick);
+    return `<span class="rank-point-guide" style="left:${tickPct}%;"></span>`;
+  }).join('');
+  const rowHtml = rows.map((r) => {
     const rankObj = data.ranking.find(item => item.option === r.option);
     const posText = rankObj ? `${rankObj.position}위` : '-';
     const color = RANK_LOLLIPOP_COLOR;
@@ -5824,25 +5725,23 @@ function buildRankLollipopChartHtml(data) {
       weightedAverage: r.weightedAverage,
       rankPosition: posText
     }));
-    const guideHtml = axisTicks.map(tick => {
-      const tickPct = pctFor(tick);
-      return `<span class="rank-point-guide ${tick === axisMin ? 'is-zero' : ''}" style="left:${tickPct}%;"></span>`;
-    }).join('');
     return `
       <div class="rank-point-row">
         <div class="rank-point-label" title="${escapeHtml(r.option)}" data-tip="${tip}">${escapeHtml(r.option)}</div>
         <div class="rank-point-track" data-tip="${tip}">
-          <div class="rank-point-track-guides" aria-hidden="true">${guideHtml}</div>
           <div class="rank-point-line" style="width:${leftPct}%;background:${color};"></div>
           <div class="rank-point-dot" style="left:${leftPct}%;background:${color};"></div>
+          <div class="rank-point-inline-label" style="left:calc(${leftPct}% + 17px);" aria-hidden="true">
+            <span class="rank-point-value">${valueText}</span>
+            <span class="rank-point-rank">${escapeHtml(posText)}</span>
+          </div>
         </div>
-        <div class="rank-point-value">${valueText}</div>
-        <div class="rank-point-rank">${escapeHtml(posText)}</div>
       </div>
     `;
   }).join('');
   return `
     <div class="rank-point-chart">
+      <div class="rank-point-guides-overlay" style="height:${overlayHeight}px;" aria-hidden="true">${guideOverlayHtml}</div>
       ${rowHtml}
       <div class="rank-point-axis-row" aria-hidden="true">
         <div class="rank-point-axis-spacer"></div>
@@ -5853,35 +5752,95 @@ function buildRankLollipopChartHtml(data) {
             return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
           }).join('')}
         </div>
-        <div class="rank-point-axis-spacer"></div>
-        <div class="rank-point-axis-spacer"></div>
       </div>
-      <div class="rank-point-axis-title-row">
-        <div class="rank-point-axis-spacer"></div>
-        <div class="rank-point-axis-title">가중 평균 점수</div>
-        <div class="rank-point-axis-spacer"></div>
-        <div class="rank-point-axis-spacer"></div>
+    </div>
+  `;
+}
+
+function buildRankVerticalAxisMeta(maxValue, step, suffix = '') {
+  const safeStep = Math.max(1, Number(step) || 1);
+  const safeMax = Math.max(safeStep, Number(maxValue) || 0);
+  const topValue = Math.ceil(safeMax / safeStep) * safeStep;
+  const ticks = [];
+  for (let value = topValue; value >= 0; value -= safeStep) {
+    const bottomPx = topValue === 0 ? 0 : (value / topValue) * RANK_VERTICAL_TRACK_HEIGHT;
+    ticks.push({
+      value,
+      label: `${value}${suffix}`,
+      bottomPx
+    });
+  }
+  return { topValue, ticks };
+}
+
+function buildRankVerticalLollipopChartHtml(data) {
+  const rows = [...(data.totalResults || [])];
+  const axisMax = Math.max(0, ...((data.rankWeights || []).map(Number)));
+  const axisMeta = buildRankVerticalAxisMeta(axisMax, 1, '');
+  const itemsHtml = rows.map(row => {
+    const rankObj = data.ranking.find(item => item.option === row.option);
+    const posText = rankObj ? `${rankObj.position}위` : '-';
+    const valueText = formatRankAverage(row.weightedAverage);
+    const ratio = axisMeta.topValue > 0 ? Math.max(0, Math.min(1, (Number(row.weightedAverage) || 0) / axisMeta.topValue)) : 0;
+    const bottomPx = ratio * RANK_VERTICAL_TRACK_HEIGHT;
+    const tip = encodeURIComponent(JSON.stringify({
+      kind: 'rank-lollipop',
+      option: row.option,
+      weightedAverage: row.weightedAverage,
+      rankPosition: posText
+    }));
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: row.option
+    }));
+    return `
+      <div class="rank-vertical-item rank-vertical-lollipop-item">
+        <div class="rank-vertical-metric-slot">
+          <div class="rank-vertical-marker-copy" style="bottom:${bottomPx + 11}px;">
+            <span class="rank-vertical-rank">${escapeHtml(posText)}</span>
+            <span class="rank-vertical-value">${valueText}</span>
+          </div>
+          <div class="rank-vertical-track" data-tip="${tip}">
+            <div class="rank-vertical-lollipop-line" style="height:${bottomPx}px;"></div>
+            <div class="rank-vertical-lollipop-dot" style="bottom:${bottomPx}px;"></div>
+          </div>
+        </div>
+        <div class="rank-vertical-label" title="${escapeHtml(row.option)}" data-tip="${labelTip}">${escapeHtml(row.option)}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="rank-vertical-chart rank-vertical-lollipop-chart">
+      <div class="rank-vertical-chart-body">
+        <div class="rank-vertical-axis" aria-hidden="true">
+          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
+        </div>
+        <div class="rank-vertical-plot">
+          <div class="rank-vertical-grid" aria-hidden="true">
+            ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+          </div>
+          ${itemsHtml}
+        </div>
       </div>
     </div>
   `;
 }
 
 function buildRankStackChartHtml(data, hiddenRanks) {
-  const rows = getRankChartRows(data, hiddenRanks);
+  const rows = [...(data.totalResults || [])];
   const rankLabels = data.rankLabels;
   const rowHtml = rows.map(r => {
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
     }));
-    const rankedCount = r.perRank.reduce((s, pr) => s + (pr.count || 0), 0);
-    const nonRankedCount = Math.max(0, (r.totalCount || 0) - rankedCount);
-    const nonRankedPct = Math.max(0, (r.totalPct || 0) - r.perRank.reduce((s, pr) => s + (pr.pct || 0), 0));
     const segments = r.perRank.map((pr, ri) => {
       if (hiddenRanks.has(ri)) return "";
       const w = Math.max(0, pr.pct);
       if (w <= 0) return "";
       const color = rankStackColor(ri);
+      const labelColor = ri === 0 ? 'var(--White)' : 'var(--neutral-700)';
       const tip = encodeURIComponent(JSON.stringify({
         kind: 'rank-seg',
         option: r.option,
@@ -5889,31 +5848,20 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
+      const valueHtml = w >= 8
+        ? `<span class="rank-stack-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`
+        : '';
       return `<div class="rank-stack-seg"
                    style="width:${w}%; background:${color};"
-                   data-tip="${tip}"></div>`;
+                   data-tip="${tip}">${valueHtml}</div>`;
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
-    const fallbackWidth = Math.max(0, Math.min(100, nonRankedPct));
-    const fallbackTip = encodeURIComponent(JSON.stringify({
-      kind: 'rank-nonranked',
-      option: r.option,
-      rankLabel: '비순위 응답',
-      pct: nonRankedPct,
-      count: nonRankedCount
-    }));
-    const fallbackHtml = fallbackWidth > 0
-      ? `<div class="rank-stack-seg" style="width:${fallbackWidth}%; background:#b88383;" data-tip="${fallbackTip}"></div>`
-      : "";
-    const trackHtml = `${segments}${fallbackHtml}`;
-    const displayedPct = visiblePct + nonRankedPct;
-    const safeDisplayedPct = Math.max(0, Math.min(100, displayedPct));
-    const totalValueHtml = `<span class="rank-stack-total-value is-outside" style="left:${safeDisplayedPct}%;">${formatPercent(displayedPct)}</span>`;
+    const safeDisplayedPct = Math.max(0, Math.min(100, visiblePct));
+    const totalValueHtml = `<span class="rank-stack-total-value is-outside" style="left:${safeDisplayedPct}%;">${formatPercent(visiblePct)}</span>`;
     return `
       <div class="rank-stack-row">
         <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
-        <div class="rank-stack-track">${trackHtml}${totalValueHtml}</div>
-        <div class="rank-stack-rank-placeholder" aria-hidden="true"></div>
+        <div class="rank-stack-track">${segments}${totalValueHtml}</div>
       </div>
     `;
   }).join('');
@@ -5921,21 +5869,28 @@ function buildRankStackChartHtml(data, hiddenRanks) {
 }
 
 function buildRankVerticalStackChartHtml(data, hiddenRanks) {
-  const rows = getRankChartRows(data, hiddenRanks);
+  const rows = [...(data.totalResults || [])];
   const rankLabels = data.rankLabels || [];
+  const maxDisplayedPct = rows.reduce((max, row) => {
+    const visiblePct = (row.perRank || []).reduce((sum, pr, ri) => sum + (hiddenRanks.has(ri) ? 0 : (pr.pct || 0)), 0);
+    return Math.max(max, visiblePct);
+  }, 0);
+  const axisMeta = buildRankVerticalAxisMeta(Math.max(20, maxDisplayedPct), 20, '%');
   const rowHtml = rows.map(r => {
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
     }));
-    const rankedCount = r.perRank.reduce((s, pr) => s + (pr.count || 0), 0);
-    const nonRankedCount = Math.max(0, (r.totalCount || 0) - rankedCount);
-    const nonRankedPct = Math.max(0, (r.totalPct || 0) - r.perRank.reduce((s, pr) => s + (pr.pct || 0), 0));
+    let cumulativePx = 0;
     const segments = r.perRank.map((pr, ri) => {
       if (hiddenRanks.has(ri)) return "";
-      const h = Math.max(0, pr.pct);
-      if (h <= 0) return "";
-      const color = rankColor(ri);
+      const pct = Math.max(0, pr.pct);
+      if (pct <= 0) return "";
+      const heightPx = axisMeta.topValue > 0 ? (pct / axisMeta.topValue) * RANK_VERTICAL_TRACK_HEIGHT : 0;
+      if (heightPx <= 0) return "";
+      cumulativePx += heightPx;
+      const color = rankStackColor(ri);
+      const labelColor = ri === 0 ? 'var(--White)' : 'var(--neutral-700)';
       const tip = encodeURIComponent(JSON.stringify({
         kind: 'rank-seg',
         option: r.option,
@@ -5943,33 +5898,42 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
-      const labelHtml = h >= 8 ? `<span class="vbar-seg-value">${formatPercent(pr.pct)}</span>` : '';
-      return `<div class="vbar-stack-seg"
-                   style="height:${Math.min(100, h)}%; background:${color};"
+      const labelHtml = heightPx >= 18
+        ? `<span class="rank-vertical-stack-seg-value" style="bottom:${cumulativePx + 2}px; color:${labelColor};">${formatPercent(pr.pct)}</span>`
+        : '';
+      return `<div class="rank-vertical-stack-seg"
+                   style="height:${heightPx}px; background:${color};"
                    data-tip="${tip}">${labelHtml}</div>`;
     }).join("");
-    const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
-    const fallbackHeight = Math.max(0, Math.min(100, nonRankedPct));
-    const fallbackTip = encodeURIComponent(JSON.stringify({
-      kind: 'rank-nonranked',
-      option: r.option,
-      rankLabel: '비순위 응답',
-      pct: nonRankedPct,
-      count: nonRankedCount
-    }));
-    const fallbackHtml = fallbackHeight > 0
-      ? `<div class="vbar-stack-seg" style="height:${fallbackHeight}%; background:#b88383;" data-tip="${fallbackTip}">${fallbackHeight >= 8 ? `<span class="vbar-seg-value">${formatPercent(nonRankedPct)}</span>` : ''}</div>`
-      : "";
-    const displayedPct = visiblePct + nonRankedPct;
+    const displayedPct = r.perRank.reduce((sum, pr, ri) => sum + (hiddenRanks.has(ri) ? 0 : (pr.pct || 0)), 0);
+    const totalBottomPx = axisMeta.topValue > 0 ? (displayedPct / axisMeta.topValue) * RANK_VERTICAL_TRACK_HEIGHT : 0;
     return `
-      <div class="vbar-item rank-stack">
-        <div class="vbar-value">${formatPercent(displayedPct)}</div>
-        <div class="vbar-track vbar-stack-track">${segments}${fallbackHtml}</div>
-        <div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+      <div class="rank-vertical-item rank-vertical-stack-item">
+        <div class="rank-vertical-metric-slot">
+          <div class="rank-vertical-track rank-vertical-stack-track">
+            <div class="rank-vertical-total-copy" style="bottom:${totalBottomPx + 2}px;">${formatPercent(displayedPct)}</div>
+            ${segments}
+          </div>
+        </div>
+        <div class="rank-vertical-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
       </div>
     `;
   }).join('');
-  return buildVerticalChartShell(rowHtml, 'rank-stack');
+  return `
+    <div class="rank-vertical-chart rank-vertical-stack-chart">
+      <div class="rank-vertical-chart-body">
+        <div class="rank-vertical-axis" aria-hidden="true">
+          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
+        </div>
+        <div class="rank-vertical-plot">
+          <div class="rank-vertical-grid" aria-hidden="true">
+            ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+          </div>
+          ${rowHtml}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function buildRankLegendHtml(data, hiddenRanks) {
@@ -5997,6 +5961,7 @@ function buildRankLegendHtml(data, hiddenRanks) {
 
 function buildRankGroupLegendHtml(data, hiddenGroups) {
   if (!data.groupResults) return '';
+  const criterionLabel = data.criterionLabel || '';
   const items = data.groupResults.map((g, i) => {
     const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
     const isHidden = hiddenGroups.has(g.value);
@@ -6014,6 +5979,7 @@ function buildRankGroupLegendHtml(data, hiddenGroups) {
       <div class="legend-actions" data-target="${escapeHtml(data.targetLabel)}" data-mode="group">
         <button type="button" class="legend-action-btn" data-legend-action="all-on">전체 선택</button>
         <button type="button" class="legend-action-btn" data-legend-action="all-off">전체 해제</button>
+        ${criterionLabel ? `<button type="button" class="legend-action-btn" data-open-group-config="true" data-target="${escapeHtml(data.targetLabel)}" data-criterion="${escapeHtml(criterionLabel)}">그룹 설정</button>` : ''}
       </div>
     </aside>
   `;
@@ -6142,7 +6108,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   const { totalResults, rankLabels, groupResults, respondentN } = data;
   if (!groupResults) {
     const topRow = [
-      `<th rowspan="2">응답 보기</th>`,
+      `<th rowspan="2">보기</th>`,
       ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
       `<th rowspan="2" class="num group-col">가중 평균</th>`,
       `<th rowspan="2" class="num">종합 순위</th>`
@@ -6154,12 +6120,13 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
       const rankObj = data.ranking.find(rk => rk.option === r.option);
       const pos = rankObj ? rankObj.position : '-';
       const rankCells = r.perRank.map(pr => `<td class="num">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
+      const posColor = typeof pos === 'number' ? `var(--color-${Math.min(pos, 20)})` : null;
       return `
         <tr>
           <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
           ${rankCells}
           <td class="num">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
-          <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
+          <td class="num${posColor ? ' rank-pos-cell' : ''}"${posColor ? ` style="background:${posColor};"` : ''}>${pos === '-' ? '-' : `${pos}위`}</td>
         </tr>
       `;
     }).join('');
@@ -6194,7 +6161,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   const displayGroups = getDisplayGroupResults(groupResults, hiddenGroups);
   const blockColspan = (rankLabels.length * 2) + 2;
   const topRow = [
-    `<th rowspan="3">응답 보기</th>`,
+    `<th rowspan="3">보기</th>`,
     buildGroupedCountHeader('응답자 전체', respondentN, blockColspan),
     ...displayGroups.map(g => buildGroupedCountHeader(g.label, g.n, blockColspan))
   ].join('');
@@ -6202,7 +6169,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
       ...[null, ...displayGroups].map(() => [
         ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
       `<th rowspan="2" class="num group-col">가중 평균</th>`,
-      `<th rowspan="2" class="num">종합순위</th>`
+      `<th rowspan="2" class="num">종합 순위</th>`
     ].join(''))
   ].join('');
   const subRow = [
@@ -6222,14 +6189,16 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
         .join('');
       const rk = g.ranking.find(x => x.option === r.option);
       const po = rk ? rk.position : '-';
-      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
+      const poColor = typeof po === 'number' ? `var(--color-${Math.min(po, 20)})` : null;
+      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num${poColor ? ' rank-pos-cell' : ''}"${poColor ? ` style="background:${poColor};"` : ''}>${po === '-' ? '-' : `${po}위`}</td>`;
     }).join('');
+    const totalPosColor = typeof totalPos === 'number' ? `var(--color-${Math.min(totalPos, 20)})` : null;
     return `
       <tr>
         <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
         ${rankCells}
         <td class="num group-col">${totalRank ? formatRankAverage(r.weightedAverage) : '-'}</td>
-        <td class="num">${totalPos === '-' ? '-' : `${totalPos}위`}</td>
+        <td class="num${totalPosColor ? ' rank-pos-cell' : ''}"${totalPosColor ? ` style="background:${totalPosColor};"` : ''}>${totalPos === '-' ? '-' : `${totalPos}위`}</td>
         ${groupCells}
       </tr>
     `;
@@ -6302,7 +6271,9 @@ function buildRankSection(data, rows) {
         : buildRankStackChartHtml(displayData, hiddenRanks);
       legendHtml = buildRankLegendHtml(displayData, hiddenRanks);
     } else {
-      chartHtml = buildRankLollipopChartHtml(displayData);
+      chartHtml = viewMode === 'vertical'
+        ? buildRankVerticalLollipopChartHtml(displayData)
+        : buildRankLollipopChartHtml(displayData);
       legendHtml = '<aside class="legend-panel is-placeholder" aria-hidden="true"></aside>';
     }
   }
@@ -6327,9 +6298,8 @@ function buildRankSection(data, rows) {
       </div>
       ${controlsHtml}
       ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
-      ${formulaNoteHtml}
       <div class="result-visual has-legend">
-        <div class="result-chart-col">${compareChartHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}${formulaNoteHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -6592,7 +6562,7 @@ function buildChoiceControlsHtml(targetLabel, options) {
         <div class="choice-chart-type-menu" role="listbox" ${isMenuOpen ? '' : 'hidden'}>
           ${chartTypes.map(type => `
             <button type="button"
-                    class="choice-chart-type-option ${type === chartType ? 'is-active' : ''}"
+                    class="choice-chart-type-option"
                     data-choice-chart-type="${type}"
                     data-choice-chart-scope="${escapeHtml(stateScope)}"
                     data-target="${safeTarget}"
@@ -6617,7 +6587,7 @@ function buildChoiceControlsHtml(targetLabel, options) {
 }
 
 /* ---------- 객관식 단일: 세로 막대 차트 ---------- */
-function buildVerticalBarChartHtml(data) {
+function buildSingleChoiceVerticalBarChartHtml(data) {
   const rows = data.totalResults;
   const maxPctValue = rows.reduce((max, row) => Math.max(max, row.pct || 0), 0);
   const axisMax = Math.max(20, Math.ceil(maxPctValue / 20) * 20);
@@ -6633,10 +6603,10 @@ function buildVerticalBarChartHtml(data) {
       count: r.count
     }));
     return `
-      <div class="vbar-col" style="--vbar-pct:${scaledPct}%; --vbar-raw-pct:${pct}%;">
-        <div class="vbar-value">${formatPercent(r.pct)}</div>
-        <div class="vbar-track">
-          <div class="vbar-fill" data-tip="${tip}"></div>
+      <div class="single-vbar-col" style="--single-vbar-pct:${scaledPct}%; --single-vbar-raw-pct:${pct}%;">
+        <div class="single-vbar-value">${formatPercent(r.pct)}</div>
+        <div class="single-vbar-track">
+          <div class="single-vbar-fill" data-tip="${tip}"></div>
         </div>
       </div>
     `;
@@ -6646,21 +6616,21 @@ function buildVerticalBarChartHtml(data) {
       kind: 'option-label',
       option: r.option
     }));
-    return `<div class="vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
+    return `<div class="single-vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
   }).join('');
   const guidesHtml = guideMarks.map(mark => `
-    <div class="vbar-guide" style="bottom:${(mark / axisMax) * 100}%;">
-      <span class="vbar-guide-line"></span>
-      <span class="vbar-guide-label">${mark}%</span>
+    <div class="single-vbar-guide" style="bottom:${(mark / axisMax) * 100}%;">
+      <span class="single-vbar-guide-line"></span>
+      <span class="single-vbar-guide-label">${mark}%</span>
     </div>
   `).join('');
   return `
-    <div class="vbar-chart">
-      <div class="vbar-plot">
-        <div class="vbar-guides" aria-hidden="true">${guidesHtml}</div>
-        <div class="vbar-track-row">${colsHtml}</div>
+    <div class="single-vbar-chart">
+      <div class="single-vbar-plot">
+        <div class="single-vbar-guides" aria-hidden="true">${guidesHtml}</div>
+        <div class="single-vbar-track-row">${colsHtml}</div>
       </div>
-      <div class="vbar-label-row">${labelsHtml}</div>
+      <div class="single-vbar-label-row">${labelsHtml}</div>
     </div>
   `;
 }
@@ -6677,55 +6647,66 @@ function buildStacked100ChartHtml(data) {
       pct: r.pct,
       count: r.count
     }));
+    const valueHtml = width >= 8 ? `<span class="stack100-segment-value">${formatPercent(r.pct)}</span>` : '';
     return `
       <div class="stack100-segment ${width < 8 ? 'is-narrow' : ''}"
            style="flex:0 0 ${width}%; background:${color};"
-           data-tip="${tip}"></div>
-    `;
-  }).join('');
-  const topValuesHtml = rows.map(r => {
-    const width = Math.max(0, Math.min(100, r.pct));
-    return `
-      <div class="stack100-topvalue-slot is-visible" style="flex:0 0 ${width}%;">
-        <span class="stack100-topvalue">${formatPercent(r.pct)}</span>
-      </div>
+           data-tip="${tip}">${valueHtml}</div>
     `;
   }).join('');
   const labelHtml = rows.map((r, i) => {
     const width = Math.max(0, Math.min(100, r.pct));
-    const posClass = i === 0
-      ? 'is-start'
-      : (i === rows.length - 1 ? (width >= 18 ? 'is-center' : 'is-end') : 'is-center');
     return `
-      <div class="stack100-label-slot ${posClass}" style="flex:0 0 ${width}%;">
+      <div class="stack100-label-slot ${width < 12 ? 'is-narrow' : ''}" style="flex:0 0 ${width}%;">
         <span class="stack100-label-text">${escapeHtml(r.option)}</span>
       </div>
     `;
   }).join('');
   return `
     <div class="stack100-chart">
-      <div class="stack100-topvalues" aria-hidden="true">${topValuesHtml}</div>
       <div class="stack100-track">${segmentsHtml}</div>
       <div class="stack100-label-row">${labelHtml}</div>
     </div>
   `;
 }
 
+function buildChoiceOptionLegendHtml(data) {
+  const items = (data.totalResults || []).map((row, index) => {
+    const color = GROUP_PALETTE[index % GROUP_PALETTE.length];
+    return `
+      <div class="legend-item is-static">
+        <span class="legend-swatch" style="background:${color}"></span>
+        <span title="${escapeHtml(row.option)}">${escapeHtml(row.option)}</span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <aside class="legend-panel">
+      <div class="legend is-static" data-target="${escapeHtml(data.targetLabel)}" data-mode="static">${items}</div>
+    </aside>
+  `;
+}
+
 /* ---------- 객관식 단일: 원/파이 ---------- */
 function buildPieChartHtml(data) {
   const rows = data.totalResults;
+  const visibleRows = rows
+    .map((row, index) => ({ row, index }))
+    .filter(entry => (entry.row.pct || 0) > 0);
+  if (visibleRows.length === 0) return '<div class="result-empty">표시할 데이터가 없습니다.</div>';
   const cx = 160;
   const cy = 160;
   const r = 142;
-  const totalPct = rows.reduce((s, x) => s + (x.pct || 0), 0) || 100;
+  const totalPct = visibleRows.reduce((s, entry) => s + (entry.row.pct || 0), 0) || 100;
   let angleAcc = -Math.PI / 2; // 12시 방향에서 시작
-  const slices = rows.map((row, i) => {
+  const slices = visibleRows.map(({ row, index }) => {
     const fraction = (row.pct || 0) / totalPct;
     if (!Number.isFinite(fraction) || fraction <= 0) return null;
     const startAngle = angleAcc;
     let endAngle = angleAcc + fraction * Math.PI * 2;
     angleAcc = endAngle;
-    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
+    const color = GROUP_PALETTE[index % GROUP_PALETTE.length];
     const tip = encodeURIComponent(JSON.stringify({
       kind: 'basic-bar',
       option: row.option,
@@ -6783,30 +6764,20 @@ function buildPieChartHtml(data) {
   }).filter(Boolean);
   const slicesHtml = slices.map(item => item.slice).join('');
   const labelsHtml = slices.map(item => item.label).join('');
-  const legendHtml = rows.map((row, i) => {
-    const color = GROUP_PALETTE[i % GROUP_PALETTE.length];
-    return `
-      <div class="pie-legend-item">
-        <span class="pie-legend-swatch" style="background:${color};"></span>
-        <span class="pie-legend-name" title="${escapeHtml(row.option)}">${escapeHtml(row.option)}</span>
-      </div>
-    `;
-  }).join('');
   return `
     <div class="pie-chart">
       <div class="pie-svg-wrap">
-        <svg class="pie-svg" viewBox="0 0 320 320" role="img" aria-label="원 그래프">
+        <svg class="pie-svg" viewBox="0 0 320 320" role="img" aria-label="원형(파이) 그래프">
           ${slicesHtml}
           ${labelsHtml}
         </svg>
       </div>
-      <div class="pie-legend">${legendHtml}</div>
     </div>
   `;
 }
 
 function buildSingleChoiceChartByType(data, chartType) {
-  if (chartType === 'bar_vertical') return buildVerticalBarChartHtml(data);
+  if (chartType === 'bar_vertical') return buildSingleChoiceVerticalBarChartHtml(data);
   if (chartType === 'bar_horizontal_100') return buildStacked100ChartHtml(data);
   if (chartType === 'pie') return buildPieChartHtml(data);
   return buildBasicChartHtml(data);
@@ -6822,7 +6793,7 @@ function ensureGroupConfigModal() {
         <div class="modal-header">
           <div class="modal-title" id="group-config-modal-title">그룹 설정</div>
           <button class="modal-close" id="close-group-config-btn" aria-label="닫기">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <img class="modal-close-icon" src="assets/icons/close_wght600fill1_40px.svg" alt="">
           </button>
         </div>
         <div class="modal-body">
@@ -7088,19 +7059,19 @@ function buildChoiceSectionHtml(data, rows) {
   const compareChartHtml = groupResults && compareMode === 'item'
     ? buildGroupedHorizontalCompareChartHtml(displayData, displayHidden)
     : chartHtml;
-  const isPieTableLayout = isSingleWithoutGroup && chartType === 'pie';
   // legend는 항상 원본 data 기준으로 (그룹 설정 버튼/체크 유지)
-  const legendHtml = groupResults ? buildLegendHtml(data, hiddenGroups) : '';
-  const tableHtml = isPieTableLayout
-    ? buildPieChartTableLayoutHtml(chartHtml, buildSimpleChoiceTableHtml(displayData))
-    : buildDataTableHtml(displayData, displayHidden);
-  const otherTexts = getOtherResponseTexts(targetLabel, rows);
-  resultState.otherResponseTexts.set(targetLabel, otherTexts);
-  const fullText = buildQuestionFullHtml(codebookEntry);
-  const visualClass = getResultVisualClass(!!groupResults);
+  const legendHtml = groupResults
+    ? buildLegendHtml(data, hiddenGroups)
+    : (isSingleWithoutGroup && chartType === 'pie' ? buildChoiceOptionLegendHtml(displayData) : '');
+  const sidePanelHtml = buildResultSidePanelHtml(legendHtml, targetLabel);
   const tableNoteHtml = data.isMulti
     ? '<div class="result-table-note">객관식 중복 응답 문항으로, 보기별 비율 합계는 100%를 초과할 수 있습니다.</div>'
     : '';
+  const tableHtml = buildDataTableHtml(displayData, displayHidden, tableNoteHtml);
+  const otherTexts = getOtherResponseTexts(targetLabel, rows);
+  resultState.otherResponseTexts.set(targetLabel, otherTexts);
+  const fullText = buildQuestionFullHtml(codebookEntry);
+  const visualClass = getResultVisualClass(!!groupResults || (isSingleWithoutGroup && chartType === 'pie'));
 
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="${data.isMulti ? 'multiple' : 'single'}">
@@ -7110,14 +7081,11 @@ function buildChoiceSectionHtml(data, rows) {
       </div>
       ${controlsHtml}
       ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
-      ${isPieTableLayout ? '' : `
-        <div class="${visualClass}">
-          <div class="result-chart-col">${compareChartHtml}</div>
-          ${legendHtml}
-        </div>
-      `}
+      <div class="${visualClass}">
+        <div class="result-chart-col">${compareChartHtml}</div>
+        ${sidePanelHtml}
+      </div>
       ${tableHtml}
-      ${tableNoteHtml}
     </section>
   `;
 }
@@ -7153,11 +7121,10 @@ function buildScaleSection(data, rows) {
         <div class="result-title">${escapeHtml(targetLabel)}</div>
         ${fullText}
         ${toggleHtml}
-        ${groupControlsHtml}
       </div>
       ${groupResults ? buildGroupCompareViewToggleHtml(data) : ''}
       <div class="${visualClass}">
-        <div class="result-chart-col">${compareChartHtml}</div>
+        <div class="result-chart-col">${groupControlsHtml}${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -7392,7 +7359,7 @@ function ensureChoiceMenuOutsideClose() {
   resultState._choiceMenuOutsideBound = true;
   document.addEventListener('click', (e) => {
     if (resultState.openChoiceMenus.size === 0 && resultState.openRankMenus.size === 0) return;
-    const within = e.target && e.target.closest && (e.target.closest('[data-choice-chart-type-select]') || e.target.closest('[data-rank-chart-type-select]'));
+    const within = e.target && e.target.closest && (e.target.closest('[data-choice-chart-type-select]') || e.target.closest('[data-rank-view-mode-select]') || e.target.closest('[data-rank-chart-type-select]'));
     if (within) return;
     resultState.openChoiceMenus.clear();
     resultState.openRankMenus.clear();
@@ -7593,7 +7560,7 @@ function attachResultEventListeners(container) {
       renderResults();
     });
   });
-  container.querySelectorAll('[data-rank-chart-type-trigger]').forEach(btn => {
+  container.querySelectorAll('[data-rank-view-mode-trigger]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
@@ -7605,6 +7572,18 @@ function attachResultEventListeners(container) {
       renderResults();
     });
   });
+  container.querySelectorAll('[data-rank-view-mode-option]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetLabel = btn.dataset.target;
+      const mode = btn.dataset.rankViewModeOption === 'vertical' ? 'vertical' : 'horizontal';
+      if (!targetLabel) return;
+      resultState.rankViewModes.set(targetLabel, mode);
+      resultState.openRankMenus.delete(targetLabel);
+      renderResults();
+    });
+  });
   container.querySelectorAll('[data-rank-chart-type]').forEach(btn => {
     btn.addEventListener('click', e => {
       e.preventDefault();
@@ -7613,7 +7592,6 @@ function attachResultEventListeners(container) {
       const type = btn.dataset.rankChartType;
       if (!targetLabel || !RANK_CHART_TYPES.includes(type)) return;
       resultState.rankChartTypes.set(targetLabel, type);
-      resultState.openRankMenus.delete(targetLabel);
       renderResults();
     });
   });
