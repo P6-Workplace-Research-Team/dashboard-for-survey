@@ -1631,28 +1631,38 @@ function setupSavedModal() {
    - data_visualization.md 의 2-1(객관식 단일), 2-3(객관식 순위) 규칙을 따릅니다.
    ===================================================================== */
 
-const GROUP_PALETTE = [
-  'var(--color-1)',  'var(--color-2)',  'var(--color-3)',  'var(--color-4)',
-  'var(--color-5)',  'var(--color-6)',  'var(--color-7)',  'var(--color-8)',
-  'var(--color-9)',  'var(--color-10)', 'var(--color-11)', 'var(--color-12)',
-  'var(--color-13)', 'var(--color-14)', 'var(--color-15)', 'var(--color-16)',
-  'var(--color-17)', 'var(--color-18)', 'var(--color-19)', 'var(--color-20)'
-];
-const ALLOCATION_PALETTE = [
-  'var(--color-1)', 'var(--color-3)', 'var(--color-5)', 'var(--color-2)',
-  'var(--color-6)', 'var(--color-4)', 'var(--color-8)', 'var(--color-7)'
-];
-const SINGLE_BAR_COLOR = 'var(--neutral-700)';
-const COMPARE_BAR_COLOR = '#d9d9d9';
+const DATA_VIZ_COLORS = {
+  categorical: [
+    'var(--color-1)',  'var(--color-2)',  'var(--color-3)',  'var(--color-4)',
+    'var(--color-5)',  'var(--color-6)',  'var(--color-7)',  'var(--color-8)',
+    'var(--color-9)',  'var(--color-10)', 'var(--color-11)', 'var(--color-12)',
+    'var(--color-13)', 'var(--color-14)', 'var(--color-15)', 'var(--color-16)',
+    'var(--color-17)', 'var(--color-18)', 'var(--color-19)', 'var(--color-20)'
+  ],
+  singleBar: 'var(--neutral-700)',
+  compareBar: 'var(--neutral-300)',
+  scaleLow: 'var(--color-2)',
+  scaleMid: 'var(--neutral-300)',
+  scaleHigh: 'var(--color-1)',
+  rankStack: [
+    'var(--neutral-700)',
+    'var(--neutral-400)',
+    'var(--neutral-300)',
+    'var(--neutral-200)'
+  ]
+};
 
-// 객관식 단일 — 100% 누적 막대 / 파이에서 사용하는 컬러 팔레트.
-const CHOICE_COLOR_PALETTE = [
-  'var(--color-1)',  'var(--color-2)',  'var(--color-3)',  'var(--color-4)',
-  'var(--color-5)',  'var(--color-6)',  'var(--color-7)',  'var(--color-8)',
-  'var(--color-9)',  'var(--color-10)', 'var(--color-11)', 'var(--color-12)',
-  'var(--color-13)', 'var(--color-14)', 'var(--color-15)', 'var(--color-16)',
-  'var(--color-17)', 'var(--color-18)', 'var(--color-19)', 'var(--color-20)'
+const GROUP_PALETTE = DATA_VIZ_COLORS.categorical;
+const ALLOCATION_PALETTE = DATA_VIZ_COLORS.categorical;
+const CHOICE_COLOR_PALETTE = DATA_VIZ_COLORS.categorical;
+const CUSTOM_GROUP_PALETTE = [
+  'var(--color-11)', 'var(--color-12)', 'var(--color-13)', 'var(--color-14)',
+  'var(--color-15)', 'var(--color-16)', 'var(--color-17)', 'var(--color-18)'
 ];
+const SINGLE_BAR_COLOR = DATA_VIZ_COLORS.singleBar;
+const COMPARE_BAR_COLOR = DATA_VIZ_COLORS.compareBar;
+const HBAR_INSIDE_VALUE_THRESHOLD = 90;
+
 function choiceNeutralColor(index) {
   const idx = Math.max(0, Number(index) || 0);
   return CHOICE_COLOR_PALETTE[idx % CHOICE_COLOR_PALETTE.length];
@@ -1673,17 +1683,8 @@ const RANK_CHART_TYPE_LABELS = {
 };
 const RANK_VERTICAL_TRACK_HEIGHT = 280;
 
-const RANK_LOLLIPOP_COLOR = 'var(--neutral-700)';
-const RANK_STACK_PALETTE = [
-  'var(--neutral-700)',
-  'var(--neutral-400)',
-  'var(--neutral-300)',
-  'var(--neutral-200)',
-  'var(--neutral-200)',
-  'var(--neutral-200)',
-  'var(--neutral-200)',
-  'var(--neutral-200)'
-];
+const RANK_LOLLIPOP_COLOR = DATA_VIZ_COLORS.singleBar;
+const RANK_STACK_PALETTE = DATA_VIZ_COLORS.rankStack;
 function rankStackColor(idx) {
   if (idx < RANK_STACK_PALETTE.length) return RANK_STACK_PALETTE[idx];
   return RANK_STACK_PALETTE[RANK_STACK_PALETTE.length - 1];
@@ -1706,20 +1707,20 @@ function buildRankWeightFormulaText(rankCount) {
 }
 
 const SCALE_5PT = [
-  'var(--color-2)',     // 1
+  DATA_VIZ_COLORS.scaleLow, // 1
   'var(--low-3)',       // 2
-  'var(--neutral-300)', // 3
+  DATA_VIZ_COLORS.scaleMid, // 3
   'var(--high-3)',      // 4
-  'var(--color-1)',     // 5
+  DATA_VIZ_COLORS.scaleHigh, // 5
 ];
 const SCALE_7PT = [
-  'var(--color-2)',     // 1
+  DATA_VIZ_COLORS.scaleLow, // 1
   'var(--low-4)',       // 2
   'var(--low-2)',       // 3
-  'var(--neutral-300)', // 4
+  DATA_VIZ_COLORS.scaleMid, // 4
   'var(--high-2)',      // 5
   'var(--high-4)',      // 6
-  'var(--color-1)',     // 7
+  DATA_VIZ_COLORS.scaleHigh, // 7
 ];
 const SCALE_DIVERGING_PALETTE = SCALE_7PT;
 
@@ -1735,7 +1736,6 @@ function getScaleColor(score, maxScore) {
 function getScaleMutedColor(score, maxScore) {
   if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 1) return 'var(--neutral-300)';
   if (score <= 1 || score >= maxScore) return 'var(--neutral-400)';
-  if (maxScore === 5) return 'var(--neutral-300)';
   const center = (maxScore + 1) / 2;
   const dist = Math.abs(score - center) / (center - 1);
   return dist < 0.34 ? 'var(--neutral-200)' : 'var(--neutral-300)';
@@ -3223,6 +3223,7 @@ function buildBasicChartHtml(data) {
   const rowHtml = rows.map(r => {
     const pct = Math.max(0, Math.min(100, r.pct));
     const widthStr = `${pct}%`;
+    const valueClass = pct >= HBAR_INSIDE_VALUE_THRESHOLD ? 'hbar-outside-value is-inside' : 'hbar-outside-value';
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
@@ -3233,7 +3234,7 @@ function buildBasicChartHtml(data) {
       pct: r.pct,
       count: r.count
     }));
-    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
+    const valueHtml = `<span class="${valueClass}" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
@@ -3398,6 +3399,7 @@ function buildGroupCompareChartHtml(data, hidden) {
   const rowHtml = rows.map(r => {
     const pct = Math.max(0, Math.min(100, r.pct));
     const widthStr = `${pct}%`;
+    const valueClass = pct >= HBAR_INSIDE_VALUE_THRESHOLD ? 'hbar-outside-value is-inside' : 'hbar-outside-value';
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
@@ -3408,7 +3410,7 @@ function buildGroupCompareChartHtml(data, hidden) {
       pct: r.pct,
       count: r.count
     }));
-    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
+    const valueHtml = `<span class="${valueClass}" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
@@ -3534,12 +3536,6 @@ function getGroupColor(groupResults, groupValue) {
   const idx = baseGroups.findIndex(group => group.value === groupValue);
   return GROUP_PALETTE[(idx < 0 ? 0 : idx) % GROUP_PALETTE.length];
 }
-
-// 사용자 정의 그룹 색상: GROUP_PALETTE 앞부분과 겹치지 않게 별도 파레트 사용
-const CUSTOM_GROUP_PALETTE = [
-  '#9b7fd4', '#5ba89e', '#d47f7f', '#7fa8d4',
-  '#d4a85b', '#7fd47f', '#d45b9b', '#5b7fd4'
-];
 
 function getCustomGroupColor(criterionLabel, groupId) {
   const defs = resultState.customGroupDefs.get(criterionLabel) || [];
@@ -3733,17 +3729,7 @@ function buildChoiceDataTableHtml(data, noteHtml = '') {
 
 function allocationColor(index) {
   const idx = Math.max(0, Number(index) || 0);
-  const cssPalette = [
-    'var(--color-1)',
-    'var(--color-2)',
-    'var(--color-3)',
-    'var(--color-4)',
-    'var(--color-5)',
-    'var(--color-6)',
-    'var(--color-7)',
-    'var(--color-8)'
-  ];
-  return cssPalette[idx % cssPalette.length];
+  return ALLOCATION_PALETTE[idx % ALLOCATION_PALETTE.length];
 }
 
 function buildRatioAllocationStackHtml(results, options = {}) {
@@ -3898,7 +3884,7 @@ function buildRatioAllocationSection(data) {
   const invalidNote = data.invalidN > 0
     ? ` 합계가 100이 아니거나 비어 있는 응답 ${Number(data.invalidN).toLocaleString()}건은 제외했습니다.`
     : '';
-  const noteHtml = `<div class="result-table-note allocation-note">각 응답자는 두 항목의 합이 100이 되도록 값을 나누어 기입했고, 차트는 그 기입값의 평균을 보여줍니다.${invalidNote}</div>`;
+  const noteHtml = `<div class="result-table-note allocation-note">각 응답자가 두 항목의 합이 100이 되도록 값을 나누어 기입하는 문항입니다. 위 차트는 각 항목에 기입한 값의 평균을 보여줍니다.${invalidNote}</div>`;
 
   return `
     <section class="result-section" data-target="${escapeHtml(targetLabel)}" data-type="ratio-allocation">
@@ -5708,7 +5694,7 @@ function buildRankLollipopChartHtml(data) {
     if (axisMax === axisMin) return 0;
     return ((safeValue - axisMin) / (axisMax - axisMin)) * 100;
   };
-  const overlayHeight = rows.length * 40 - 8; // (row-height 32 + gap 8) * n - last gap
+  const overlayHeight = rows.length * 40 - 8;
   const guideOverlayHtml = axisTicks.map(tick => {
     const tickPct = pctFor(tick);
     return `<span class="rank-point-guide" style="left:${tickPct}%;"></span>`;
@@ -5733,9 +5719,9 @@ function buildRankLollipopChartHtml(data) {
           <div class="rank-point-dot" style="left:${leftPct}%;background:${color};"></div>
           <div class="rank-point-inline-label" style="left:calc(${leftPct}% + 17px);" aria-hidden="true">
             <span class="rank-point-value">${valueText}</span>
-            <span class="rank-point-rank">${escapeHtml(posText)}</span>
           </div>
         </div>
+        <div class="rank-point-rank">${escapeHtml(posText)}</div>
       </div>
     `;
   }).join('');
@@ -5752,6 +5738,7 @@ function buildRankLollipopChartHtml(data) {
             return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
           }).join('')}
         </div>
+        <div class="rank-point-axis-rank-spacer"></div>
       </div>
     </div>
   `;
@@ -5775,8 +5762,10 @@ function buildRankVerticalAxisMeta(maxValue, step, suffix = '') {
 
 function buildRankVerticalLollipopChartHtml(data) {
   const rows = [...(data.totalResults || [])];
+  const n = rows.length;
   const axisMax = Math.max(0, ...((data.rankWeights || []).map(Number)));
   const axisMeta = buildRankVerticalAxisMeta(axisMax, 1, '');
+  const colsStyle = `grid-template-columns: repeat(${n}, 1fr);`;
   const itemsHtml = rows.map(row => {
     const rankObj = data.ranking.find(item => item.option === row.option);
     const posText = rankObj ? `${rankObj.position}위` : '-';
@@ -5788,10 +5777,6 @@ function buildRankVerticalLollipopChartHtml(data) {
       option: row.option,
       weightedAverage: row.weightedAverage,
       rankPosition: posText
-    }));
-    const labelTip = encodeURIComponent(JSON.stringify({
-      kind: 'option-label',
-      option: row.option
     }));
     return `
       <div class="rank-vertical-item rank-vertical-lollipop-item">
@@ -5805,9 +5790,15 @@ function buildRankVerticalLollipopChartHtml(data) {
             <div class="rank-vertical-lollipop-dot" style="bottom:${bottomPx}px;"></div>
           </div>
         </div>
-        <div class="rank-vertical-label" title="${escapeHtml(row.option)}" data-tip="${labelTip}">${escapeHtml(row.option)}</div>
       </div>
     `;
+  }).join('');
+  const labelsHtml = rows.map(row => {
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: row.option
+    }));
+    return `<div class="rank-vertical-label" title="${escapeHtml(row.option)}" data-tip="${labelTip}">${escapeHtml(row.option)}</div>`;
   }).join('');
 
   return `
@@ -5816,11 +5807,16 @@ function buildRankVerticalLollipopChartHtml(data) {
         <div class="rank-vertical-axis" aria-hidden="true">
           ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
         </div>
-        <div class="rank-vertical-plot">
-          <div class="rank-vertical-grid" aria-hidden="true">
-            ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+        <div class="rank-vertical-plot-col">
+          <div class="rank-vertical-plot" style="${colsStyle}">
+            <div class="rank-vertical-grid" aria-hidden="true">
+              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+            </div>
+            ${itemsHtml}
           </div>
-          ${itemsHtml}
+          <div class="rank-vertical-labels-row" style="${colsStyle}">
+            ${labelsHtml}
+          </div>
         </div>
       </div>
     </div>
@@ -5848,20 +5844,20 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
-      const valueHtml = w >= 8
-        ? `<span class="rank-stack-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`
-        : '';
+      const valueHtml = `<span class="rank-stack-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`;
       return `<div class="rank-stack-seg"
                    style="width:${w}%; background:${color};"
                    data-tip="${tip}">${valueHtml}</div>`;
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
-    const safeDisplayedPct = Math.max(0, Math.min(100, visiblePct));
-    const totalValueHtml = `<span class="rank-stack-total-value is-outside" style="left:${safeDisplayedPct}%;">${formatPercent(visiblePct)}</span>`;
+    const totalValueHtml = `<span class="rank-stack-total-value is-outside">${formatPercent(visiblePct)}</span>`;
     return `
       <div class="rank-stack-row">
         <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
-        <div class="rank-stack-track">${segments}${totalValueHtml}</div>
+        <div class="rank-stack-main">
+          <div class="rank-stack-track">${segments}</div>
+          ${totalValueHtml}
+        </div>
       </div>
     `;
   }).join('');
@@ -5870,17 +5866,15 @@ function buildRankStackChartHtml(data, hiddenRanks) {
 
 function buildRankVerticalStackChartHtml(data, hiddenRanks) {
   const rows = [...(data.totalResults || [])];
+  const n = rows.length;
   const rankLabels = data.rankLabels || [];
   const maxDisplayedPct = rows.reduce((max, row) => {
     const visiblePct = (row.perRank || []).reduce((sum, pr, ri) => sum + (hiddenRanks.has(ri) ? 0 : (pr.pct || 0)), 0);
     return Math.max(max, visiblePct);
   }, 0);
   const axisMeta = buildRankVerticalAxisMeta(Math.max(20, maxDisplayedPct), 20, '%');
+  const colsStyle = `grid-template-columns: repeat(${n}, 1fr);`;
   const rowHtml = rows.map(r => {
-    const labelTip = encodeURIComponent(JSON.stringify({
-      kind: 'option-label',
-      option: r.option
-    }));
     let cumulativePx = 0;
     const segments = r.perRank.map((pr, ri) => {
       if (hiddenRanks.has(ri)) return "";
@@ -5899,7 +5893,7 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
         count: pr.count
       }));
       const labelHtml = heightPx >= 18
-        ? `<span class="rank-vertical-stack-seg-value" style="bottom:${cumulativePx + 2}px; color:${labelColor};">${formatPercent(pr.pct)}</span>`
+        ? `<span class="rank-vertical-stack-seg-value" style="top:4px; color:${labelColor};">${formatPercent(pr.pct)}</span>`
         : '';
       return `<div class="rank-vertical-stack-seg"
                    style="height:${heightPx}px; background:${color};"
@@ -5915,9 +5909,15 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
             ${segments}
           </div>
         </div>
-        <div class="rank-vertical-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
       </div>
     `;
+  }).join('');
+  const labelsHtml = rows.map(r => {
+    const labelTip = encodeURIComponent(JSON.stringify({
+      kind: 'option-label',
+      option: r.option
+    }));
+    return `<div class="rank-vertical-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
   }).join('');
   return `
     <div class="rank-vertical-chart rank-vertical-stack-chart">
@@ -5925,11 +5925,16 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
         <div class="rank-vertical-axis" aria-hidden="true">
           ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
         </div>
-        <div class="rank-vertical-plot">
-          <div class="rank-vertical-grid" aria-hidden="true">
-            ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+        <div class="rank-vertical-plot-col">
+          <div class="rank-vertical-plot" style="${colsStyle}">
+            <div class="rank-vertical-grid" aria-hidden="true">
+              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+            </div>
+            ${rowHtml}
           </div>
-          ${rowHtml}
+          <div class="rank-vertical-labels-row" style="${colsStyle}">
+            ${labelsHtml}
+          </div>
         </div>
       </div>
     </div>
@@ -6077,6 +6082,7 @@ function buildRankFirstChoiceGroupCompareChartHtml(data, hiddenGroups) {
   const rowHtml = rows.map(r => {
     const pct = Math.max(0, Math.min(100, r.pct));
     const widthStr = `${pct}%`;
+    const valueClass = pct >= HBAR_INSIDE_VALUE_THRESHOLD ? 'hbar-outside-value is-inside' : 'hbar-outside-value';
     const labelTip = encodeURIComponent(JSON.stringify({
       kind: 'option-label',
       option: r.option
@@ -6087,7 +6093,7 @@ function buildRankFirstChoiceGroupCompareChartHtml(data, hiddenGroups) {
       pct: r.pct,
       count: r.count
     }));
-    const valueHtml = `<span class="hbar-outside-value" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
+    const valueHtml = `<span class="${valueClass}" style="left:${widthStr};">${formatPercent(r.pct)}</span>`;
     return `
       <div class="hbar-row">
         <div class="hbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
@@ -6120,13 +6126,12 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
       const rankObj = data.ranking.find(rk => rk.option === r.option);
       const pos = rankObj ? rankObj.position : '-';
       const rankCells = r.perRank.map(pr => `<td class="num">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
-      const posColor = typeof pos === 'number' ? `var(--color-${Math.min(pos, 20)})` : null;
       return `
         <tr>
           <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
           ${rankCells}
           <td class="num">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
-          <td class="num${posColor ? ' rank-pos-cell' : ''}"${posColor ? ` style="background:${posColor};"` : ''}>${pos === '-' ? '-' : `${pos}위`}</td>
+          <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
         </tr>
       `;
     }).join('');
@@ -6189,16 +6194,14 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
         .join('');
       const rk = g.ranking.find(x => x.option === r.option);
       const po = rk ? rk.position : '-';
-      const poColor = typeof po === 'number' ? `var(--color-${Math.min(po, 20)})` : null;
-      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num${poColor ? ' rank-pos-cell' : ''}"${poColor ? ` style="background:${poColor};"` : ''}>${po === '-' ? '-' : `${po}위`}</td>`;
+      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
     }).join('');
-    const totalPosColor = typeof totalPos === 'number' ? `var(--color-${Math.min(totalPos, 20)})` : null;
     return `
       <tr>
         <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
         ${rankCells}
         <td class="num group-col">${totalRank ? formatRankAverage(r.weightedAverage) : '-'}</td>
-        <td class="num${totalPosColor ? ' rank-pos-cell' : ''}"${totalPosColor ? ` style="background:${totalPosColor};"` : ''}>${totalPos === '-' ? '-' : `${totalPos}위`}</td>
+        <td class="num">${totalPos === '-' ? '-' : `${totalPos}위`}</td>
         ${groupCells}
       </tr>
     `;
@@ -6295,11 +6298,12 @@ function buildRankSection(data, rows) {
           ${escapeHtml(targetLabel)}
         </div>
         ${fullText}
+        ${controlsHtml}
+        ${!groupResults ? formulaNoteHtml : ''}
       </div>
-      ${controlsHtml}
       ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
       <div class="result-visual has-legend">
-        <div class="result-chart-col">${compareChartHtml}${formulaNoteHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
@@ -7078,8 +7082,8 @@ function buildChoiceSectionHtml(data, rows) {
       <div class="result-header">
         <div class="result-title">${escapeHtml(targetLabel)}</div>
         ${fullText}
+        ${controlsHtml}
       </div>
-      ${controlsHtml}
       ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
       <div class="${visualClass}">
         <div class="result-chart-col">${compareChartHtml}</div>
