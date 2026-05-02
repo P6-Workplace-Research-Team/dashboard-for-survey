@@ -4835,8 +4835,8 @@ body.home-page {
   .result-table td {
     padding: 8px 16px;
     text-align: left;
-    border-bottom: 1px solid var(--neutral-300);
     white-space: nowrap;
+    border-bottom: 1px solid var(--neutral-300);
   }
   .result-table th {
     background: var(--neutral-50);
@@ -4852,6 +4852,7 @@ body.home-page {
     left: 0;
     z-index: 2;
     box-shadow: 1px 0 0 var(--neutral-300);
+    border-right: 1px solid var(--neutral-300);
   }
   .result-table thead tr:first-child > th:first-child {
     z-index: 4;
@@ -4870,6 +4871,8 @@ body.home-page {
     background: var(--neutral-50);
     color: var(--neutral-700);
     font-weight: var(--font-weight-semibold);
+    border-top: 1px solid var(--neutral-300);
+    border-bottom: 1px solid var(--neutral-300);
   }
   .result-table tr.total-row td:first-child {
     background: var(--neutral-50);
