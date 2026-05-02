@@ -5560,7 +5560,7 @@ body.home-page {
 }
 
 .rank-formula-note {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: var(--caption-1-size);
   line-height: var(--body-line-height);
   font-weight: var(--font-weight-regular);
@@ -5680,7 +5680,7 @@ body.home-page {
 }
 
 .rank-point-axis-row {
-  margin-top: 4px;
+  margin-top: 8px;
   align-items: start;
 }
 
@@ -5764,9 +5764,10 @@ body.home-page {
 }
 
 .rank-stack-seg-value {
-  font-size: var(--button-2-size);
+  font-size: var(--label-1-size);
   line-height: var(--body-line-height);
-  font-weight: var(--font-weight-regular);
+  font-weight: var(--font-weight-semibold);
+  color: var(--neutral-700);
   white-space: nowrap;
   pointer-events: none;
 }
