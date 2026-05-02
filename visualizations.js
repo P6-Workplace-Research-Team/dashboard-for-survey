@@ -3609,7 +3609,7 @@ function getResultVisualClass(hasLegend) {
 }
 
 function buildGroupedCountHeader(label, count, colspan) {
-  return `<th colspan="${colspan}" class="group-head">${escapeHtml(label)}<br><span style="font-weight:500;color:var(--text-3);">N=${Number(count || 0).toLocaleString()}</span></th>`;
+  return `<th colspan="${colspan}" class="group-col">${escapeHtml(label)}<br><span style="font-weight:500;color:var(--text-3);">N=${Number(count || 0).toLocaleString()}</span></th>`;
 }
 
 function buildDataTableToggleButtonHtml() {
@@ -4204,28 +4204,24 @@ function formatScaleScoreLabel(result) {
 function buildScaleLegendItemsHtml(data) {
   const maxScore = data.scoreRange.length;
   const items = data.scoreResults.map(result => `
-    <div class="scale-score-item">
-      <span class="scale-score-swatch" style="background:${getScaleColor(result.score, maxScore)}"></span>
-      <div class="scale-score-copy">
-        <span class="scale-score-key">${result.score}점</span>${result.label !== `${result.score}점` ? ` - <span class="scale-score-text">${escapeHtml(result.label)}</span>` : ''}
-      </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${getScaleColor(result.score, maxScore)}"></span>
+      <span>${result.score}점${result.label !== `${result.score}점` ? `<span class="legend-item-sub"> - ${escapeHtml(result.label)}</span>` : ''}</span>
     </div>
   `).join('');
-  return `<div class="scale-score-legend">${items}</div>`;
+  return `<div class="legend is-static">${items}</div>`;
 }
 
 function buildScaleLegendItemsByScoreRangeHtml(scoreRange) {
   const scores = Array.isArray(scoreRange) ? scoreRange : [];
   const maxScore = scores.length;
   const items = scores.map(score => `
-    <div class="scale-score-item">
-      <span class="scale-score-swatch" style="background:${getScaleColor(score, maxScore)}"></span>
-      <div class="scale-score-copy">
-        <span class="scale-score-key">${score}점</span>
-      </div>
+    <div class="legend-item">
+      <span class="legend-swatch" style="background:${getScaleColor(score, maxScore)}"></span>
+      <span>${score}점</span>
     </div>
   `).join('');
-  return `<div class="scale-score-legend">${items}</div>`;
+  return `<div class="legend is-static">${items}</div>`;
 }
 
 function buildScaleScoreOnlyLegendHtml(scoreRange) {
@@ -4499,7 +4495,7 @@ function buildScaleCompareDistributionSectionHtml(compareData) {
 
 function buildScaleCompareScoreHeaders(scoreRange) {
   return (scoreRange || []).map(score => `
-    <th class="num group-head" colspan="2">${Number(score).toLocaleString()}점</th>
+    <th class="num group-col" colspan="2">${Number(score).toLocaleString()}점</th>
   `).join("");
 }
 
@@ -4525,8 +4521,8 @@ function buildScaleCompareDataTableHtml(compareData, hiddenGroups = new Set()) {
   if (hasGroups) {
     const topRow = [
       `<th rowspan="2">문항명</th>`,
-      `<th colspan="2" class="group-head">응답자 전체</th>`,
-      ...displayGroups.map(group => `<th colspan="2" class="group-head">${escapeHtml(group.label)}</th>`)
+      `<th colspan="2" class="group-col">응답자 전체</th>`,
+      ...displayGroups.map(group => `<th colspan="2" class="group-col">${escapeHtml(group.label)}</th>`)
     ].join("");
     const subRow = [
       `<th class="num group-col">평균</th><th class="num">응답 수(명)</th>`,
@@ -5110,7 +5106,7 @@ function buildDerivedScaleDataTableHtml(data, hiddenGroups = new Set()) {
             <th class="num metric">Q3(상위 25%)</th>
             <th class="num metric">최대값</th>
             <th class="num metric">평균</th>
-            <th class="num respondents">응답 수(명)</th>
+            <th class="num respondents group-col">응답 수(명)</th>
           </tr>
         </thead>
         <tbody>
@@ -5122,7 +5118,7 @@ function buildDerivedScaleDataTableHtml(data, hiddenGroups = new Set()) {
             <td class="num metric">${data.q3.toFixed(2)}</td>
             <td class="num metric">${data.max.toFixed(2)}</td>
             <td class="num metric mean-value">${data.mean.toFixed(2)}점</td>
-            <td class="num respondents">${data.totalN.toLocaleString()}</td>
+            <td class="num respondents group-col">${data.totalN.toLocaleString()}</td>
           </tr>
         </tbody>
       </table>
@@ -5140,7 +5136,7 @@ function buildDerivedScaleDataTableHtml(data, hiddenGroups = new Set()) {
       <td class="num metric">${Number(group.q3 || 0).toFixed(2)}</td>
       <td class="num metric">${Number(group.max || 0).toFixed(2)}</td>
       <td class="num metric mean-value">${Number(group.mean || 0).toFixed(2)}점</td>
-      <td class="num respondents">${Number(group.n || 0).toLocaleString()}</td>
+      <td class="num respondents group-col">${Number(group.n || 0).toLocaleString()}</td>
     </tr>
   `).join("");
   const tableHtml = `
@@ -5171,7 +5167,7 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
         <td>${formatScaleScoreLabel(result)}</td>
         <td class="num">${formatPercent(result.pct)}</td>
         <td class="num">${result.count.toLocaleString()}</td>
-        <td class="num">-</td>
+        <td class="num group-col">-</td>
       </tr>
     `).join("");
     const tableHtml = `
@@ -5181,7 +5177,7 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
             <th>점수</th>
             <th class="num">응답 비율(%)</th>
             <th class="num">응답 수(명)</th>
-            <th class="num">평균</th>
+            <th class="num group-col">평균</th>
           </tr>
         </thead>
         <tbody>
@@ -5190,7 +5186,7 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
             <td>합계</td>
             <td class="num">${formatPercent(100)}</td>
             <td class="num">${data.totalN.toLocaleString()}</td>
-            <td class="num">${data.mean.toFixed(2)}점</td>
+            <td class="num group-col">${data.mean.toFixed(2)}점</td>
           </tr>
         </tbody>
       </table>
@@ -5205,25 +5201,25 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
     ...displayGroups.map(group => buildGroupedCountHeader(group.label, group.n, 3))
   ].join("");
   const subRow = [
-    `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`,
-    ...displayGroups.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num">평균</th>`)
+    `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num group-col">평균</th>`,
+    ...displayGroups.map(() => `<th class="num group-col">응답 비율(%)</th><th class="num">응답 수(명)</th><th class="num group-col">평균</th>`)
   ].join("");
   const bodyRows = data.scoreResults.map(result => {
     const groupCells = displayGroups.map(group => {
       const groupResult = group.scoreResults.find(item => item.score === result.score) || { pct: 0, count: 0 };
-      return `<td class="num group-col">${formatPercent(groupResult.pct)}</td><td class="num">${groupResult.count.toLocaleString()}</td><td class="num">-</td>`;
+      return `<td class="num group-col">${formatPercent(groupResult.pct)}</td><td class="num">${groupResult.count.toLocaleString()}</td><td class="num group-col">-</td>`;
     }).join("");
     return `
       <tr>
         <td>${formatScaleScoreLabel(result)}</td>
         <td class="num group-col">${formatPercent(result.pct)}</td>
         <td class="num">${result.count.toLocaleString()}</td>
-        <td class="num">-</td>
+        <td class="num group-col">-</td>
         ${groupCells}
       </tr>
     `;
   }).join("");
-  const totalCells = displayGroups.map(group => `<td class="num group-col">${formatPercent(100)}</td><td class="num">${group.n.toLocaleString()}</td><td class="num">${group.mean.toFixed(2)}점</td>`).join("");
+  const totalCells = displayGroups.map(group => `<td class="num group-col">${formatPercent(100)}</td><td class="num">${group.n.toLocaleString()}</td><td class="num group-col">${group.mean.toFixed(2)}점</td>`).join("");
   const tableHtml = `
     <table class="result-table">
       <thead>
@@ -5236,7 +5232,7 @@ function buildScaleDataTableHtml(data, hiddenGroups = new Set()) {
           <td>합계</td>
           <td class="num group-col">${formatPercent(100)}</td>
           <td class="num">${data.totalN.toLocaleString()}</td>
-          <td class="num">${data.mean.toFixed(2)}점</td>
+          <td class="num group-col">${data.mean.toFixed(2)}점</td>
           ${totalCells}
         </tr>
       </tbody>
@@ -6115,7 +6111,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   if (!groupResults) {
     const topRow = [
       `<th rowspan="2">보기</th>`,
-      ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
+      ...rankLabels.map(lab => `<th colspan="2" class="group-col">${escapeHtml(lab)}</th>`),
       `<th rowspan="2" class="num group-col">가중 평균</th>`,
       `<th rowspan="2" class="num">종합 순위</th>`
     ].join('');
@@ -6125,12 +6121,12 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
     const bodyRows = totalResults.map(r => {
       const rankObj = data.ranking.find(rk => rk.option === r.option);
       const pos = rankObj ? rankObj.position : '-';
-      const rankCells = r.perRank.map(pr => `<td class="num">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
+      const rankCells = r.perRank.map(pr => `<td class="num group-col">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
       return `
         <tr>
           <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
           ${rankCells}
-          <td class="num">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
+          <td class="num group-col">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
           <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
         </tr>
       `;
@@ -6138,7 +6134,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
     const totalRankCells = rankLabels.map((_, ri) => {
       const totalCount = totalResults.reduce((sum, result) => sum + ((result.perRank[ri] && result.perRank[ri].count) || 0), 0);
       const totalPct = respondentN > 0 ? (totalCount / respondentN) * 100 : 0;
-      return `<td class="num">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
+      return `<td class="num group-col">${formatPercent(totalPct)}</td><td class="num">${totalCount.toLocaleString()}</td>`;
     }).join('');
     const tableHtml = `
       <table class="result-table">
@@ -6151,7 +6147,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
           <tr class="total-row">
             <td>합계</td>
             ${totalRankCells}
-            <td class="num">-</td>
+            <td class="num group-col">-</td>
             <td class="num">-</td>
           </tr>
         </tbody>
@@ -6172,7 +6168,7 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
   ].join('');
   const midRow = [
       ...[null, ...displayGroups].map(() => [
-        ...rankLabels.map(lab => `<th colspan="2" class="group-head">${escapeHtml(lab)}</th>`),
+        ...rankLabels.map(lab => `<th colspan="2" class="group-col">${escapeHtml(lab)}</th>`),
       `<th rowspan="2" class="num group-col">가중 평균</th>`,
       `<th rowspan="2" class="num">종합 순위</th>`
     ].join(''))
