@@ -1948,6 +1948,58 @@ body.home-page {
     cursor: not-allowed;
   }
 
+
+  .result-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--radius-12);
+    background: var(--White);
+    width: fit-content;
+  }
+  .result-view-btn {
+    border: none;
+    background: transparent;
+    color: var(--neutral-900);
+    font-size: var(--label-1-size);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--body-line-height);
+    padding: 4px 12px;
+    border-radius: var(--radius-8);
+    transition: background .15s ease, color .15s ease;
+  }
+  .result-view-btn.active {
+    background: var(--neutral-900);
+    color: var(--White);
+  }
+  .result-view-btn:disabled {
+    color: var(--neutral-300);
+    font-weight: var(--font-weight-regular);
+    cursor: default;
+  }
+  .result-view-btn[aria-disabled="true"] {
+    color: var(--neutral-300);
+    font-weight: var(--font-weight-regular);
+    cursor: not-allowed;
+  }
+  .result-view-btn:disabled:hover,
+  .result-view-btn[aria-disabled="true"]:hover {
+    background: transparent;
+    color: var(--neutral-300);
+  }
+  .result-view-toggle.is-disabled {
+    background: var(--neutral-100);
+    border-color: var(--neutral-300);
+    pointer-events: none;
+  }
+  .result-view-toggle.is-disabled .result-view-btn,
+  .result-view-toggle.is-disabled .result-view-btn.active {
+    background: transparent;
+    color: var(--neutral-300);
+  } 
+  
   /* -------- 차트 및 범례 영역 -------- */
 
   .result-visual {
@@ -4611,57 +4663,6 @@ body.home-page {
     pointer-events: auto;
   }
 
-  /*
-  .result-view-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px;
-    border: 1px solid var(--neutral-300);
-    border-radius: var(--radius-12);
-    background: var(--White);
-    width: fit-content;
-  }
-  .result-view-btn {
-    border: none;
-    background: transparent;
-    color: var(--neutral-900);
-    font-size: var(--label-1-size);
-    font-weight: var(--font-weight-semibold);
-    line-height: var(--body-line-height);
-    padding: 4px 12px;
-    border-radius: var(--radius-8);
-    transition: background .15s ease, color .15s ease;
-  }
-  .result-view-btn.active {
-    background: var(--neutral-900);
-    color: var(--White);
-  }
-  .result-view-btn:disabled {
-    color: var(--neutral-300);
-    font-weight: var(--font-weight-regular);
-    cursor: default;
-  }
-  .result-view-btn[aria-disabled="true"] {
-    color: var(--neutral-300);
-    font-weight: var(--font-weight-regular);
-    cursor: not-allowed;
-  }
-  .result-view-btn:disabled:hover,
-  .result-view-btn[aria-disabled="true"]:hover {
-    background: transparent;
-    color: var(--neutral-300);
-  }
-  .result-view-toggle.is-disabled {
-    background: var(--neutral-100);
-    border-color: var(--neutral-300);
-    pointer-events: none;
-  }
-  .result-view-toggle.is-disabled .result-view-btn,
-  .result-view-toggle.is-disabled .result-view-btn.active {
-    background: transparent;
-    color: var(--neutral-300);
-  } */
 
   /*
   .chart-view-controls {
