@@ -5572,7 +5572,7 @@ body.home-page {
 
 /* ===== Rank Charts Final Overrides ===== */
 .result-section[data-type="rank"] .choice-controls {
-  margin-bottom: 40px;
+  margin-bottom: 0;
 }
 
 .result-section[data-type="rank"] .result-visual {
@@ -5638,11 +5638,7 @@ body.home-page {
 }
 
 .rank-point-guides-overlay {
-  position: absolute;
-  left: calc(var(--rank-label-col) + 16px);
-  right: 0;
-  top: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .rank-point-track::before {
