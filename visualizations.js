@@ -5861,11 +5861,12 @@ function buildRankStackChartHtml(data, hiddenRanks) {
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
     const safeDisplayedPct = Math.max(0, Math.min(100, visiblePct));
-    const totalValueHtml = `<span class="rank-stack-total-value is-outside" style="left:${safeDisplayedPct}%;">${formatPercent(visiblePct)}</span>`;
+    const totalValueHtml = `<span class="rank-stack-total-value">${formatPercent(visiblePct)}</span>`;
     return `
       <div class="rank-stack-row">
         <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
-        <div class="rank-stack-track">${segments}${totalValueHtml}</div>
+        <div class="rank-stack-track">${segments}</div>
+        <div class="rank-stack-total-cell">${totalValueHtml}</div>
       </div>
     `;
   }).join('');
