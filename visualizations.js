@@ -5609,7 +5609,8 @@ function buildRankControlsHtml(targetLabel, options = {}) {
   const {
     chartType = 'lollipop',
     viewMode = 'horizontal',
-    sortByScore = false
+    sortByScore = false,
+    rankCount = 1
   } = options;
   const safeTarget = escapeHtml(targetLabel);
   const isMenuOpen = resultState.openRankMenus.has(targetLabel);
@@ -5667,7 +5668,8 @@ function buildRankControlsHtml(targetLabel, options = {}) {
       <span class="choice-controls-sort-label">가중 평균 높은 순서로 정렬</span>
     </label>
   `;
-  return `<div class="choice-controls">${directionHtml}${chartTypeHtml}${sortHtml}</div>`;
+  const formulaHtml = `<div class="rank-formula-note">${escapeHtml(buildRankWeightFormulaText(rankCount))}</div>`;
+  return `<div class="choice-controls-wrap"><div class="choice-controls">${directionHtml}${chartTypeHtml}${sortHtml}</div>${formulaHtml}</div>`;
 }
 
 function buildRankSummaryHtml(data) {
@@ -6120,13 +6122,12 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
       const rankObj = data.ranking.find(rk => rk.option === r.option);
       const pos = rankObj ? rankObj.position : '-';
       const rankCells = r.perRank.map(pr => `<td class="num">${formatPercent(pr.pct)}</td><td class="num">${pr.count.toLocaleString()}</td>`).join('');
-      const posColor = typeof pos === 'number' ? `var(--color-${Math.min(pos, 20)})` : null;
       return `
         <tr>
           <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
           ${rankCells}
           <td class="num">${rankObj ? formatRankAverage(r.weightedAverage) : '-'}</td>
-          <td class="num${posColor ? ' rank-pos-cell' : ''}"${posColor ? ` style="background:${posColor};"` : ''}>${pos === '-' ? '-' : `${pos}위`}</td>
+          <td class="num">${pos === '-' ? '-' : `${pos}위`}</td>
         </tr>
       `;
     }).join('');
@@ -6189,16 +6190,14 @@ function buildRankDataTableHtml(data, hiddenGroups = new Set()) {
         .join('');
       const rk = g.ranking.find(x => x.option === r.option);
       const po = rk ? rk.position : '-';
-      const poColor = typeof po === 'number' ? `var(--color-${Math.min(po, 20)})` : null;
-      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num${poColor ? ' rank-pos-cell' : ''}"${poColor ? ` style="background:${poColor};"` : ''}>${po === '-' ? '-' : `${po}위`}</td>`;
+      return `${perRankCells}<td class="num group-col">${rk ? formatRankAverage(perOpt ? perOpt.weightedAverage : 0) : '-'}</td><td class="num">${po === '-' ? '-' : `${po}위`}</td>`;
     }).join('');
-    const totalPosColor = typeof totalPos === 'number' ? `var(--color-${Math.min(totalPos, 20)})` : null;
     return `
       <tr>
         <td>${renderTableOptionLabel(r.option, data.targetLabel)}</td>
         ${rankCells}
         <td class="num group-col">${totalRank ? formatRankAverage(r.weightedAverage) : '-'}</td>
-        <td class="num${totalPosColor ? ' rank-pos-cell' : ''}"${totalPosColor ? ` style="background:${totalPosColor};"` : ''}>${totalPos === '-' ? '-' : `${totalPos}위`}</td>
+        <td class="num">${totalPos === '-' ? '-' : `${totalPos}위`}</td>
         ${groupCells}
       </tr>
     `;
@@ -6256,7 +6255,8 @@ function buildRankSection(data, rows) {
     ? buildRankControlsHtml(targetLabel, {
         chartType,
         viewMode,
-        sortByScore
+        sortByScore,
+        rankCount: displayData.rankCount
       })
     : '';
   let chartHtml = '';
@@ -6282,7 +6282,6 @@ function buildRankSection(data, rows) {
   const compareChartHtml = groupResults && compareMode === 'item'
     ? buildGroupedHorizontalCompareChartHtml(displayData, hiddenGroups)
     : chartHtml;
-  const formulaNoteHtml = buildRankFormulaNoteHtml(displayData);
   const otherTexts = getOtherResponseTexts(targetLabel, rows);
   resultState.otherResponseTexts.set(targetLabel, otherTexts);
   const fullText = buildQuestionFullHtml(codebookEntry);
@@ -6299,7 +6298,7 @@ function buildRankSection(data, rows) {
       ${controlsHtml}
       ${groupResults ? buildGroupCompareViewToggleHtml(displayData) : ''}
       <div class="result-visual has-legend">
-        <div class="result-chart-col">${compareChartHtml}${formulaNoteHtml}</div>
+        <div class="result-chart-col">${compareChartHtml}</div>
         ${sidePanelHtml}
       </div>
       ${tableHtml}
