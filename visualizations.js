@@ -5837,10 +5837,11 @@ function buildRankStackChartHtml(data, hiddenRanks) {
       kind: 'option-label',
       option: r.option
     }));
-    const segments = r.perRank.map((pr, ri) => {
-      if (hiddenRanks.has(ri)) return "";
+    const visibleSegs = r.perRank
+      .map((pr, ri) => ({ pr, ri }))
+      .filter(({ pr, ri }) => !hiddenRanks.has(ri) && Math.max(0, pr.pct) > 0);
+    const segments = visibleSegs.map(({ pr, ri }, idx) => {
       const w = Math.max(0, pr.pct);
-      if (w <= 0) return "";
       const color = rankStackColor(ri);
       const labelColor = ri === 0 ? 'var(--White)' : 'var(--neutral-700)';
       const tip = encodeURIComponent(JSON.stringify({
@@ -5853,7 +5854,8 @@ function buildRankStackChartHtml(data, hiddenRanks) {
       const valueHtml = w >= 8
         ? `<span class="rank-stack-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`
         : '';
-      return `<div class="rank-stack-seg"
+      const edgeClass = `${idx === 0 ? ' is-first' : ''}${idx === visibleSegs.length - 1 ? ' is-last' : ''}`;
+      return `<div class="rank-stack-seg${edgeClass}"
                    style="width:${w}%; background:${color};"
                    data-tip="${tip}">${valueHtml}</div>`;
     }).join("");

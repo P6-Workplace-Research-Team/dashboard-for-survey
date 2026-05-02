@@ -2065,13 +2065,13 @@ body {
     color: var(--White);
   }
 
-  /* ===== ������ ����: �׷��� ��� / ���� ��Ʈ�� ===== */
+  /* ===== 객관식 공통: 그래프 선택 / 정렬 컨트롤 ===== */
   
 .choice-controls-wrap {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 40px;
 }
 
 .choice-controls {
@@ -2092,9 +2092,6 @@ body {
   line-height: var(--body-line-height);
 }
 
-.result-section[data-type="rank"] .rank-point-guides-overlay {
-  display: none;
-}
 .choice-controls {
     display: flex;
     flex-wrap: wrap;
@@ -4337,11 +4334,11 @@ body {
     overflow: hidden;
   }
   .rank-stack-seg:hover { opacity: 0.85; }
-.rank-stack-track .rank-stack-seg:first-child {
+.rank-stack-track .rank-stack-seg.is-first {
   border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
 }
-.rank-stack-track .rank-stack-seg:last-child {
+.rank-stack-track .rank-stack-seg.is-last {
   border-top-right-radius: 4px;
   border-bottom-right-radius: 4px;
 }
@@ -5644,6 +5641,10 @@ body.home-page {
   display: none;
 }
 
+.rank-point-track::before {
+  display: none;
+}
+
 .rank-point-guide {
   position: absolute;
   top: 0;
@@ -5778,12 +5779,12 @@ body.home-page {
   opacity: 0.85;
 }
 
-.rank-stack-track .rank-stack-seg:first-child {
+.rank-stack-track .rank-stack-seg.is-first {
   border-top-left-radius: var(--radius-4);
   border-bottom-left-radius: var(--radius-4);
 }
 
-.rank-stack-track .rank-stack-seg:last-child {
+.rank-stack-track .rank-stack-seg.is-last {
   border-top-right-radius: var(--radius-4);
   border-bottom-right-radius: var(--radius-4);
 }
