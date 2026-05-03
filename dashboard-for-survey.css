@@ -1602,7 +1602,7 @@ body.home-page {
     align-items: center;
     justify-content: center;
   }
-  .chip .remove-btn:hover { background: var(--neutral-50); }
+  .chip .remove-btn:hover { background: var(--neutral-700); }
 
   /* ================================ 데이터 시각화 영역 (중요) ================================ */
 
@@ -2358,11 +2358,12 @@ body.home-page {
     gap: 8px;
     padding: 0;
   }
-  .single-vbar-plot {
+  .vertical-chart-plot {
     position: relative;
+    height: calc(var(--viz-vertical-top-space) + var(--viz-vertical-track-height));
     padding-right: 40px;
   }
-  .single-vbar-plot::after {
+  .vertical-chart-plot::after {
     content: "";
     position: absolute;
     left: 0;
@@ -2371,25 +2372,28 @@ body.home-page {
     border-top: 2px solid var(--neutral-300);
     pointer-events: none;
   }
-  .single-vbar-guides {
+  .vertical-chart-guides {
     position: absolute;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: var(--viz-vertical-top-space);
+    bottom: 0;
     pointer-events: none;
   }
-  .single-vbar-guide {
+  .vertical-chart-guide {
     position: absolute;
     left: 0;
     right: 0;
     transform: translateY(50%);
   }
-  .single-vbar-guide-line {
+  .vertical-chart-guide-line {
     display: block;
     width: 100%;
     border-top: 1px solid var(--neutral-200);
   }
-  .single-vbar-guide-label {
+  .vertical-chart-guide-label {
     position: absolute;
-    right: -2px;
+    right: 0;
     top: 0;
     transform: translateY(-50%);
     font-size: var(--label-2-size);
@@ -2402,6 +2406,7 @@ body.home-page {
     display: flex;
     align-items: stretch;
     height: var(--viz-vertical-track-height);
+    margin-top: var(--viz-vertical-top-space);
     gap: 4px;
     position: relative;
     z-index: 1;
@@ -3035,103 +3040,45 @@ body.home-page {
 
   /* - 차트 상세 : 객관식 순위 (롤리팝 세로 및 세로 누적 막대) */ 
 
-  /* 세로 차트 공통 */
   .rank-vertical-lollipop-chart,
   .rank-vertical-stack-chart {
-    --vbar-track-height: var(--viz-vertical-track-height);
-    --vbar-track-top: var(--viz-vertical-top-space);
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     padding: 0;
   }
-
-  .rank-vertical-chart-body {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .rank-vertical-axis {
-    position: relative;
-    height: var(--vbar-track-height);
-    margin-top: var(--vbar-track-top);
-    margin-right: 8px;
-  }
-
-  .rank-vertical-axis-label {
-    position: absolute;
-    right: 0;
-    transform: translateY(50%);
-    font-size: var(--caption-2-size);
-    line-height: var(--body-line-height);
-    color: var(--neutral-600);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  .rank-vertical-plot-col {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .rank-vertical-plot {
-    position: relative;
-    height: calc(var(--vbar-track-top) + var(--vbar-track-height));
-    display: grid;
-    column-gap: 4px;
-    border-bottom: 1px solid var(--neutral-200);
-  }
-
   .rank-vertical-labels-row {
     display: grid;
     column-gap: 4px;
     padding: 8px 8px 0;
+    padding-right: 40px;
   }
-
-  .rank-vertical-grid {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: var(--vbar-track-top);
-    height: var(--vbar-track-height);
-    pointer-events: none;
-    z-index: 0;
+  .rank-vertical-plot {
+    display: grid;
+    column-gap: 4px;
   }
-
-  .rank-vertical-grid-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: var(--viz-grid-color);
-    transform: translateY(50%);
-  }
-
   .rank-vertical-item {
     position: relative;
+    margin-top: var(--viz-vertical-top-space);
     z-index: 1;
     min-width: 0;
   }
-
   .rank-vertical-metric-slot {
     position: relative;
-    height: calc(var(--vbar-track-top) + var(--vbar-track-height));
+    height: var(--viz-vertical-track-height);
   }
-
   .rank-vertical-track {
     position: absolute;
     left: 50%;
     bottom: 0;
     width: 100%;
-    height: var(--vbar-track-height);
+    height: var(--viz-vertical-track-height);
     transform: translateX(-50%);
     display: flex;
     align-items: flex-end;
     justify-content: center;
     overflow: visible;
   }
-
   .rank-vertical-label {
     min-width: 0;
     font-size: var(--label-1-size);
@@ -3146,7 +3093,6 @@ body.home-page {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-
   .rank-vertical-marker-label {
     position: absolute;
     left: 50%;
@@ -3157,7 +3103,6 @@ body.home-page {
     gap: 2px;
     white-space: nowrap;
   }
-
   .rank-vertical-lollipop-line {
     width: 4px;
     background: var(--neutral-700);
@@ -4122,7 +4067,6 @@ body.home-page {
   .allocation-chart {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     padding: 0;
   }
   .allocation-stack-wrap {
@@ -4135,7 +4079,7 @@ body.home-page {
     height: var(--viz-stack-height);
     overflow: hidden;
     border-radius: var(--viz-bar-radius);
-    background: var(--viz-chart-soft-bg);
+    background: transparent;
   }
   .allocation-segment {
     min-width: 0;
@@ -4143,7 +4087,7 @@ body.home-page {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid rgba(255, 255, 255, 0.72);
+    border-right: 1px solid var(--neutral-300);
     color: var(--White);
     cursor: help;
   }
@@ -4151,7 +4095,7 @@ body.home-page {
     border-right: none;
   }
   .allocation-segment:hover {
-    opacity: 0.88;
+    opacity: 0.85;
   }
   .allocation-segment-value {
     display: block;
@@ -4160,7 +4104,7 @@ body.home-page {
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: 0 8px;
-    color: rgba(255, 255, 255, 0.94);
+    color: var(--White);
     font-size: var(--label-1-size);
     line-height: var(--body-line-height);
     font-weight: var(--font-weight-semibold);
@@ -4199,18 +4143,21 @@ body.home-page {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .allocation-group-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 2px 0 8px;
-  }
   .result-table-note.allocation-note {
     margin: 8px 0 0;
     font-size: var(--caption-1-size);
     line-height: var(--body-line-height);
     font-weight: var(--font-weight-regular);
-    color: var(--neutral-700);
+    color: var(--neutral-600);
+  }
+
+  /* - 차트 상세 : 주관식 비율 배분 그룹 (TBD 정리 필요) - */
+
+  .allocation-group-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0;
   }
   .allocation-group-row {
     display: grid;
@@ -4258,17 +4205,16 @@ body.home-page {
     color: var(--neutral-700);
   }
 
-  /* - 차트 상세 : 주관식 숫자 - */
+  /* - 차트 상세 : 주관식 숫자 (TBD 정리 필요) - */
 
   .numeric-open-chart {
-    --numeric-chart-height: var(--viz-vertical-track-height);
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
   .numeric-open-plot {
     position: relative;
-    height: var(--numeric-chart-height);
+    height: var(--viz-vertical-track-height);
     padding: 36px 0 42px 40px;
     overflow: visible;
   }
@@ -4637,30 +4583,30 @@ body.home-page {
     background-repeat: no-repeat;
     background-position: right 10px center;
   }
-.stacked-track {
-  display: flex;
-  width: min(760px, 100%);
-  height: 36px;
-  border-radius: 0;
-  overflow: hidden;
-  background: #f2f2f2;
-}
-.stacked-seg {
-  height: 100%;
+  .stacked-track {
     display: flex;
-    align-items: center;
-    justify-content: center;
-  min-width: 0;
-  cursor: pointer;
-}
-.stacked-track .stacked-seg:first-child {
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-.stacked-track .stacked-seg:last-child {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-}
+    width: min(760px, 100%);
+    height: 36px;
+    border-radius: 0;
+    overflow: hidden;
+    background: #f2f2f2;
+  }
+  .stacked-seg {
+    height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    min-width: 0;
+    cursor: pointer;
+  }
+  .stacked-track .stacked-seg:first-child {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+  }
+  .stacked-track .stacked-seg:last-child {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
   .stacked-seg-label {
     color: #fff;
     font-size: 11px;
@@ -4714,6 +4660,7 @@ body.home-page {
     margin: -6px 0 16px;
   }*/
   
+
   /* ==== 데이터 테이블 영역 ==== */
 
   /* - 데이터 테이블 펼치기/숨기기 토글 - */
@@ -4738,11 +4685,11 @@ body.home-page {
     font-size: var(--label-1-size);
     font-weight: var(--font-weight-semibold);
     line-height: var(--body-line-height);
-    border-radius: 6px;
+    border-radius: var(--radius-4);
     transition: background-color .15s ease;
   }
   .data-table-toggle:hover {
-    background: var(--neutral-100, #f1f1f1);
+    background: var(--neutral-100);
   }
   .data-table-toggle:focus-visible {
     outline: 2px solid var(--neutral-900);
@@ -4850,7 +4797,7 @@ body.home-page {
     padding: 4px 8px;
     border: 1px solid var(--neutral-300);
     border-radius: var(--radius-pill);
-    background: var(--White);
+    background: var(--neutral-50);
     color: var(--neutral-700);
     font-size: var(--caption-2-size);
     font-weight: var(--font-weight-regular);
@@ -5179,7 +5126,8 @@ body.home-page {
     color: var(--neutral-900);
   } */
 
-  /* ==== 대시보드 푸터 ===== */
+  /* ==== 대시보드 푸터 ==== */
+
   .dash-footer {
     text-align: center;
     min-height: 64px;
@@ -5237,7 +5185,7 @@ body.home-page {
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-4);
-    color: var(--neutral-600);
+    opacity: 0.6;
   }
   .modal-close-icon {
     width: 16px;
@@ -5427,6 +5375,7 @@ body.home-page {
   .update-file-btn:disabled { opacity: 0.5; cursor: default; }
 
   /* - 범례 그룹화 모달 - */
+
   .group-config-note {
     font-size: 12px;
     color: var(--neutral-600);
@@ -5547,7 +5496,7 @@ body.home-page {
     font-size: var(--heading-6-size);
   }
   #other-response-modal .modal-body {
-    padding: 12px 16px 24px;
+    padding: 12px 16px 20px;
   }
   .other-modal-subtitle {
     margin-bottom: 16px;
@@ -5622,8 +5571,7 @@ body.home-page {
   .selection-status,
   .single-hbar-chart.group-compare .single-hbar-value,
   .scale-compare-row-axis-copy,
-  .rank-group-table th,
-  .other-response-open-btn {
+  .rank-group-table th {
     font-weight: var(--font-weight-semibold);
   }
 
@@ -5944,6 +5892,48 @@ body.home-page {
   flex-shrink: 0;
 }
 
+.result-header-top .result-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.export-img-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: var(--button-2-size);
+  font-weight: var(--font-weight-regular);
+  color: var(--neutral-700);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--button-2-radius);
+  padding: var(--button-2-padding);
+  background: var(--White);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, font-weight .15s ease;
+}
+
+.export-img-btn:hover {
+  color: var(--neutral-900);
+  border-color: var(--neutral-900);
+  font-weight: var(--font-weight-semibold);
+}
+
+.export-img-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.result-export-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+  flex-shrink: 0;
+}
+
+
 /* 그룹별 비교 관련 무언가 */
 
 .result-header-top {
@@ -6057,45 +6047,4 @@ body.home-page {
   font-size: 11px;
   color: #333;
   font-variant-numeric: tabular-nums;
-}
-
-.result-header-top .result-title {
-  flex: 1;
-  min-width: 0;
-}
-
-.export-img-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  font-size: var(--button-2-size);
-  font-weight: var(--font-weight-regular);
-  color: var(--neutral-700);
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--button-2-radius);
-  padding: var(--button-2-padding);
-  background: var(--White);
-  cursor: pointer;
-  transition: color .15s ease, border-color .15s ease, font-weight .15s ease;
-}
-
-.export-img-btn:hover {
-  color: var(--neutral-900);
-  border-color: var(--neutral-900);
-  font-weight: var(--font-weight-semibold);
-}
-
-.export-img-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-  pointer-events: none;
-}
-
-.result-export-icon {
-  width: 15px;
-  height: 15px;
-  display: block;
-  flex-shrink: 0;
 }

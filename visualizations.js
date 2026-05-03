@@ -5789,23 +5789,21 @@ function buildRankVerticalLollipopChartHtml(data) {
     return `<div class="rank-vertical-label" title="${escapeHtml(row.option)}" data-tip="${labelTip}">${escapeHtml(row.option)}</div>`;
   }).join('');
 
+  const guidesHtml = axisMeta.ticks.map(tick => `
+    <div class="vertical-chart-guide" style="bottom:${tick.bottomPct}%;" aria-hidden="true">
+      <span class="vertical-chart-guide-line"></span>
+      <span class="vertical-chart-guide-label">${tick.label}</span>
+    </div>
+  `).join('');
+
   return `
     <div class="rank-vertical-lollipop-chart">
-      <div class="rank-vertical-chart-body">
-        <div class="rank-vertical-axis" aria-hidden="true">
-          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPct}%;">${tick.label}</span>`).join('')}
-        </div>
-        <div class="rank-vertical-plot-col">
-          <div class="rank-vertical-plot" style="${colsStyle}">
-            <div class="rank-vertical-grid" aria-hidden="true">
-              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPct}%;"></span>`).join('')}
-            </div>
-            ${itemsHtml}
-          </div>
-          <div class="rank-vertical-labels-row" style="${colsStyle}">
-            ${labelsHtml}
-          </div>
-        </div>
+      <div class="vertical-chart-plot rank-vertical-plot" style="${colsStyle}">
+        <div class="vertical-chart-guides" aria-hidden="true">${guidesHtml}</div>
+        ${itemsHtml}
+      </div>
+      <div class="rank-vertical-labels-row" style="${colsStyle}">
+        ${labelsHtml}
       </div>
     </div>
   `;
@@ -5907,23 +5905,21 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
     }));
     return `<div class="rank-vertical-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
   }).join('');
+  const guidesHtml = axisMeta.ticks.map(tick => `
+    <div class="vertical-chart-guide" style="bottom:${tick.bottomPct}%;" aria-hidden="true">
+      <span class="vertical-chart-guide-line"></span>
+      <span class="vertical-chart-guide-label">${tick.label}</span>
+    </div>
+  `).join('');
+
   return `
     <div class="rank-vertical-stack-chart">
-      <div class="rank-vertical-chart-body">
-        <div class="rank-vertical-axis" aria-hidden="true">
-          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPct}%;">${tick.label}</span>`).join('')}
-        </div>
-        <div class="rank-vertical-plot-col">
-          <div class="rank-vertical-plot" style="${colsStyle}">
-            <div class="rank-vertical-grid" aria-hidden="true">
-              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPct}%;"></span>`).join('')}
-            </div>
-            ${rowHtml}
-          </div>
-          <div class="rank-vertical-labels-row" style="${colsStyle}">
-            ${labelsHtml}
-          </div>
-        </div>
+      <div class="vertical-chart-plot rank-vertical-plot" style="${colsStyle}">
+        <div class="vertical-chart-guides" aria-hidden="true">${guidesHtml}</div>
+        ${rowHtml}
+      </div>
+      <div class="rank-vertical-labels-row" style="${colsStyle}">
+        ${labelsHtml}
       </div>
     </div>
   `;
@@ -6611,15 +6607,15 @@ function buildSingleChoiceVerticalBarChartHtml(data) {
     return `<div class="single-vbar-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
   }).join('');
   const guidesHtml = guideMarks.map(mark => `
-    <div class="single-vbar-guide" style="bottom:${(mark / axisMax) * 100}%;">
-      <span class="single-vbar-guide-line"></span>
-      <span class="single-vbar-guide-label">${mark}%</span>
+    <div class="vertical-chart-guide" style="bottom:${(mark / axisMax) * 100}%;">
+      <span class="vertical-chart-guide-line"></span>
+      <span class="vertical-chart-guide-label">${mark}%</span>
     </div>
   `).join('');
   return `
     <div class="single-vbar-chart">
-      <div class="single-vbar-plot">
-        <div class="single-vbar-guides" aria-hidden="true">${guidesHtml}</div>
+      <div class="vertical-chart-plot single-vbar-plot">
+        <div class="vertical-chart-guides" aria-hidden="true">${guidesHtml}</div>
         <div class="single-vbar-track-row">${colsHtml}</div>
       </div>
       <div class="single-vbar-label-row">${labelsHtml}</div>
