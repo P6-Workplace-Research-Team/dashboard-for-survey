@@ -34,7 +34,7 @@
 |---|---|
 | 문항 제목 | `.result-title` |
 | 문항 전체 텍스트 | `.result-question-full` (Q. 본문 텍스트) |
-| 차트 본체 | `.hbar-chart`, `.vbar-chart`, `.pie-chart-wrap`, `.stacked-chart-wrap`, `.lollipop-chart` 등 차트 영역 전체 |
+| 차트 본체 | `.single-hbar-chart`, `.vbar-chart`, `.pie-chart-wrap`, `.stacked-chart-wrap`, `.lollipop-chart` 등 차트 영역 전체 |
 | 가중 평균 설명 주석 | `.result-note` (산출식 설명 텍스트) |
 | 범례 | `.result-side-panel`, `.result-legend` 등 범례 영역 (그룹 비교 적용 시 그룹 범례 포함) |
 | 데이터 테이블 | `[data-data-table-section]` — **펼쳐진 상태인 경우에만** 포함 |
