@@ -4665,107 +4665,104 @@ function buildNumericOpenControlsHtml(targetLabel, interval, start, disabled = f
   const noteText = disabled
     ? '그룹별 비교에서는 전체 기준 축을 유지하기 위해 구간 시작값과 간격을 조정할 수 없습니다.'
     : safeMode === 'box'
-      ? '박스수염 보기에서는 전체 기준 축을 유지하기 위해 구간 시작값과 간격을 조정할 수 없습니다.'
+      ? ''
       : '구간 시작값과 간격을 조정해 분포를 원하는 기준으로 확인할 수 있습니다.';
   return `
     <div class="numeric-open-controls">
       <div class="numeric-open-view-toggle" role="group" aria-label="주관식 숫자 차트 유형">
         <button type="button"
-                class="numeric-open-view-btn ${safeMode === 'histogram' ? 'active' : ''}"
-                data-numeric-view="histogram"
-                data-target="${escapeHtml(targetLabel)}"
-                data-numeric-view-locked="${disabled ? 'true' : 'false'}">히스토그램</button>
-        <button type="button"
                 class="numeric-open-view-btn ${safeMode === 'box' ? 'active' : ''}"
                 data-numeric-view="box"
                 data-target="${escapeHtml(targetLabel)}"
-                data-numeric-view-locked="${disabled ? 'true' : 'false'}">박스수염</button>
+                data-numeric-view-locked="${disabled ? 'true' : 'false'}">요약 보기</button>
+        <button type="button"
+                class="numeric-open-view-btn ${safeMode === 'histogram' ? 'active' : ''}"
+                data-numeric-view="histogram"
+                data-target="${escapeHtml(targetLabel)}"
+                data-numeric-view-locked="${disabled ? 'true' : 'false'}">분포 보기</button>
       </div>
-      <label class="numeric-open-bin-control">
-        <span>구간 시작값</span>
-        <input type="number"
-               step="1"
-               class="numeric-open-bin-input"
-               data-numeric-start="true"
-               data-target="${escapeHtml(targetLabel)}"
-               value="${normalizeNumericHistogramStart(start)}"${disabledAttr}>
-      </label>
-      <label class="numeric-open-bin-control">
-        <span>구간 간격</span>
-        <input type="number"
-               min="1"
-               step="1"
-               class="numeric-open-bin-input"
-               data-numeric-interval="true"
-               data-target="${escapeHtml(targetLabel)}"
-               value="${clampNumericHistogramStep(interval)}"${disabledAttr}>
-      </label>
-      <div class="numeric-open-controls-note">${noteText}</div>
+      <div class="numeric-open-bin-controls">
+        <label class="numeric-open-bin-control">
+          <span>구간 시작값</span>
+          <input type="number"
+                 step="1"
+                 class="numeric-open-bin-input"
+                 data-numeric-start="true"
+                 data-target="${escapeHtml(targetLabel)}"
+                 value="${normalizeNumericHistogramStart(start)}"${disabledAttr}>
+        </label>
+        <label class="numeric-open-bin-control">
+          <span>구간 간격</span>
+          <input type="number"
+                 min="1"
+                 step="1"
+                 class="numeric-open-bin-input"
+                 data-numeric-interval="true"
+                 data-target="${escapeHtml(targetLabel)}"
+                 value="${clampNumericHistogramStep(interval)}"${disabledAttr}>
+        </label>
+      </div>
+      ${noteText ? `<div class="numeric-open-controls-note">${noteText}</div>` : ''}
     </div>
   `;
 }
 
 function buildNumericWhiskerTrackHtml(item, axisMin, axisMax, numberUnit = '', groupLabel = '', options = {}) {
-  const minLeft = getNumericValueLeftPct(item.min, axisMin, axisMax);
-  const q1Left = getNumericValueLeftPct(item.q1, axisMin, axisMax);
-  const medianLeft = getNumericValueLeftPct(item.median, axisMin, axisMax);
-  const q3Left = getNumericValueLeftPct(item.q3, axisMin, axisMax);
-  const maxLeft = getNumericValueLeftPct(item.max, axisMin, axisMax);
-  const meanLeft = getNumericValueLeftPct(item.mean, axisMin, axisMax);
-  const rangeLeft = Math.min(minLeft ?? 0, maxLeft ?? 0);
-  const rangeWidth = Math.max(0.8, Math.abs((maxLeft ?? 0) - (minLeft ?? 0)));
-  const q1ToMedianLeft = Math.min(q1Left ?? 0, medianLeft ?? 0);
-  const q1ToMedianWidth = Math.max(0, Math.abs((medianLeft ?? 0) - (q1Left ?? 0)));
-  const medianToQ3Left = Math.min(medianLeft ?? 0, q3Left ?? 0);
-  const medianToQ3Width = Math.max(0, Math.abs((q3Left ?? 0) - (medianLeft ?? 0)));
-  const rangeTip = encodeURIComponent(JSON.stringify({
-    kind: 'numeric-whisker-range',
-    groupLabel,
-    min: item.min,
-    max: item.max,
-    totalN: item.n,
-    unit: numberUnit
-  }));
-  const boxTip = encodeURIComponent(JSON.stringify({
-    kind: 'numeric-whisker-box',
-    groupLabel,
-    q1: item.q1,
-    median: item.median,
-    q3: item.q3,
-    totalN: item.n,
-    unit: numberUnit
-  }));
-  const medianTip = encodeURIComponent(JSON.stringify({
-    kind: 'numeric-quartile',
-    groupLabel,
-    label: 'Q2 (중앙값)',
-    tooltipLabel: 'Q2 (중앙값)',
-    value: item.median,
-    unit: numberUnit
-  }));
+  const minLeft   = getNumericValueLeftPct(item.min,    axisMin, axisMax) ?? 0;
+  const q1Left    = getNumericValueLeftPct(item.q1,     axisMin, axisMax) ?? 0;
+  const medLeft   = getNumericValueLeftPct(item.median, axisMin, axisMax) ?? 0;
+  const q3Left    = getNumericValueLeftPct(item.q3,     axisMin, axisMax) ?? 0;
+  const maxLeft   = getNumericValueLeftPct(item.max,    axisMin, axisMax) ?? 100;
+  const meanLeft  = getNumericValueLeftPct(item.mean,   axisMin, axisMax) ?? 0;
+  const deadLeftFlex    = Math.max(0, minLeft);
+  const leftWhiskerFlex = Math.max(0, q1Left - minLeft);
+  const q1q2Flex        = Math.max(0, medLeft - q1Left);
+  const q2q3Flex        = Math.max(0, q3Left - medLeft);
+  const rightWhiskerFlex = Math.max(0, maxLeft - q3Left);
+  const deadRightFlex   = Math.max(0, 100 - maxLeft);
   const meanTip = encodeURIComponent(JSON.stringify({
-    kind: 'numeric-mean',
-    groupLabel,
-    mean: item.mean,
-    totalN: item.n,
-    unit: numberUnit
+    kind: 'numeric-mean', groupLabel, mean: item.mean, totalN: item.n, unit: numberUnit
   }));
+  const minTip = encodeURIComponent(JSON.stringify({ kind: 'numeric-boxplot-stat', groupLabel, label: '최솟값',       value: item.min,    unit: numberUnit }));
+  const q1Tip  = encodeURIComponent(JSON.stringify({ kind: 'numeric-boxplot-stat', groupLabel, label: 'Q1(하위 25%)', value: item.q1,     unit: numberUnit }));
+  const q2Tip  = encodeURIComponent(JSON.stringify({ kind: 'numeric-boxplot-stat', groupLabel, label: 'Q2(중앙값)',   value: item.median, unit: numberUnit }));
+  const q3Tip  = encodeURIComponent(JSON.stringify({ kind: 'numeric-boxplot-stat', groupLabel, label: 'Q3(상위 25%)', value: item.q3,     unit: numberUnit }));
+  const maxTip = encodeURIComponent(JSON.stringify({ kind: 'numeric-boxplot-stat', groupLabel, label: '최댓값',       value: item.max,    unit: numberUnit }));
   const meanLabel = Number.isFinite(Number(item.mean))
     ? Number(item.mean).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     : '-';
+  const fmtQ = v => Number.isFinite(Number(v)) ? formatNumericValue(v, 1) : '-';
   return `
     <div class="numeric-whisker-track-wrap">
-      <div class="numeric-whisker-track">
-        <div class="numeric-whisker-track-base"></div>
-        <div class="numeric-whisker-range" style="left:${rangeLeft}%; width:${rangeWidth}%;" data-tip="${rangeTip}"></div>
-        <div class="numeric-whisker-cap" style="left:${minLeft}%;"></div>
-        <div class="numeric-whisker-cap" style="left:${maxLeft}%;"></div>
-        <div class="numeric-whisker-box is-left" style="left:${q1ToMedianLeft}%; width:${q1ToMedianWidth}%; background:var(--color-2);" data-tip="${boxTip}"></div>
-        <div class="numeric-whisker-box is-right" style="left:${medianToQ3Left}%; width:${medianToQ3Width}%; background:var(--color-1);" data-tip="${boxTip}"></div>
-        <div class="numeric-whisker-median" style="left:${medianLeft}%;" data-tip="${medianTip}"></div>
+      <div class="numeric-whisker-q-tick" style="left:${q1Left}%;" data-tip="${q1Tip}"></div>
+      <div class="numeric-whisker-q-tick" style="left:${medLeft}%;" data-tip="${q2Tip}"></div>
+      <div class="numeric-whisker-q-tick" style="left:${q3Left}%;" data-tip="${q3Tip}"></div>
+      <div class="numeric-whisker-box-row">
+        <div class="numeric-whisker-dead-seg"    style="flex:${deadLeftFlex};"></div>
+        <div class="numeric-whisker-whisker-seg" style="flex:${leftWhiskerFlex};"></div>
+        <div class="numeric-whisker-box is-left"  style="flex:${q1q2Flex};  background:var(--color-2);"></div>
+        <div class="numeric-whisker-box is-right" style="flex:${q2q3Flex};  background:var(--color-1);"></div>
+        <div class="numeric-whisker-whisker-seg" style="flex:${rightWhiskerFlex};"></div>
+        <div class="numeric-whisker-dead-seg"    style="flex:${deadRightFlex};"></div>
+        <div class="numeric-whisker-end-tick" style="left:${minLeft}%;" data-tip="${minTip}"></div>
+        <div class="numeric-whisker-end-tick" style="left:${maxLeft}%;" data-tip="${maxTip}"></div>
         <div class="numeric-whisker-mean" style="left:${meanLeft}%;" data-tip="${meanTip}">
           <div class="numeric-whisker-mean-label">평균</div>
           ${escapeHtml(meanLabel)}
+        </div>
+      </div>
+      <div class="numeric-whisker-q-label-layer">
+        <div class="numeric-whisker-q-item" style="left:${q1Left}%;"  data-tip="${q1Tip}">
+          <div class="numeric-whisker-q-name">Q1</div>
+          <div class="numeric-whisker-q-val">${fmtQ(item.q1)}</div>
+        </div>
+        <div class="numeric-whisker-q-item" style="left:${medLeft}%;" data-tip="${q2Tip}">
+          <div class="numeric-whisker-q-name">Q2</div>
+          <div class="numeric-whisker-q-val">${fmtQ(item.median)}</div>
+        </div>
+        <div class="numeric-whisker-q-item" style="left:${q3Left}%;"  data-tip="${q3Tip}">
+          <div class="numeric-whisker-q-name">Q3</div>
+          <div class="numeric-whisker-q-val">${fmtQ(item.q3)}</div>
         </div>
       </div>
     </div>
@@ -4796,6 +4793,36 @@ function buildNumericQuartileMarkersHtml(item, numberUnit = '', groupLabel = '')
   }).join('');
 }
 
+function buildNumericBoxAxisHtml(domainMin, domainMax) {
+  const range = domainMax - domainMin;
+  if (!Number.isFinite(range) || range <= 0) {
+    const label = Number.isFinite(domainMin) ? (Number.isInteger(domainMin) ? String(domainMin) : formatNumericValue(domainMin, 1)) : '-';
+    return `<div class="numeric-whisker-axis-tick is-start" style="left:0%;"></div><span class="numeric-whisker-axis-label is-start" style="left:0%;">${label}</span>`;
+  }
+  const rawInterval = range / 4;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)));
+  const normalized = rawInterval / magnitude;
+  const niceInterval = normalized < 1.5 ? magnitude
+                     : normalized < 3   ? 2 * magnitude
+                     : normalized < 7   ? 5 * magnitude
+                     : 10 * magnitude;
+  const tickStart = Math.ceil(domainMin / niceInterval) * niceInterval;
+  const tickEnd   = Math.floor(domainMax / niceInterval) * niceInterval;
+  const ticks = [];
+  if (Math.abs(tickStart - domainMin) > niceInterval * 0.01) ticks.push(domainMin);
+  for (let v = tickStart; v <= tickEnd + niceInterval * 1e-6; v += niceInterval) {
+    ticks.push(Math.round(v / niceInterval) * niceInterval);
+  }
+  if (ticks.length === 0 || Math.abs(ticks[ticks.length - 1] - domainMax) > niceInterval * 0.01) ticks.push(domainMax);
+  const n = ticks.length;
+  const fmt = v => !Number.isFinite(v) ? '-' : Number.isInteger(v) ? String(v) : formatNumericValue(v, 1);
+  return ticks.map((v, i) => {
+    const leftPct = ((v - domainMin) / (domainMax - domainMin)) * 100;
+    const edgeClass = i === 0 ? ' is-start' : i === n - 1 ? ' is-end' : '';
+    return `<div class="numeric-whisker-axis-tick${edgeClass}" style="left:${leftPct}%;"></div><span class="numeric-whisker-axis-label${edgeClass}" style="left:${leftPct}%;">${fmt(v)}</span>`;
+  }).join('');
+}
+
 function buildNumericBoundaryAxisLabelsHtml(bins, domainMax, className) {
   const safeBins = Array.isArray(bins) ? bins : [];
   const boundaryValues = safeBins.map(bin => bin.start).concat([domainMax]);
@@ -4812,7 +4839,6 @@ function buildNumericBoundaryAxisLabelsHtml(bins, domainMax, className) {
 
 function buildNumericHistogramChartHtml(histogram, options = {}) {
   const {
-    maxBinCount = histogram.maxBinCount || 0,
     groupLabel = '',
     numberUnit = ''
   } = options;
@@ -4820,20 +4846,23 @@ function buildNumericHistogramChartHtml(histogram, options = {}) {
   if (!hasValues) {
     return '<div class="result-empty">표시할 수치 응답이 없습니다.</div>';
   }
-  const yAxisConfig = getNumericYAxisConfig(maxBinCount || 0);
-  const axisMaxCount = yAxisConfig.axisMax || 1;
-  const gridLinesHtml = yAxisConfig.ticks
-    .filter(value => value > 0 && value <= axisMaxCount)
-    .map(value => {
-      const rawY = 100 - ((value / axisMaxCount) * 100);
-      const y = value === axisMaxCount ? 0.5 : rawY;
-      return `<line class="numeric-open-gridline" x1="0" y1="${y}" x2="100" y2="${y}"></line>`;
-    }).join('');
+  // Y축: 응답 비율(%) 기준 — single-vbar와 동일한 방식
+  const maxBinPct = histogram.bins.reduce((m, b) => Math.max(m, b.pct || 0), 0);
+  const axisMax = Math.max(20, Math.ceil(maxBinPct / 20) * 20);
+  const guideMarks = [];
+  for (let mark = 20; mark <= axisMax; mark += 20) guideMarks.push(mark);
+  const guidesHtml = guideMarks.map(mark => `
+    <div class="vertical-chart-guide" style="bottom:${(mark / axisMax) * 100}%;">
+      <span class="vertical-chart-guide-line"></span>
+      <span class="vertical-chart-guide-label">${mark}%</span>
+    </div>
+  `).join('');
+
   const binWidth = 100 / histogram.bins.length;
   const gap = Math.min(0.18, binWidth * 0.06);
   const barWidth = Math.max(0.2, binWidth - gap);
   const barsHtml = histogram.bins.map((bin, index) => {
-    const heightPct = axisMaxCount > 0 ? Math.max(0, Math.min(100, (bin.count / axisMaxCount) * 100)) : 0;
+    const heightPct = axisMax > 0 ? Math.max(0, Math.min(100, (bin.pct / axisMax) * 100)) : 0;
     const visibleHeight = bin.count > 0 ? Math.max(1.2, heightPct) : 0.6;
     const x = (index * binWidth) + (gap / 2);
     const tip = encodeURIComponent(JSON.stringify({
@@ -4845,18 +4874,19 @@ function buildNumericHistogramChartHtml(histogram, options = {}) {
       pct: bin.pct,
       count: bin.count
     }));
+    const valueLabel = bin.count > 0
+      ? `<span class="numeric-open-bar-value">${formatPercent(bin.pct)}</span>`
+      : '';
     return `
       <div class="numeric-open-bar ${bin.count > 0 ? '' : 'is-empty'}"
            style="left:${x.toFixed(3)}%; width:${barWidth.toFixed(3)}%; height:${visibleHeight.toFixed(3)}%; background:${SINGLE_BAR_COLOR};"
            data-tip="${tip}"
-           aria-label="구간 ${index + 1}"></div>
+           aria-label="구간 ${index + 1}">${valueLabel}</div>
     `;
   }).join('');
+
   const axisLabelsHtml = buildNumericBoundaryAxisLabelsHtml(histogram.bins, histogram.domainMax, 'numeric-open-axis-label');
-  const yAxisLabelsHtml = yAxisConfig.ticks.map(value => {
-    const bottom = axisMaxCount > 0 ? (value / axisMaxCount) * 100 : 0;
-    return `<span class="numeric-open-y-axis-label" style="bottom:${bottom}%;">${value.toLocaleString()}</span>`;
-  }).join('');
+
   const meanTip = encodeURIComponent(JSON.stringify({
     kind: 'numeric-mean',
     groupLabel,
@@ -4864,33 +4894,27 @@ function buildNumericHistogramChartHtml(histogram, options = {}) {
     totalN: histogram.n,
     unit: numberUnit
   }));
-  const statMarkersHtml = buildNumericQuartileMarkersHtml(histogram, numberUnit, groupLabel);
   const footerHtml = `
     <div class="numeric-open-footer">
-      <div class="numeric-open-note">구간 기준: 시작값 이상, 다음 경계값 미만입니다. 마지막 구간은 최댓값을 포함합니다.</div>
+      <div class="numeric-open-note"> 각 구간은 시작값 '이상' 다음 경계값 '미만'을 의미합니다. 단, 마지막 구간은 최댓값을 포함합니다.</div>
       <div class="numeric-open-unit">${numberUnit ? `단위 : ${escapeHtml(numberUnit)}` : ''}</div>
     </div>
   `;
   return `
     <div class="numeric-open-chart">
-      <div class="numeric-open-plot">
-        <svg class="numeric-open-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          ${gridLinesHtml}
-          <line class="numeric-open-baseline" x1="0" y1="100" x2="100" y2="100"></line>
-        </svg>
-        <div class="numeric-open-y-axis">${yAxisLabelsHtml}</div>
+      <div class="vertical-chart-plot numeric-open-hist-plot">
+        <div class="vertical-chart-guides" aria-hidden="true">${guidesHtml}</div>
         <div class="numeric-open-bars">${barsHtml}</div>
-        <div class="numeric-open-stat-layer">${statMarkersHtml}</div>
         <div class="numeric-open-mean-layer">
           ${histogram.meanLeftPct === null ? '' : `
           <div class="numeric-open-mean-marker" style="left:${histogram.meanLeftPct}%;">
             <div class="numeric-open-mean-line"></div>
-            <div class="numeric-open-mean-label" data-tip="${meanTip}">평균</div>
+            <div class="numeric-open-mean-label" data-tip="${meanTip}">평균<span class="numeric-open-hist-marker-value">${formatNumericValue(histogram.mean, 1)}</span></div>
           </div>
-        `}
+          `}
         </div>
-        <div class="numeric-open-axis">${axisLabelsHtml}</div>
       </div>
+      <div class="numeric-open-boundary-axis">${axisLabelsHtml}</div>
       ${footerHtml}
     </div>
   `;
@@ -4898,10 +4922,9 @@ function buildNumericHistogramChartHtml(histogram, options = {}) {
 
 function buildNumericOpenBoxChartHtml(data) {
   const numberUnit = data.codebookEntry && data.codebookEntry.numberUnit ? data.codebookEntry.numberUnit : '';
-  const axisLabelsHtml = buildNumericBoundaryAxisLabelsHtml(data.bins, data.domainMax, 'numeric-whisker-axis-label');
   const footerHtml = `
     <div class="numeric-open-footer">
-      <div class="numeric-open-note">수염은 최소~최대, 박스는 Q1~Q3, 세로선은 중앙값, 점은 평균입니다.</div>
+      <div class="numeric-open-note">박스플롯 차트 보는 법: 수염은 응답값의 전체 범위, 박스는 전체 응답 중 가운데 50%가 모인 구간, 분홍색과 파랑색이 나뉘는 지점은 중앙값입니다.</div>
       <div class="numeric-open-unit">${numberUnit ? `단위 : ${escapeHtml(numberUnit)}` : ''}</div>
     </div>
   `;
@@ -4909,8 +4932,7 @@ function buildNumericOpenBoxChartHtml(data) {
     <div class="numeric-open-summary-whisker">
       <div class="numeric-open-summary-body">
         ${buildNumericWhiskerTrackHtml(data, data.domainMin, data.domainMax, numberUnit, '응답자 전체')}
-        <div class="numeric-whisker-axis">${axisLabelsHtml}</div>
-        <div class="numeric-open-stat-layer">${buildNumericQuartileMarkersHtml(data, numberUnit, '응답자 전체')}</div>
+        <div class="numeric-whisker-axis">${buildNumericBoxAxisHtml(data.domainMin, data.domainMax)}</div>
       </div>
       ${footerHtml}
     </div>
@@ -4947,17 +4969,16 @@ function buildNumericOpenGroupChartHtml(data, hiddenGroups) {
     `;
   }).join('');
   const rowHtml = overallRowHtml + groupRowsHtml;
-  const axisLabelsHtml = buildNumericBoundaryAxisLabelsHtml(data.bins, data.domainMax, 'numeric-whisker-axis-label');
   const footerHtml = `
     <div class="numeric-open-footer">
-      <div class="numeric-open-note">수염은 최소~최대, 박스는 Q1~Q3, 세로선은 중앙값, 점은 평균입니다.</div>
+      <div class="numeric-open-note">박스플롯 차트 보는 법: 수염은 응답값의 전체 범위, 박스는 전체 응답 중 가운데 50%가 모인 구간, 분홍색과 파랑색이 나뉘는 지점은 중앙값입니다.</div>
       <div class="numeric-open-unit">${numberUnit ? `단위 : ${escapeHtml(numberUnit)}` : ''}</div>
     </div>
   `;
   return `
     <div class="numeric-whisker-chart">
       <div class="numeric-whisker-rows">${rowHtml}</div>
-      <div class="numeric-whisker-axis">${axisLabelsHtml}</div>
+      <div class="numeric-whisker-axis">${buildNumericBoxAxisHtml(data.domainMin, data.domainMax)}</div>
       ${footerHtml}
     </div>
   `;
@@ -5261,7 +5282,6 @@ function buildNumericOpenDataTableHtml(data, hiddenGroups = new Set()) {
       ]
     : [{
         label: data.targetLabel || "응답자 전체",
-        total: true,
         n: data.totalN,
         mean: data.mean,
         min: data.min,
@@ -7467,7 +7487,7 @@ function attachResultEventListeners(container) {
       if (!targetLabel || !mode) return;
       if (btn.dataset.numericViewLocked === 'true') {
         if (mode === 'histogram') {
-          alert('그룹별 비교에서는 히스토그램 보기를 사용할 수 없습니다. 그룹별 비교는 박스수염으로 표시합니다.');
+          alert('그룹별 비교에서는 분포 보기를 사용할 수 없습니다. 그룹별 비교는 요약 보기로 표시합니다.');
         }
         return;
       }
@@ -7766,6 +7786,12 @@ function formatTooltipHtml(d) {
         d.groupLabel ? line(escapeHtml(d.groupLabel)) : "",
         line(escapeHtml(d.tooltipLabel || d.label || "")),
         line(`사분위값 ${formatNumericValueWithUnit(Number(d.value), d.unit || "")}`)
+      ].join("");
+    case "numeric-boxplot-stat":
+      return [
+        d.groupLabel ? line(escapeHtml(d.groupLabel)) : "",
+        line(escapeHtml(d.label || "")),
+        line(formatNumericValueWithUnit(Number(d.value), d.unit || ""))
       ].join("");
     case "numeric-whisker-range":
       return [
