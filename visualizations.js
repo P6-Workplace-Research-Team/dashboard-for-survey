@@ -1681,8 +1681,6 @@ const RANK_CHART_TYPE_LABELS = {
   lollipop: '가중 평균',
   stacked: '응답 비율'
 };
-const RANK_VERTICAL_TRACK_HEIGHT = 280;
-
 const RANK_LOLLIPOP_COLOR = DATA_VIZ_COLORS.singleBar;
 const RANK_STACK_PALETTE = DATA_VIZ_COLORS.rankStack;
 function rankStackColor(idx) {
@@ -5687,7 +5685,7 @@ function buildRankLollipopChartHtml(data) {
   const overlayHeight = rows.length * 40 - 8;
   const guideOverlayHtml = axisTicks.map(tick => {
     const tickPct = pctFor(tick);
-    return `<span class="rank-point-guide" style="left:${tickPct}%;"></span>`;
+    return `<span class="lollipop-h-guide" style="left:${tickPct}%;"></span>`;
   }).join('');
   const rowHtml = rows.map((r) => {
     const rankObj = data.ranking.find(item => item.option === r.option);
@@ -5702,33 +5700,33 @@ function buildRankLollipopChartHtml(data) {
       rankPosition: posText
     }));
     return `
-      <div class="rank-point-row">
-        <div class="rank-point-label" title="${escapeHtml(r.option)}" data-tip="${tip}">${escapeHtml(r.option)}</div>
-        <div class="rank-point-track" data-tip="${tip}">
-          <div class="rank-point-line" style="width:${leftPct}%;background:${color};"></div>
-          <div class="rank-point-dot" style="left:${leftPct}%;background:${color};"></div>
-          <div class="rank-point-inline-label" style="left:calc(${leftPct}% + 17px);" aria-hidden="true">
-            <span class="rank-point-value">${valueText}</span>
+      <div class="lollipop-h-row">
+        <div class="lollipop-h-label" title="${escapeHtml(r.option)}" data-tip="${tip}">${escapeHtml(r.option)}</div>
+        <div class="lollipop-h-track" data-tip="${tip}">
+          <div class="lollipop-h-line" style="width:${leftPct}%;background:${color};"></div>
+          <div class="lollipop-h-dot" style="left:${leftPct}%;background:${color};"></div>
+          <div class="lollipop-h-inline-label" style="left:calc(${leftPct}% + 17px);" aria-hidden="true">
+            <span class="lollipop-h-value">${valueText}</span>
           </div>
         </div>
-        <div class="rank-point-rank">${escapeHtml(posText)}</div>
+        <div class="lollipop-h-rank">${escapeHtml(posText)}</div>
       </div>
     `;
   }).join('');
   return `
-    <div class="rank-point-chart">
-      <div class="rank-point-guides-overlay" style="height:${overlayHeight}px;" aria-hidden="true">${guideOverlayHtml}</div>
+    <div class="lollipop-h-chart">
+      <div class="lollipop-h-guides-overlay" style="height:${overlayHeight}px;" aria-hidden="true">${guideOverlayHtml}</div>
       ${rowHtml}
-      <div class="rank-point-axis-row" aria-hidden="true">
-        <div class="rank-point-axis-spacer"></div>
-        <div class="rank-point-axis">
+      <div class="lollipop-h-axis-row" aria-hidden="true">
+        <div class="lollipop-h-axis-spacer"></div>
+        <div class="lollipop-h-axis">
           ${axisTicks.map(tick => {
             const leftPct = pctFor(tick);
             const cls = tick === axisMin ? 'is-start' : (tick === axisMax ? 'is-end' : 'is-mid');
-            return `<span class="rank-point-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
+            return `<span class="lollipop-h-axis-label ${cls}" style="left:${leftPct}%;">${tick}</span>`;
           }).join('')}
         </div>
-        <div class="rank-point-axis-rank-spacer"></div>
+        <div class="lollipop-h-axis-rank-spacer"></div>
       </div>
     </div>
   `;
@@ -5740,11 +5738,11 @@ function buildRankVerticalAxisMeta(maxValue, step, suffix = '') {
   const topValue = Math.ceil(safeMax / safeStep) * safeStep;
   const ticks = [];
   for (let value = topValue; value >= 0; value -= safeStep) {
-    const bottomPx = topValue === 0 ? 0 : (value / topValue) * RANK_VERTICAL_TRACK_HEIGHT;
+    const bottomPct = topValue === 0 ? 0 : (value / topValue) * 100;
     ticks.push({
       value,
       label: `${value}${suffix}`,
-      bottomPx
+      bottomPct
     });
   }
   return { topValue, ticks };
@@ -5761,7 +5759,7 @@ function buildRankVerticalLollipopChartHtml(data) {
     const posText = rankObj ? `${rankObj.position}위` : '-';
     const valueText = formatRankAverage(row.weightedAverage);
     const ratio = axisMeta.topValue > 0 ? Math.max(0, Math.min(1, (Number(row.weightedAverage) || 0) / axisMeta.topValue)) : 0;
-    const bottomPx = ratio * RANK_VERTICAL_TRACK_HEIGHT;
+    const bottomPct = ratio * 100;
     const tip = encodeURIComponent(JSON.stringify({
       kind: 'rank-lollipop',
       option: row.option,
@@ -5771,13 +5769,13 @@ function buildRankVerticalLollipopChartHtml(data) {
     return `
       <div class="rank-vertical-item rank-vertical-lollipop-item">
         <div class="rank-vertical-metric-slot">
-          <div class="rank-vertical-marker-label" style="bottom:${bottomPx + 11}px;">
+          <div class="rank-vertical-marker-label" style="bottom:calc(${bottomPct}% + 11px);">
             <span class="rank-vertical-rank">${escapeHtml(posText)}</span>
             <span class="rank-vertical-value">${valueText}</span>
           </div>
           <div class="rank-vertical-track" data-tip="${tip}">
-            <div class="rank-vertical-lollipop-line" style="height:${bottomPx}px;"></div>
-            <div class="rank-vertical-lollipop-dot" style="bottom:${bottomPx}px;"></div>
+            <div class="rank-vertical-lollipop-line" style="height:${bottomPct}%;"></div>
+            <div class="rank-vertical-lollipop-dot" style="bottom:${bottomPct}%;"></div>
           </div>
         </div>
       </div>
@@ -5792,15 +5790,15 @@ function buildRankVerticalLollipopChartHtml(data) {
   }).join('');
 
   return `
-    <div class="rank-vertical-chart rank-vertical-lollipop-chart">
+    <div class="rank-vertical-lollipop-chart">
       <div class="rank-vertical-chart-body">
         <div class="rank-vertical-axis" aria-hidden="true">
-          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
+          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPct}%;">${tick.label}</span>`).join('')}
         </div>
         <div class="rank-vertical-plot-col">
           <div class="rank-vertical-plot" style="${colsStyle}">
             <div class="rank-vertical-grid" aria-hidden="true">
-              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPct}%;"></span>`).join('')}
             </div>
             ${itemsHtml}
           </div>
@@ -5834,24 +5832,24 @@ function buildRankStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
-      const valueHtml = `<span class="rank-stack-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`;
-      return `<div class="rank-stack-seg"
+      const valueHtml = `<span class="stack-h-seg-value" style="color:${labelColor};">${formatPercent(pr.pct)}</span>`;
+      return `<div class="stack-h-seg"
                    style="width:${w}%; background:${color};"
                    data-tip="${tip}">${valueHtml}</div>`;
     }).join("");
     const visiblePct = r.perRank.reduce((s, pr, ri) => s + (hiddenRanks.has(ri) ? 0 : pr.pct), 0);
-    const totalValueHtml = `<span class="rank-stack-total-value is-outside">${formatPercent(visiblePct)}</span>`;
+    const totalValueHtml = `<span class="stack-h-total-value is-outside">${formatPercent(visiblePct)}</span>`;
     return `
-      <div class="rank-stack-row">
-        <div class="rank-stack-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
-        <div class="rank-stack-main">
-          <div class="rank-stack-track">${segments}</div>
+      <div class="stack-h-row">
+        <div class="stack-h-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>
+        <div class="stack-h-main">
+          <div class="stack-h-track">${segments}</div>
           ${totalValueHtml}
         </div>
       </div>
     `;
   }).join('');
-  return `<div class="rank-stack-chart">${rowHtml}</div>`;
+  return `<div class="stack-h-chart">${rowHtml}</div>`;
 }
 
 function buildRankVerticalStackChartHtml(data, hiddenRanks) {
@@ -5865,14 +5863,14 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
   const axisMeta = buildRankVerticalAxisMeta(Math.max(20, maxDisplayedPct), 20, '%');
   const colsStyle = `grid-template-columns: repeat(${n}, 1fr);`;
   const rowHtml = rows.map(r => {
-    let cumulativePx = 0;
+    let cumulativePct = 0;
     const segments = r.perRank.map((pr, ri) => {
       if (hiddenRanks.has(ri)) return "";
       const pct = Math.max(0, pr.pct);
       if (pct <= 0) return "";
-      const heightPx = axisMeta.topValue > 0 ? (pct / axisMeta.topValue) * RANK_VERTICAL_TRACK_HEIGHT : 0;
-      if (heightPx <= 0) return "";
-      cumulativePx += heightPx;
+      const heightPct = axisMeta.topValue > 0 ? (pct / axisMeta.topValue) * 100 : 0;
+      if (heightPct <= 0) return "";
+      cumulativePct += heightPct;
       const color = rankStackColor(ri);
       const labelColor = ri === 0 ? 'var(--White)' : 'var(--neutral-700)';
       const tip = encodeURIComponent(JSON.stringify({
@@ -5882,20 +5880,20 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
         pct: pr.pct,
         count: pr.count
       }));
-      const labelHtml = heightPx >= 18
+      const labelHtml = heightPct >= 6
         ? `<span class="rank-vertical-stack-seg-value" style="top:4px; color:${labelColor};">${formatPercent(pr.pct)}</span>`
         : '';
       return `<div class="rank-vertical-stack-seg"
-                   style="height:${heightPx}px; background:${color};"
+                   style="height:${heightPct}%; background:${color};"
                    data-tip="${tip}">${labelHtml}</div>`;
     }).join("");
     const displayedPct = r.perRank.reduce((sum, pr, ri) => sum + (hiddenRanks.has(ri) ? 0 : (pr.pct || 0)), 0);
-    const totalBottomPx = axisMeta.topValue > 0 ? (displayedPct / axisMeta.topValue) * RANK_VERTICAL_TRACK_HEIGHT : 0;
+    const totalBottomPct = axisMeta.topValue > 0 ? (displayedPct / axisMeta.topValue) * 100 : 0;
     return `
       <div class="rank-vertical-item rank-vertical-stack-item">
         <div class="rank-vertical-metric-slot">
           <div class="rank-vertical-track rank-vertical-stack-track">
-            <div class="rank-vertical-total-label" style="bottom:${totalBottomPx + 2}px;">${formatPercent(displayedPct)}</div>
+            <div class="rank-vertical-total-label" style="bottom:calc(${totalBottomPct}% + 2px);">${formatPercent(displayedPct)}</div>
             ${segments}
           </div>
         </div>
@@ -5910,15 +5908,15 @@ function buildRankVerticalStackChartHtml(data, hiddenRanks) {
     return `<div class="rank-vertical-label" title="${escapeHtml(r.option)}" data-tip="${labelTip}">${escapeHtml(r.option)}</div>`;
   }).join('');
   return `
-    <div class="rank-vertical-chart rank-vertical-stack-chart">
+    <div class="rank-vertical-stack-chart">
       <div class="rank-vertical-chart-body">
         <div class="rank-vertical-axis" aria-hidden="true">
-          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPx}px;">${tick.label}</span>`).join('')}
+          ${axisMeta.ticks.map(tick => `<span class="rank-vertical-axis-label" style="bottom:${tick.bottomPct}%;">${tick.label}</span>`).join('')}
         </div>
         <div class="rank-vertical-plot-col">
           <div class="rank-vertical-plot" style="${colsStyle}">
             <div class="rank-vertical-grid" aria-hidden="true">
-              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPx}px;"></span>`).join('')}
+              ${axisMeta.ticks.map(tick => `<span class="rank-vertical-grid-line" style="bottom:${tick.bottomPct}%;"></span>`).join('')}
             </div>
             ${rowHtml}
           </div>

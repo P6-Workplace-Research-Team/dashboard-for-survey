@@ -2804,29 +2804,29 @@ body.home-page {
   
   /* - 차트 상세 : 객관식 순위 (롤리팝 가로) - */
 
-  .rank-point-chart {
+  .lollipop-h-chart {
     position: relative;
     padding: 0;
   }
 
-  .rank-point-row,
-  .rank-point-axis-row {
+  .lollipop-h-row,
+  .lollipop-h-axis-row {
     display: grid;
     grid-template-columns: var(--viz-label-col-width) minmax(0, 1fr) var(--viz-bar-right-col);
     column-gap: var(--viz-label-bar-gap);
     align-items: center;
   }
 
-  .rank-point-row {
+  .lollipop-h-row {
     height: var(--viz-bar-height);
     margin-bottom: var(--viz-bar-row-gap);
   }
 
-  .rank-point-row:last-of-type {
+  .lollipop-h-row:last-of-type {
     margin-bottom: 0;
   }
 
-  .rank-point-label{
+  .lollipop-h-label{
     font-size: var(--label-1-size);
     line-height: var(--body-line-height);
     font-weight: var(--font-weight-regular);
@@ -2837,13 +2837,13 @@ body.home-page {
     white-space: nowrap;
   }
 
-  .rank-point-track {
+  .lollipop-h-track {
     position: relative;
     height: var(--viz-bar-height);
     overflow: visible;
   }
 
-  .rank-point-guides-overlay {
+  .lollipop-h-guides-overlay {
     position: absolute;
     left: calc(var(--viz-label-col-width) + var(--viz-label-bar-gap));
     right: calc(var(--viz-bar-right-col) + var(--viz-label-bar-gap));
@@ -2851,7 +2851,7 @@ body.home-page {
     pointer-events: none;
   }
 
-  .rank-point-guide {
+  .lollipop-h-guide {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -2860,7 +2860,7 @@ body.home-page {
     transform: translateX(-50%);
   }
 
-  .rank-point-inline-label {
+  .lollipop-h-inline-label {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -2870,7 +2870,7 @@ body.home-page {
     white-space: nowrap;
   }
 
-  .rank-point-line {
+  .lollipop-h-line {
     position: absolute;
     left: 0;
     top: 50%;
@@ -2878,7 +2878,7 @@ body.home-page {
     transform: translateY(-50%);
   }
 
-  .rank-point-dot {
+  .lollipop-h-dot {
     position: absolute;
     top: 50%;
     width: 16px;
@@ -2887,10 +2887,10 @@ body.home-page {
     transform: translate(-50%, -50%);
   }
 
-  .rank-point-dot:hover { background: var(--neutral-600);}
+  .lollipop-h-dot:hover { background: var(--neutral-600);}
 
-  .rank-point-value,
-  .rank-point-rank,
+  .lollipop-h-value,
+  .lollipop-h-rank,
   .rank-vertical-value,
   .rank-vertical-rank,
   .rank-vertical-total-label {
@@ -2902,25 +2902,25 @@ body.home-page {
     white-space: nowrap;
   }
 
-  .rank-point-value {
+  .lollipop-h-value {
     text-align: left;
   }
 
-  .rank-point-rank {
+  .lollipop-h-rank {
     text-align: center;
   }
 
-  .rank-point-axis-row {
+  .lollipop-h-axis-row {
     margin-top: 4px;
     align-items: start;
   }
 
-  .rank-point-axis {
+  .lollipop-h-axis {
     position: relative;
     height: 16px;
   }
 
-  .rank-point-axis-label {
+  .lollipop-h-axis-label {
     position: absolute;
     top: 0;
     font-size: var(--caption-1-size);
@@ -2932,11 +2932,11 @@ body.home-page {
 
   /* - 차트 상세 : 객관식 순위 (가로 막대 누적형) - */
   
-  .rank-stack-chart {
+  .stack-h-chart {
     padding: 0;
   }
 
-  .rank-stack-row {
+  .stack-h-row {
     display: grid;
     grid-template-columns: var(--viz-label-col-width) minmax(0, 1fr);
     column-gap: var(--viz-label-bar-gap);
@@ -2945,11 +2945,11 @@ body.home-page {
     margin-bottom: var(--viz-bar-row-gap);
   }
 
-  .rank-stack-row:last-child {
+  .stack-h-row:last-child {
     margin-bottom: 0;
   }
 
-  .rank-stack-main {
+  .stack-h-main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--viz-bar-right-col);
     column-gap: var(--viz-label-bar-gap);
@@ -2957,7 +2957,7 @@ body.home-page {
     min-width: 0;
   }
 
-  .rank-stack-track {
+  .stack-h-track {
     position: relative;
     display: flex;
     height: var(--viz-bar-height);
@@ -2965,7 +2965,7 @@ body.home-page {
     overflow: visible;
   }
 
-  .rank-stack-seg {
+  .stack-h-seg {
     container-type: inline-size;
     display: flex;
     align-items: center;
@@ -2976,21 +2976,21 @@ body.home-page {
     transition: opacity .15s ease;
   }
 
-  .rank-stack-seg:hover {
+  .stack-h-seg:hover {
     opacity: 0.85;
   }
 
-  .rank-stack-track .rank-stack-seg:first-child {
+  .stack-h-track .stack-h-seg:first-child {
     border-top-left-radius: var(--radius-4);
     border-bottom-left-radius: var(--radius-4);
   }
 
-  .rank-stack-track .rank-stack-seg:last-child {
+  .stack-h-track .stack-h-seg:last-child {
     border-top-right-radius: var(--radius-4);
     border-bottom-right-radius: var(--radius-4);
   }
 
-  .rank-stack-seg-value {
+  .stack-h-seg-value {
     display: none;
     font-size: var(--label-2-size);
     line-height: var(--body-line-height);
@@ -3000,12 +3000,12 @@ body.home-page {
   }
 
   @container (min-width: 44px) {
-    .rank-stack-seg-value {
+    .stack-h-seg-value {
       display: inline;
     }
   }
 
-  .rank-stack-label {
+  .stack-h-label {
   font-size: var(--label-1-size);
   line-height: var(--body-line-height);
   font-weight: var(--font-weight-regular);
@@ -3016,7 +3016,7 @@ body.home-page {
   white-space: nowrap;
   }
 
-  .rank-stack-total-value.is-outside {
+  .stack-h-total-value.is-outside {
     font-size: var(--label-1-size);
     line-height: var(--body-line-height);
     font-weight: var(--font-weight-semibold);
@@ -3025,21 +3025,25 @@ body.home-page {
     white-space: nowrap;
   }
 
-  .rank-stack-total-value {
+  .stack-h-total-value {
     pointer-events: none;
   }
 
-  .rank-stack-total-value.is-outside {
+  .stack-h-total-value.is-outside {
     text-align: center;
   }
 
   /* - 차트 상세 : 객관식 순위 (롤리팝 세로 및 세로 누적 막대) */ 
 
-  .rank-vertical-chart {
+  /* 세로 차트 공통 */
+  .rank-vertical-lollipop-chart,
+  .rank-vertical-stack-chart {
+    --vbar-track-height: var(--viz-vertical-track-height);
+    --vbar-track-top: var(--viz-vertical-top-space);
     width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 0 0 4px;
+    padding: 0;
   }
 
   .rank-vertical-chart-body {
@@ -3050,7 +3054,8 @@ body.home-page {
 
   .rank-vertical-axis {
     position: relative;
-    height: calc(var(--viz-vertical-top-space) + 280px);
+    height: var(--vbar-track-height);
+    margin-top: var(--vbar-track-top);
     margin-right: 8px;
   }
 
@@ -3072,10 +3077,10 @@ body.home-page {
 
   .rank-vertical-plot {
     position: relative;
-    height: calc(var(--viz-vertical-top-space) + 280px);
+    height: calc(var(--vbar-track-top) + var(--vbar-track-height));
     display: grid;
     column-gap: 4px;
-    border-bottom: 1px solid var(--neutral-300);
+    border-bottom: 1px solid var(--neutral-200);
   }
 
   .rank-vertical-labels-row {
@@ -3088,8 +3093,8 @@ body.home-page {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: 280px;
+    top: var(--vbar-track-top);
+    height: var(--vbar-track-height);
     pointer-events: none;
     z-index: 0;
   }
@@ -3099,7 +3104,7 @@ body.home-page {
     left: 0;
     right: 0;
     height: 1px;
-    background: var(--neutral-200);
+    background: var(--viz-grid-color);
     transform: translateY(50%);
   }
 
@@ -3111,7 +3116,7 @@ body.home-page {
 
   .rank-vertical-metric-slot {
     position: relative;
-    height: calc(var(--viz-vertical-top-space) + 280px);
+    height: calc(var(--vbar-track-top) + var(--vbar-track-height));
   }
 
   .rank-vertical-track {
@@ -3119,7 +3124,7 @@ body.home-page {
     left: 50%;
     bottom: 0;
     width: 100%;
-    height: 280px;
+    height: var(--vbar-track-height);
     transform: translateX(-50%);
     display: flex;
     align-items: flex-end;
@@ -4923,14 +4928,14 @@ body.home-page {
     font-size: 12px;
   }
   
-  .rank-point-chart {
+  .lollipop-h-chart {
     --viz-label-col-width: 220px;
     --viz-bar-right-col: 44px;
     --viz-bar-height: 32px;
     --viz-bar-row-gap: 8px;
     padding: 8px 0 8px 10px;
   }
-  .rank-point-row {
+  .lollipop-h-row {
     display: grid;
     grid-template-columns: var(--viz-label-col-width) minmax(0, 1fr) var(--viz-bar-right-col);
     gap: 12px;
@@ -4938,10 +4943,10 @@ body.home-page {
     height: var(--viz-bar-height);
     margin-bottom: var(--viz-bar-row-gap);
   }
-  .rank-point-row:last-of-type {
+  .lollipop-h-row:last-of-type {
     margin-bottom: 0;
   }
-  .rank-point-label {
+  .lollipop-h-label {
     font-size: var(--label-1-size);
     line-height: var(--body-line-height);
     color: var(--neutral-900);
@@ -4950,12 +4955,12 @@ body.home-page {
     white-space: nowrap;
     text-align: right;
   }
-  .rank-point-track {
+  .lollipop-h-track {
     position: relative;
     height: var(--viz-bar-height);
     overflow: visible;
   }
-  .rank-point-track-guides {
+  .lollipop-h-track-guides {
     position: absolute;
     left: 0;
     right: 0;
@@ -4963,7 +4968,7 @@ body.home-page {
     bottom: calc(var(--viz-bar-row-gap) / -2);
     pointer-events: none;
   }
-  .rank-point-guide {
+  .lollipop-h-guide {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -4971,11 +4976,11 @@ body.home-page {
     background: rgba(21, 21, 21, 0.08);
     transform: translateX(-50%);
   }
-  .rank-point-guide.is-zero {
+  .lollipop-h-guide.is-zero {
     background: rgba(21, 21, 21, 0.14);
     transform: none;
   }
-  .rank-point-line {
+  .lollipop-h-line {
     position: absolute;
     left: 0;
     top: 50%;
@@ -4983,7 +4988,7 @@ body.home-page {
     border-radius: 0 4px 4px 0;
     transform: translateY(-50%);
   }
-  .rank-point-dot {
+  .lollipop-h-dot {
     position: absolute;
     top: 50%;
     width: 16px;
@@ -4992,7 +4997,7 @@ body.home-page {
     transform: translate(-50%, -50%);
     cursor: pointer;
   }
-  .rank-point-value {
+  .lollipop-h-value {
     font-size: var(--label-1-size);
     font-weight: var(--font-weight-semibold);
     color: var(--neutral-900);
@@ -5000,26 +5005,26 @@ body.home-page {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .rank-point-rank {
+  .lollipop-h-rank {
     font-size: var(--label-1-size);
     font-weight: var(--font-weight-semibold);
     color: var(--neutral-900);
     text-align: right;
     white-space: nowrap;
   }
-  .rank-point-axis-row,
-  .rank-point-axis-title-row {
+  .lollipop-h-axis-row,
+  .lollipop-h-axis-title-row {
     display: grid;
     grid-template-columns: var(--viz-label-col-width) minmax(0, 1fr) var(--viz-bar-right-col);
     gap: 12px;
     align-items: start;
   }
-  .rank-point-axis {
+  .lollipop-h-axis {
     position: relative;
     height: 22px;
     margin-top: 2px;
   }
-  .rank-point-axis-label {
+  .lollipop-h-axis-label {
     font-size: var(--caption-2-size);
     line-height: var(--body-line-height);
     color: var(--neutral-600);
@@ -5027,16 +5032,16 @@ body.home-page {
     top: 0;
     font-variant-numeric: tabular-nums;
   }
-  .rank-point-axis-label.is-start {
+  .lollipop-h-axis-label.is-start {
     transform: translateX(0);
   }
-  .rank-point-axis-label.is-mid {
+  .lollipop-h-axis-label.is-mid {
     transform: translateX(-50%);
   }
-  .rank-point-axis-label.is-end {
+  .lollipop-h-axis-label.is-end {
     transform: translateX(-100%);
   }
-  .rank-point-axis-title {
+  .lollipop-h-axis-title {
     margin-top: 2px;
     font-size: var(--label-1-size);
     line-height: var(--body-line-height);
@@ -5044,14 +5049,14 @@ body.home-page {
     text-align: center;
   }
 
-  .rank-stack-chart {
+  .stack-h-chart {
     --viz-label-col-width: 220px;
     --viz-bar-right-col: 44px;
     --viz-bar-height: 32px;
     --viz-bar-row-gap: 8px;
     padding: 8px 0 8px 10px;
   }
-  .rank-stack-row {
+  .stack-h-row {
     display: grid;
     grid-template-columns: var(--viz-label-col-width) minmax(0, 1fr);
     gap: 16px;
@@ -5059,15 +5064,15 @@ body.home-page {
     margin-bottom: var(--viz-bar-row-gap);
     height: var(--viz-bar-height);
   }
-  .rank-stack-row:last-child { margin-bottom: 0; }
-  .rank-stack-main {
+  .stack-h-row:last-child { margin-bottom: 0; }
+  .stack-h-main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--viz-bar-right-col);
     gap: 8px;
     align-items: center;
     min-width: 0;
   }
-  .rank-stack-label {
+  .stack-h-label {
     font-size: var(--label-1-size);
     color: var(--neutral-900);
     overflow: hidden;
@@ -5075,7 +5080,7 @@ body.home-page {
     white-space: nowrap;
     text-align: right;
   }
-  .rank-stack-track {
+  .stack-h-track {
     position: relative;
     border-radius: 0;
     height: var(--viz-bar-height);
@@ -5083,7 +5088,7 @@ body.home-page {
     display: flex;
     background: #f5f5f5;
   }
-  .rank-stack-seg {
+  .stack-h-seg {
     height: 100%;
     cursor: pointer;
     transition: opacity .15s ease;
@@ -5093,28 +5098,28 @@ body.home-page {
     justify-content: flex-end;
     overflow: hidden;
   }
-  .rank-stack-seg:hover { opacity: 0.85; }
-  .rank-stack-track .rank-stack-seg:first-child {
+  .stack-h-seg:hover { opacity: 0.85; }
+  .stack-h-track .stack-h-seg:first-child {
     border-top-left-radius: 4px;
     border-bottom-left-radius: 4px;
   }
-  .rank-stack-track .rank-stack-seg:last-child {
+  .stack-h-track .stack-h-seg:last-child {
     border-top-right-radius: 4px;
     border-bottom-right-radius: 4px;
   }
-  .rank-stack-total-value {
+  .stack-h-total-value {
     white-space: nowrap;
     pointer-events: none;
     font-variant-numeric: tabular-nums;
   }
-  .rank-stack-total-value.is-outside {
+  .stack-h-total-value.is-outside {
     color: var(--neutral-900);
     font-size: var(--label-1-size);
     font-weight: var(--font-weight-semibold);
     line-height: var(--body-line-height);
     text-align: center;
   }
-  .rank-stack-rank-placeholder {
+  .stack-h-rank-placeholder {
     width: 100%;
     height: 100%;
   }
